@@ -534,6 +534,7 @@ def _common_context(request: Request, **extra) -> dict:
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
+        request,
         "index.html",
         _common_context(
             request,
@@ -610,6 +611,7 @@ async def calculate(
         error = f"กรอกข้อมูลไม่ถูกต้อง: {e}"
 
     return templates.TemplateResponse(
+        request,
         "index.html",
         _common_context(
             request,
