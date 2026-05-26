@@ -208,7 +208,14 @@ body::before {
   border-radius: 8px;
   background: var(--paper);
   color: var(--ink);
-  transition: all 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  /* แก้บั๊กมือถือ: ให้ native picker เปิดได้ */
+  position: relative;
+  z-index: 2;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(107, 14, 27, 0.15);
+  /* iOS Safari ต้อง min 16px กันไม่ให้ auto-zoom */
+  min-height: 44px;
 }
 
 .birth-form input:focus,

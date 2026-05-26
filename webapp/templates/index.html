@@ -95,9 +95,9 @@
           </label>
 
           <fieldset class="transit-fieldset">
-            <legend>ดาวจร (ไม่บังคับ)</legend>
+            <legend>ดาวจร (วันที่ดูดวง)</legend>
             <p class="fieldset-hint">
-              วันเวลาและสถานที่ที่ต้องการดูดาวจร เช่น วันนี้
+              วันเวลาและสถานที่ที่ต้องการดูดาวจร (default = วันนี้/ตอนนี้/กรุงเทพฯ)
               จะแสดงเป็น<b>เลขอารบิก</b>ในวงนอกของผังดวง
             </p>
 
@@ -109,6 +109,7 @@
                   name="transit_date_th"
                   id="transit_date_th"
                   value="{{ form.transit_date_th }}"
+                  required
                   autocomplete="off"
                   spellcheck="false"
                   placeholder="วว/ดด/ปปปป"
@@ -132,7 +133,7 @@
 
             <label>
               <span>เวลาดาวจร (24 ชั่วโมง)</span>
-              <input type="time" name="transit_time" value="{{ form.transit_time }}" step="60" />
+              <input type="time" name="transit_time" value="{{ form.transit_time }}" required step="60" />
             </label>
 
             <label>

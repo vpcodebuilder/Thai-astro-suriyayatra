@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -510,15 +511,21 @@ def chart_to_view(
     }
 
 
-_DEFAULT_FORM = {
-    "name": "",
-    "birth_date_th": "",
-    "birth_time": "",
-    "province": "กรุงเทพมหานคร",
-    "transit_date_th": "",
-    "transit_time": "",
-    "transit_province": "กรุงเทพมหานคร",
-}
+THAI_TZ = timezone(timedelta(hours=7))
+
+
+def _default_form() -> dict:
+    """ค่าเริ่มต้นของฟอร์ม — ดาวจร pre-fill เป็น 'วันนี้/เวลานี้/กรุงเทพฯ'"""
+    now = datetime.now(THAI_TZ)
+    return {
+        "name": "",
+        "birth_date_th": "",
+        "birth_time": "",
+        "province": "กรุงเทพมหานคร",
+        "transit_date_th": f"{now.day:02d}/{now.month:02d}/{now.year + 543}",
+        "transit_time": f"{now.hour:02d}:{now.minute:02d}",
+        "transit_province": "กรุงเทพมหานคร",
+    }
 
 
 def _common_context(request: Request, **extra) -> dict:
@@ -539,7 +546,7 @@ async def index(request: Request) -> HTMLResponse:
         _common_context(
             request,
             result=None,
-            form=_DEFAULT_FORM.copy(),
+            form=_default_form(),
             error=None,
         ),
     )
