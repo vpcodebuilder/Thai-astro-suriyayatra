@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ผูกดวงโหราศาสตร์ไทย (สุริยยาตร์)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="ornament">❀</div>
+    <h1>ผูกดวงโหราศาสตร์ไทย</h1>
+    <p class="subtitle">วิธีสุริยยาตร์ — ตำราโบราณของไทย</p>
+    <div class="ornament">❀</div>
+  </header>
+
+  <main class="container {% if result %}has-result{% endif %}">
+
+    <!-- ===== ซ้าย: ฟอร์มข้อมูลผู้ขอดวง ===== -->
+    <section class="form-section">
+      <div class="card">
+        <h2><span class="title-deco">✦</span> ข้อมูลผู้ขอดวง <span class="title-deco">✦</span></h2>
+        {% if error %}
+          <div class="error">{{ error }}</div>
+        {% endif %}
+        <form method="post" action="/" class="birth-form">
+          <label>
+            <span>ชื่อ-นามสกุล</span>
+            <input
+              type="text"
+              name="name"
+              value="{{ form.name }}"
+              placeholder="(ไม่บังคับ)"
+              autocomplete="name"
+            />
+          </label>
+
+          <label>
+            <span>วันเดือนปีเกิด (พ.ศ.)</span>
+            <div class="date-input-group">
+              <input
+                type="text"
+                name="birth_date_th"
+                id="birth_date_th"
+                value="{{ form.birth_date_th }}"
+                required
+                inputmode="numeric"
+                placeholder="วว/ดด/ปปปป  เช่น 15/05/2533"
+                pattern="\d{1,2}/\d{1,2}/\d{4}"
+                maxlength="10"
+              />
+              <input
+                type="date"
+                id="birth_date_picker"
+                class="date-picker-helper"
+                title="เปิดปฏิทินเลือกวันที่"
+              />
+            </div>
+            <small class="hint">พิมพ์ DD/MM/YYYY (พ.ศ.) หรือกดปุ่ม 📅 เลือกจากปฏิทิน</small>
+          </label>
+
+          <label>
+            <span>เวลาเกิด (24 ชั่วโมง)</span>
+            <input
+              type="time"
+              name="birth_time"
+              value="{{ form.birth_time }}"
+              required
+              step="60"
+            />
+            <small class="hint">รูปแบบ HH:MM เช่น 08:30 หรือ 21:45</small>
+          </label>
+
+          <label>
+            <span>จังหวัดที่เกิด</span>
+            <select name="province" required>
+              {% for p in provinces %}
+                <option value="{{ p }}" {% if p == form.province %}selected{% endif %}>{{ p }}</option>
+              {% endfor %}
+            </select>
+            <small class="hint">ใช้ปรับเวลาท้องถิ่นตามลองจิจูดจังหวัด</small>
+          </label>
+
+          <fieldset class="transit-fieldset">
+            <legend>ดาวจร (ไม่บังคับ)</legend>
+            <p class="fieldset-hint">
+              วันเวลาและสถานที่ที่ต้องการดูดาวจร เช่น วันนี้
+              จะแสดงเป็น<b>เลขอารบิก</b>ในวงนอกของผังดวง
+            </p>
+
+            <label>
+              <span>วันที่ดาวจร (พ.ศ.)</span>
+              <div class="date-input-group">
+                <input
+                  type="text"
+                  name="transit_date_th"
+                  id="transit_date_th"
+                  value="{{ form.transit_date_th }}"
+                  inputmode="numeric"
+                  placeholder="วว/ดด/ปปปป"
+                  pattern="\d{1,2}/\d{1,2}/\d{4}"
+                  maxlength="10"
+                />
+                <input
+                  type="date"
+                  id="transit_date_picker"
+                  class="date-picker-helper"
+                  title="เปิดปฏิทิน"
+                />
+              </div>
+            </label>
+
+            <label>
+              <span>เวลาดาวจร (24 ชั่วโมง)</span>
+              <input type="time" name="transit_time" value="{{ form.transit_time }}" step="60" />
+            </label>
+
+            <label>
+              <span>สถานที่ดาวจร</span>
+              <select name="transit_province">
+                {% for p in provinces %}
+                  <option value="{{ p }}" {% if p == form.transit_province %}selected{% endif %}>{{ p }}</option>
+                {% endfor %}
+              </select>
+            </label>
+          </fieldset>
+
+          <button type="submit" class="btn-primary">
+            ผูกดวง <span class="btn-arrow">›</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    {% if result %}
+    <!-- ===== กลาง: ผังจักรราศี ===== -->
+    <section class="chart-section">
+      <div class="card result-header-card">
+        <div class="result-header">
+          <div>
+            {% if result.person_name %}
+              <h2>ดวงชะตาของ {{ result.person_name }}</h2>
+            {% else %}
+              <h2>ดวงชะตา</h2>
+            {% endif %}
+            <p class="meta">
+              เกิดวัน{{ result.birth_date_th }} เวลา {{ result.birth_time }} น.
+              <br/>ณ จังหวัด{{ result.province }}
+            </p>
+          </div>
+          <div class="lakkana-badge">
+            <div class="badge-label">ลัคนา</div>
+            <div class="badge-value">
+              {{ result.ascendant.rasi_name }}
+              {{ result.ascendant.degree }}°{{ "%02d"|format(result.ascendant.arcminute) }}′
+            </div>
+            <div class="badge-sub">เจ้าชะตา: {{ result.chart_lord }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-wrapper">
+        {% set c = result.circle %}
+        <div class="zodiac-stage" style="--svg-size: {{ c.size }}px;">
+          <svg class="zodiac-svg" viewBox="0 0 {{ c.size }} {{ c.size }}"
+               xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="paper-bg" cx="50%" cy="50%" r="60%">
+                <stop offset="0%" stop-color="#fff9ed"/>
+                <stop offset="100%" stop-color="#f1e2bb"/>
+              </radialGradient>
+              <radialGradient id="asc-glow" cx="50%" cy="50%" r="60%">
+                <stop offset="0%" stop-color="rgba(232,197,112,0.55)"/>
+                <stop offset="100%" stop-color="rgba(201,162,74,0.15)"/>
+              </radialGradient>
+            </defs>
+
+            <circle cx="{{ c.center }}" cy="{{ c.center }}" r="{{ c.r_outer }}"
+                    fill="url(#paper-bg)" class="rim-outer"/>
+
+            {% for r in c.rasis if r.is_ascendant %}
+              <path d="{{ r.sector_path }}" fill="url(#asc-glow)" class="asc-sector"/>
+            {% endfor %}
+
+            {% for d in c.dividers %}
+              <line x1="{{ "%.2f"|format(d.x1) }}" y1="{{ "%.2f"|format(d.y1) }}"
+                    x2="{{ "%.2f"|format(d.x2) }}" y2="{{ "%.2f"|format(d.y2) }}"
+                    class="divider-line"/>
+            {% endfor %}
+
+            {% if c.has_transit %}
+              <circle cx="{{ c.center }}" cy="{{ c.center }}" r="{{ c.r_outer_transit }}"
+                      class="rim-line rim-transit"/>
+            {% endif %}
+            <circle cx="{{ c.center }}" cy="{{ c.center }}" r="{{ c.r_outer }}"
+                    class="rim-line"/>
+            <circle cx="{{ c.center }}" cy="{{ c.center }}" r="{{ c.r_inner }}"
+                    class="rim-line rim-inner"/>
+
+            {% for r in c.rasis %}
+              <g class="rasi-group {% if r.is_ascendant %}rasi-group-asc{% endif %}">
+                <text x="{{ "%.2f"|format(r.label_x) }}" y="{{ "%.2f"|format(r.label_y) }}"
+                      class="rasi-label" text-anchor="middle" dominant-baseline="middle">
+                  {{ r.name }}
+                </text>
+                <text x="{{ "%.2f"|format(r.bhava_x) }}" y="{{ "%.2f"|format(r.bhava_y) }}"
+                      class="bhava-label" text-anchor="middle" dominant-baseline="middle">
+                  {{ r.bhava }}
+                </text>
+              </g>
+            {% endfor %}
+
+            {% if c.lagna_marker %}
+              {% set lm = c.lagna_marker %}
+              <g class="lagna-group"
+                 data-tip-planet="ลัคนา"
+                 data-tip-source="กำเนิด"
+                 data-tip-rasi="{{ result.ascendant.rasi_name }}"
+                 data-tip-degree="{{ result.ascendant.degree }}"
+                 data-tip-arcmin="{{ result.ascendant.arcminute }}"
+                 data-tip-arcsec="0">
+                <line x1="{{ "%.2f"|format(lm.line_x1) }}" y1="{{ "%.2f"|format(lm.line_y1) }}"
+                      x2="{{ "%.2f"|format(lm.line_x2) }}" y2="{{ "%.2f"|format(lm.line_y2) }}"
+                      class="lagna-line"/>
+                <circle cx="{{ "%.2f"|format(lm.x) }}" cy="{{ "%.2f"|format(lm.y) }}"
+                        r="17" class="lagna-marker-circle planet-hoverable"/>
+                <text x="{{ "%.2f"|format(lm.x) }}" y="{{ "%.2f"|format(lm.y) }}"
+                      class="lagna-marker-text"
+                      text-anchor="middle" dominant-baseline="central">ลั</text>
+              </g>
+            {% endif %}
+
+            {# natal planet chips #}
+            {% for r in c.rasis %}
+              {% for chip in r.chips %}
+                <g class="planet-svg-group"
+                   data-tip-planet="{{ chip.name }}"
+                   data-tip-source="กำเนิด"
+                   data-tip-rasi="{{ chip.rasi_name }}"
+                   data-tip-degree="{{ chip.degree }}"
+                   data-tip-arcmin="{{ chip.arcminute }}"
+                   data-tip-arcsec="{{ chip.arcsecond }}"
+                   data-tip-retro="{{ '1' if chip.retrograde else '0' }}">
+                  <circle cx="{{ "%.2f"|format(chip.x) }}" cy="{{ "%.2f"|format(chip.y) }}"
+                          r="14" class="planet-chip-svg planet-hoverable {{ chip.color_class }}"/>
+                  <text x="{{ "%.2f"|format(chip.x) }}" y="{{ "%.2f"|format(chip.y) }}"
+                        class="planet-abbr-svg"
+                        text-anchor="middle" dominant-baseline="central">{{ chip.abbr }}</text>
+                </g>
+              {% endfor %}
+            {% endfor %}
+
+            {# transit planet chips #}
+            {% if c.has_transit %}
+              {% for r in c.rasis %}
+                {% for tchip in r.transit_chips %}
+                  <g class="planet-svg-group transit-chip-group"
+                     data-tip-planet="{{ tchip.name }}"
+                     data-tip-source="จร"
+                     data-tip-rasi="{{ tchip.rasi_name }}"
+                     data-tip-degree="{{ tchip.degree }}"
+                     data-tip-arcmin="{{ tchip.arcminute }}"
+                     data-tip-arcsec="{{ tchip.arcsecond }}"
+                     data-tip-retro="{{ '1' if tchip.retrograde else '0' }}">
+                    <circle cx="{{ "%.2f"|format(tchip.x) }}" cy="{{ "%.2f"|format(tchip.y) }}"
+                            r="11" class="planet-chip-svg transit-chip-svg planet-hoverable {{ tchip.color_class }}"/>
+                    <text x="{{ "%.2f"|format(tchip.x) }}" y="{{ "%.2f"|format(tchip.y) }}"
+                          class="planet-abbr-svg transit-abbr-svg"
+                          text-anchor="middle" dominant-baseline="central">{{ tchip.abbr }}</text>
+                  </g>
+                {% endfor %}
+              {% endfor %}
+            {% endif %}
+          </svg>
+
+          <div class="zodiac-center">
+            <div class="om">๛</div>
+            {% if result.person_name %}
+              <div class="center-name">{{ result.person_name }}</div>
+            {% endif %}
+            <div class="center-birth">
+              {{ result.birth_date_th }}<br/>
+              เวลา {{ result.birth_time }} น.<br/>
+              {{ result.province }}
+            </div>
+            <div class="center-lakkana">
+              ลัคนา {{ result.ascendant.rasi_name }}
+              {{ result.ascendant.degree }}°{{ "%02d"|format(result.ascendant.arcminute) }}′
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ความหมายภพ (อยู่กลางตามผังดวง เพื่อให้คอลัมน์ขวาเห็นตำแหน่งดาวได้กระชับ) -->
+      <div class="card bhava-card">
+        <h2><span class="title-deco">✦</span> ความหมายของภพทั้ง 12 <span class="title-deco">✦</span></h2>
+        <p class="bhava-intro">
+          ภพ (บ้าน) แต่ละหลักในดวงชะตาแสดงเรื่องราวต่าง ๆ ของชีวิต
+          ดูว่า<b>ดาวอะไรอยู่ในภพไหน</b> เพื่อตีความความหมายเบื้องต้น
+        </p>
+        <div class="bhava-table">
+          {% for b in bhava_meanings %}
+            <div class="bhava-row">
+              <span class="bhava-num">{{ loop.index }}</span>
+              <span class="bhava-name">{{ b.name }}</span>
+              <span class="bhava-short">{{ b.short }}</span>
+              <span class="bhava-full">{{ b.full }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ขวา: ตารางดาวกำเนิด + ดาวจร + ข้อมูลคำนวณ ===== -->
+    <section class="detail-section">
+      <div class="card">
+        <h2><span class="title-deco">✦</span> ดาวกำเนิด <span class="title-deco">✦</span></h2>
+        <div class="planet-table">
+          {% for p in result.planets %}
+            <div class="planet-row">
+              <span class="planet-chip {{ p.color_class }} chip-lg">{{ p.abbr }}</span>
+              <span class="planet-name">{{ p.name }}{% if p.retrograde %} <em class="retro">(พักร์)</em>{% endif %}</span>
+              <span class="planet-pos">{{ p.rasi_name }} {{ p.degree }}°{{ "%02d"|format(p.arcminute) }}′</span>
+              <span class="planet-house">ภพ{{ p.bhava }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if result.transit %}
+      <div class="card">
+        <h2><span class="title-deco">✦</span> ดาวจร <span class="title-deco">✦</span></h2>
+        <p class="transit-meta">
+          ดู ณ <b>{{ result.transit.date_th }}</b><br/>
+          เวลา <b>{{ result.transit.time }} น.</b> · จังหวัด<b>{{ result.transit.province }}</b>
+        </p>
+        <div class="planet-table">
+          {% for p in result.transit.planets %}
+            <div class="planet-row">
+              <span class="planet-chip {{ p.color_class }} chip-lg chip-arabic">{{ p.abbr }}</span>
+              <span class="planet-name">{{ p.name }}{% if p.retrograde %} <em class="retro">(พักร์)</em>{% endif %}</span>
+              <span class="planet-pos">{{ p.rasi_name }} {{ p.degree }}°{{ "%02d"|format(p.arcminute) }}′</span>
+              <span class="planet-house"></span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <details class="card collapsible">
+        <summary>ข้อมูลการคำนวณ (สำหรับผู้ศึกษา)</summary>
+        <div class="calc-info">
+          <div><b>จุลศักราช:</b> {{ result.info.cs_year }}</div>
+          <div><b>เถลิงศก:</b> {{ result.info.thaloengsok }}</div>
+          <div><b>สุรทิน:</b> {{ result.info.surathin }} วัน</div>
+          <div><b>หรคุณ:</b> {{ result.info.horakhun }}</div>
+          <div><b>Julian Day:</b> {{ result.info.julian }}</div>
+          <div><b>กรรมจุปา:</b> {{ result.info.kammatchaphon }}</div>
+          <div><b>อุจจพล:</b> {{ result.info.ujapon }}</div>
+          <div><b>ดิถี:</b> {{ result.info.dithi }}</div>
+        </div>
+      </details>
+    </section>
+
+    {# ===== แถวล่าง: คำทำนายเจ้าเรือนครองภพ (ดวงพื้นฐาน) ===== #}
+    {% if result.natal_bhava_lords %}
+    {% set nbl = result.natal_bhava_lords %}
+    <section class="prophecy-section">
+      <div class="card prophecy-card">
+        <h2><span class="title-deco">✦</span> คำทำนายเจ้าเรือนครองภพ (ดวงพื้นฐาน) <span class="title-deco">✦</span></h2>
+        <p class="prophecy-intro">
+          ดูจากดาว<b>เจ้าเรือน</b>แต่ละภพ (ดาวที่ครองราศีของภพนั้น) ว่าในชะตากำเนิด
+          ไปสถิตอยู่ภพอะไร ผลทำนายเป็นแบบ <b>ภพ-ภพ</b> ใช้ดูแนวโน้มทั้งชีวิต
+        </p>
+        <div class="summary-headline">{{ nbl.headline }}</div>
+
+        <div class="prophecy-list">
+          {% for p in nbl.all_items %}
+            <div class="prophecy-row tone-{{ p.tone }}">
+              <div class="prophecy-pair">
+                <span class="tone-tag tone-{{ p.tone }}">{{ p.tone_label }}</span>
+              </div>
+              <div class="prophecy-detail">
+                <div class="prophecy-headline">
+                  เจ้าเรือน<b>{{ p.lord_bhava_name }}</b> (ภพ {{ p.lord_bhava }})
+                  = <b>{{ p.lord_planet }}</b> ราศี{{ p.lord_rasi }}
+                  → อยู่<b>{{ p.located_bhava_name }}</b> (ภพ {{ p.located_bhava }})
+                </div>
+                <div class="prophecy-text">{{ p.prediction }}</div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+        <p class="prophecy-footer">
+          <small>* "วิปริต-ราชโยค" = เจ้าเรือนของภพทุกข์ (6/8/12) ไปตกในภพทุกข์อีกที กลายเป็นดี (ทุกข์หักล้างกัน)</small>
+        </p>
+      </div>
+    </section>
+    {% endif %}
+
+    {# ===== แถวล่าง: คำทำนายดาวจรกระทบดาวเดิม (เต็มความกว้าง 3 คอลัมน์) ===== #}
+    {% if result.transit and result.transit.aspects %}
+    <section class="prophecy-section">
+      {# === กล่องสรุป (อ่านง่าย) === #}
+      {% if result.transit.summary %}
+        {% set s = result.transit.summary %}
+        <div class="card summary-card">
+          <h2><span class="title-deco">☼</span> สรุปคำทำนายช่วงนี้ <span class="title-deco">☼</span></h2>
+          <div class="summary-headline">{{ s.headline }}</div>
+
+          {% if s.top_items %}
+            <div class="summary-top">
+              <div class="summary-section-label">📌 เรื่องเด่นที่สุดในช่วงนี้</div>
+              {% for t in s.top_items %}
+                <div class="summary-top-item tone-{{ t.tone }}">
+                  <div class="summary-rank">#{{ t.rank }}</div>
+                  <div class="summary-body">
+                    <div class="summary-title">
+                      <span class="tone-tag tone-{{ t.tone }}">{{ t.tone_label }}</span>
+                      <b>{{ t.transit_planet }}</b>จร{{ t.aspect_type }}<b>{{ t.natal_planet }}</b>เดิม
+                      <span class="summary-theme">— เรื่อง{{ t.theme }}</span>
+                    </div>
+                    <div class="summary-narrative">{{ t.narrative }}</div>
+                    <div class="summary-duration">⏱ {{ t.duration }}</div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          {% if s.good_items %}
+            <div class="summary-block good">
+              <div class="summary-section-label">✨ ในด้านที่ดี</div>
+              <ul>
+                {% for g in s.good_items %}
+                  <li><b>{{ g.transit_planet }}</b>จร{{ g.aspect_type }}<b>{{ g.natal_planet }}</b>เดิม
+                    — {{ g.short }} <small>({{ g.duration }})</small></li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          {% if s.warn_items %}
+            <div class="summary-block warn">
+              <div class="summary-section-label">⚠ สิ่งที่ต้องระวัง</div>
+              <ul>
+                {% for w in s.warn_items %}
+                  <li><b>{{ w.transit_planet }}</b>จร{{ w.aspect_type }}<b>{{ w.natal_planet }}</b>เดิม
+                    — {{ w.short }} <small>({{ w.duration }})</small></li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          <div class="summary-conclusion">{{ s.conclusion }}</div>
+        </div>
+      {% endif %}
+
+      {# === เจ้าเรือนเดิม ณ ตำแหน่งดาวจร === #}
+      {% if result.transit.bhava_lords %}
+      {% set tbl = result.transit.bhava_lords %}
+      <div class="card prophecy-card">
+        <h2><span class="title-deco">✦</span> เจ้าเรือนเดิม ณ ตำแหน่งดาวจร <span class="title-deco">✦</span></h2>
+        <p class="prophecy-intro">
+          ดูดาว<b>เจ้าเรือน</b>ของชะตาเดิม ขณะนี้กำลังโคจรอยู่ภพไหน
+          (มองภพจากลัคนาเดิม) — ใช้ดูช่วงเวลาปัจจุบัน
+        </p>
+        <div class="summary-headline">{{ tbl.headline }}</div>
+        <div class="prophecy-list">
+          {% for p in tbl.all_items %}
+            <div class="prophecy-row tone-{{ p.tone }}">
+              <div class="prophecy-pair">
+                <span class="tone-tag tone-{{ p.tone }}">{{ p.tone_label }}</span>
+              </div>
+              <div class="prophecy-detail">
+                <div class="prophecy-headline">
+                  เจ้าเรือน<b>{{ p.lord_bhava_name }}</b> (ภพ {{ p.lord_bhava }})
+                  = <b>{{ p.lord_planet }}</b> ขณะนี้จรในราศี{{ p.lord_rasi }}
+                  → อยู่<b>{{ p.located_bhava_name }}</b> (ภพ {{ p.located_bhava }})
+                </div>
+                <div class="prophecy-text">{{ p.prediction }}</div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# === ตารางคำทำนายเต็มเรียงตามความสำคัญ === #}
+      <div class="card prophecy-card">
+        <h2><span class="title-deco">✦</span> คำทำนายโดยละเอียด (เรียงตามลำดับความสำคัญ) <span class="title-deco">✦</span></h2>
+        <p class="prophecy-intro">
+          ดาวจรเคลื่อนผ่านราศีต่าง ๆ เมื่อ<b>กุม</b> (ราศีเดียวกัน) หรือ
+          <b>เล็ง</b> (ราศีตรงข้าม) ดาวกำเนิด จะเกิดอิทธิพลต่อชีวิตช่วงนั้น
+          แถวที่<b>มีเลข #1, #2, #3 และขอบสีเข้ม</b>คือ aspect สำคัญที่สุด
+        </p>
+        <div class="prophecy-list">
+          {% for a in result.transit.aspects %}
+            <div class="prophecy-row sev-{{ a.severity }}">
+              {% if loop.index <= 3 %}
+                <div class="prophecy-rank-badge">#{{ loop.index }}</div>
+              {% endif %}
+              <div class="prophecy-pair">
+                <span class="planet-chip {{ a.transit_color }} chip-sm chip-arabic">{{ a.transit_abbr }}</span>
+                <span class="aspect-word">{{ a.aspect_type }}</span>
+                <span class="planet-chip {{ a.natal_color }} chip-sm">{{ a.natal_abbr }}</span>
+              </div>
+              <div class="prophecy-detail">
+                <div class="prophecy-headline">
+                  <b>{{ a.transit_planet }}</b>จร({{ a.transit_rasi }}) <b>{{ a.aspect_type }}</b>
+                  <b>{{ a.natal_planet }}</b>เดิม({{ a.natal_rasi }})
+                </div>
+                <div class="prophecy-text">{{ a.prediction }}</div>
+                <div class="prophecy-meta">{{ a.duration }}</div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+        <p class="prophecy-footer">
+          <small>* คำทำนายเป็นแนวทางทั่วไปจากตำราโหราศาสตร์ไทย (อ.เทพย์ สาริกบุตร, พล.ต.ประยูร พิศนาคะ ฯลฯ)
+          การตีความที่แม่นยำต้องดูปัจจัยอื่น เช่น มิตรศัตรู ทักษา องศาเป๊ะ ฯลฯ ประกอบ</small>
+        </p>
+      </div>
+    </section>
+    {% elif result %}
+    <section class="prophecy-section">
+      <div class="card prophecy-card">
+        <h2><span class="title-deco">✦</span> คำทำนายดาวจรกระทบดาวเดิม <span class="title-deco">✦</span></h2>
+        <p class="prophecy-empty">
+          กรอก "ดาวจร" (วันที่/เวลา/สถานที่) ในฟอร์มทางซ้าย
+          แล้วกดผูกดวงอีกครั้งเพื่อดูคำทำนายช่วงเวลานั้น
+        </p>
+      </div>
+    </section>
+    {% endif %}
+
+    {# ===== บทพูดของโหร (Oracle Reading) — การ์ดสุดท้าย ===== #}
+    {% if result.oracle %}
+    {% set o = result.oracle %}
+    <section class="prophecy-section">
+      <div class="card oracle-card oracle-{{ o.tone_class }}">
+        <h2><span class="title-deco">🔮</span> คำพยากรณ์จากโหร <span class="title-deco">🔮</span></h2>
+        <div class="oracle-subtitle">บทสรุปจากดวงดาวทั้งหมด — อ่านเหมือนนั่งคุยกับโหรหนึ่งคน</div>
+
+        <div class="oracle-greeting">{{ o.greeting }}</div>
+
+        {% if o.yoga_messages %}
+          <div class="oracle-yogas">
+            <h3>⭐ เกณฑ์ดวงพื้นฐานของคุณ</h3>
+            {% for y in o.yoga_messages %}
+              <div class="oracle-yoga sev-{{ y.severity }}">
+                <div class="oracle-yoga-text">{{ y.text | safe }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if o.dignity_highlights %}
+          <div class="oracle-dignities">
+            <h3>⚡ ตำแหน่งกำลังของดาวสำคัญ</h3>
+            <div class="dignity-grid">
+              {% for d in o.dignity_highlights %}
+                <div class="dignity-chip {{ 'strong' if d.is_strong else 'weak' }}">
+                  <span class="dignity-planet">{{ d.planet }}</span>
+                  <span class="dignity-rasi">{{ d.rasi }}</span>
+                  <span class="dignity-label">{{ d.label }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if o.headline %}
+          <div class="oracle-headline">{{ o.headline }}</div>
+        {% endif %}
+
+        {% if o.life_areas %}
+          <div class="oracle-areas">
+            {% for area in o.life_areas %}
+              <div class="oracle-area">
+                <h3>{{ area.title }}</h3>
+                {% if area.good %}
+                  <ul class="oracle-good">
+                    {% for g in area.good %}<li>✨ {{ g }}</li>{% endfor %}
+                  </ul>
+                {% endif %}
+                {% if area.warn %}
+                  <ul class="oracle-warn">
+                    {% for w in area.warn %}<li>⚠ {{ w }}</li>{% endfor %}
+                  </ul>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if o.opportunities %}
+          <div class="oracle-block oracle-block-good">
+            <h3>✨ โอกาสดี ๆ ที่กำลังเข้ามา</h3>
+            <ul>
+              {% for op in o.opportunities %}<li>{{ op }}</li>{% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        {% if o.warnings %}
+          <div class="oracle-block oracle-block-warn">
+            <h3>⚠ สิ่งที่อยากเตือนให้ระวัง</h3>
+            <ul>
+              {% for w in o.warnings %}<li>{{ w }}</li>{% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <div class="oracle-closing">{{ o.closing }}</div>
+
+        <p class="oracle-footer">
+          <small>* คำทำนายสังเคราะห์จากดาวจรกระทบดาวเดิม + เจ้าเรือนครองภพ
+          ใช้เป็นแนวทางประกอบการตัดสินใจ ไม่ใช่ข้อกำหนดตายตัว</small>
+        </p>
+      </div>
+    </section>
+    {% endif %}
+    {% endif %}
+  </main>
+
+  <!-- tooltip for planet hover (ปรากฎเมื่อ hover ดาว) -->
+  <div id="planet-tooltip" class="planet-tooltip" role="tooltip" aria-hidden="true"></div>
+
+  <footer>
+    <p>คำนวณตามคัมภีร์สุริยยาตร์ของไทย · port มาจาก Devtino.Astrology</p>
+  </footer>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
