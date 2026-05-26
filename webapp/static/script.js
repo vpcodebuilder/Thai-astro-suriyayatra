@@ -53,6 +53,29 @@ function setupDateSync(textId, pickerId) {
   });
 }
 
+function setupDatePickerButtons() {
+  document.querySelectorAll(".date-picker-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const id = btn.dataset.pickerFor;
+      const pick = document.getElementById(id);
+      if (!pick) return;
+      // วิธีมาตรฐาน (Chrome, Edge, Firefox ใหม่)
+      if (typeof pick.showPicker === "function") {
+        try {
+          pick.showPicker();
+          return;
+        } catch (err) {
+          // some browsers throw if not triggered by user gesture
+        }
+      }
+      // fallback: focus + click (iOS Safari)
+      pick.focus();
+      pick.click();
+    });
+  });
+}
+
 /* ======================================================================
    2) Planet hover tooltip
    ====================================================================== */
@@ -123,5 +146,6 @@ function setupPlanetTooltip() {
 document.addEventListener("DOMContentLoaded", () => {
   setupDateSync("birth_date_th", "birth_date_picker");
   setupDateSync("transit_date_th", "transit_date_picker");
+  setupDatePickerButtons();
   setupPlanetTooltip();
 });

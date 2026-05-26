@@ -50,16 +50,23 @@
                 id="birth_date_th"
                 value="{{ form.birth_date_th }}"
                 required
-                inputmode="numeric"
+                autocomplete="off"
+                spellcheck="false"
                 placeholder="วว/ดด/ปปปป  เช่น 15/05/2533"
-                pattern="\d{1,2}/\d{1,2}/\d{4}"
                 maxlength="10"
               />
+              <button
+                type="button"
+                class="date-picker-btn"
+                data-picker-for="birth_date_picker"
+                aria-label="เปิดปฏิทินเลือกวันที่"
+              >📅</button>
               <input
                 type="date"
                 id="birth_date_picker"
-                class="date-picker-helper"
-                title="เปิดปฏิทินเลือกวันที่"
+                class="date-picker-hidden"
+                tabindex="-1"
+                aria-hidden="true"
               />
             </div>
             <small class="hint">พิมพ์ DD/MM/YYYY (พ.ศ.) หรือกดปุ่ม 📅 เลือกจากปฏิทิน</small>
@@ -102,16 +109,23 @@
                   name="transit_date_th"
                   id="transit_date_th"
                   value="{{ form.transit_date_th }}"
-                  inputmode="numeric"
+                  autocomplete="off"
+                  spellcheck="false"
                   placeholder="วว/ดด/ปปปป"
-                  pattern="\d{1,2}/\d{1,2}/\d{4}"
                   maxlength="10"
                 />
+                <button
+                  type="button"
+                  class="date-picker-btn"
+                  data-picker-for="transit_date_picker"
+                  aria-label="เปิดปฏิทิน"
+                >📅</button>
                 <input
                   type="date"
                   id="transit_date_picker"
-                  class="date-picker-helper"
-                  title="เปิดปฏิทิน"
+                  class="date-picker-hidden"
+                  tabindex="-1"
+                  aria-hidden="true"
                 />
               </div>
             </label>
