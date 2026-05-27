@@ -32,6 +32,9 @@ from thai_astro.bhava_lord_prophecy import (
 )
 from thai_astro.oracle_narrative import compose_oracle_reading
 from thai_astro.dignities import compute_all_dignities, detect_yogas
+from thai_astro.taksa import (
+    compute_taksa, compute_transit_taksa, transit_aspects_on_taksa,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -447,6 +450,18 @@ def chart_to_view(
     dignities = compute_all_dignities(chart.planets)
     yogas = detect_yogas(chart.ascendant.zodiac.rasi, chart.planets, dignities)
 
+    # ทักษา (Taksa) — ดาวประจำวันเกิด + 8 บริวาร + ดาวเสวยอายุ
+    taksa = compute_taksa(
+        chart.ce_year, chart.month, chart.day, chart.hour, chart.minute,
+    )
+    taksa_transit_aspects = transit_aspects_on_taksa(
+        taksa,
+        chart.planets,
+        transit_chart.planets if transit_chart is not None else None,
+    )
+    # ทักษาจร (Transit Taksa) — เดิน 9 ช่องปีละ 1 ตา
+    transit_taksa = compute_transit_taksa(taksa, taksa.year_of_life)
+
     # บทพูดโหร (oracle narrative) — สังเคราะห์ทุก source
     oracle_seed = f"{chart.ce_year}-{chart.month}-{chart.day}-{chart.hour}-{chart.minute}"
     oracle_reading = compose_oracle_reading(
@@ -498,6 +513,7 @@ def chart_to_view(
         } if transit_chart is not None else None),
         "natal_bhava_lords": natal_lord_summary,
         "oracle": oracle_reading,
+        "taksa": _taksa_to_view(taksa, taksa_transit_aspects, transit_taksa),
         "info": {
             "cs_year": sr.thaloengsok_cs_year,
             "thaloengsok": f"{sr.thaloengsok.day} {THAI_MONTHS[sr.thaloengsok.month]} {sr.thaloengsok.be_year}",
@@ -512,6 +528,120 @@ def chart_to_view(
 
 
 THAI_TZ = timezone(timedelta(hours=7))
+
+
+# ============================================================
+# Taksa 3x3 grid layout (ทิศ → ตำแหน่งใน grid)
+# Layout:
+#   พายัพ(NW) | อุดร(N)   | อีสาน(NE)
+#   ประจิม(W) | [center]  | บูรพา(E)
+#   หรดี(SW)  | ทักษิณ(S) | อาคเนย์(SE)
+# ============================================================
+TAKSA_GRID_POSITIONS = {
+    "พายัพ":  (0, 0),
+    "อุดร":   (0, 1),
+    "อีสาน":  (0, 2),
+    "ประจิม": (1, 0),
+    "บูรพา":  (1, 2),
+    "หรดี":   (2, 0),
+    "ทักษิณ": (2, 1),
+    "อาคเนย์": (2, 2),
+}
+
+
+def _taksa_to_view(taksa, transit_aspects, transit_taksa=None):
+    """แปลง Taksa เป็น dict สำหรับ template (มี 3x3 grid + ทักษาจร)"""
+    # Build map: direction → transit cell info
+    transit_by_direction = {}
+    if transit_taksa is not None:
+        for c in transit_taksa.cells:
+            key = "กลาง" if c.is_center else c.direction
+            transit_by_direction[key] = {
+                "years_visited": c.years_visited,
+                "cycle_position": c.cycle_first_position,
+                "is_current": c.is_current,
+            }
+
+    grid = [[None for _ in range(3)] for _ in range(3)]
+    for b in taksa.bhavas:
+        r, c = TAKSA_GRID_POSITIONS[b.direction]
+        info = PLANET_INFO_MAP.get(b.planet, {})
+        t_info = transit_by_direction.get(b.direction, {})
+        grid[r][c] = {
+            "position": b.position, "name": b.name, "theme": b.theme,
+            "tone": b.tone, "planet": b.planet,
+            "direction": b.direction, "direction_en": b.direction_en,
+            "age_range": f"{b.age_range[0]}-{b.age_range[1]}",
+            "prediction": b.prediction,
+            "is_current_dasa": b.is_current_dasa,
+            "abbr": info.get("abbr", ""),
+            "color_class": info.get("color_class", ""),
+            "transit_years": t_info.get("years_visited", []),
+            "transit_cycle_pos": t_info.get("cycle_position", 0),
+            "transit_is_current": t_info.get("is_current", False),
+        }
+
+    return {
+        "birth_weekday_name": taksa.birth_weekday_name,
+        "birth_planet": taksa.birth_planet,
+        "birth_planet_note": taksa.birth_planet_note,
+        "age_completed_years": taksa.age_completed_years,
+        "year_of_life": taksa.year_of_life,
+        "current_dasa_planet": taksa.current_dasa_planet,
+        "current_dasa_bhava_name": taksa.current_dasa_bhava.name,
+        "current_dasa_prediction": taksa.current_dasa_bhava.prediction,
+        "age_in_current_dasa": taksa.age_in_current_dasa,
+        "next_dasa_age": taksa.next_dasa_age,
+        "next_dasa_planet": taksa.next_dasa_planet,
+        "summary": taksa.overall_summary,
+        "grid": grid,
+        "center_transit": transit_by_direction.get("กลาง", {}),
+        "bhavas": [
+            {
+                "position": b.position, "name": b.name, "theme": b.theme,
+                "tone": b.tone, "planet": b.planet,
+                "direction": b.direction, "direction_en": b.direction_en,
+                "age_range": f"{b.age_range[0]}-{b.age_range[1]}",
+                "prediction": b.prediction,
+                "is_current_dasa": b.is_current_dasa,
+                "abbr": PLANET_INFO_MAP.get(b.planet, {}).get("abbr", ""),
+                "color_class": PLANET_INFO_MAP.get(b.planet, {}).get("color_class", ""),
+            }
+            for b in taksa.bhavas
+        ],
+        "transit_aspects": transit_aspects,
+        "transit_taksa": (
+            {
+                "current_planet": transit_taksa.current_planet,
+                "current_cycle_position": transit_taksa.current_cycle_position,
+                "is_on_center": transit_taksa.is_on_center,
+                "natal_bhava_at_current": transit_taksa.natal_bhava_at_current,
+                "natal_bhava_tone": transit_taksa.natal_bhava_tone,
+                "summary": transit_taksa.summary,
+                "overlay_note": transit_taksa.overlay_note,
+                "overlay_chart": [
+                    {
+                        "position": b.position, "name": b.name, "theme": b.theme,
+                        "tone": b.tone, "planet": b.planet,
+                        "direction": b.direction, "direction_en": b.direction_en,
+                        "prediction": b.prediction,
+                        "abbr": PLANET_INFO_MAP.get(b.planet, {}).get("abbr", ""),
+                        "color_class": PLANET_INFO_MAP.get(b.planet, {}).get("color_class", ""),
+                    }
+                    for b in (transit_taksa.overlay_chart or [])
+                ] if transit_taksa.overlay_chart else None,
+                "overlay_combos": [
+                    {
+                        **c,
+                        "abbr": PLANET_INFO_MAP.get(c["planet"], {}).get("abbr", ""),
+                        "color_class": PLANET_INFO_MAP.get(c["planet"], {}).get("color_class", ""),
+                    }
+                    for c in (transit_taksa.overlay_combos or [])
+                ] if transit_taksa.overlay_combos else None,
+            }
+            if transit_taksa is not None else None
+        ),
+    }
 
 
 def _default_form() -> dict:

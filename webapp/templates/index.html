@@ -555,6 +555,215 @@
     </section>
     {% endif %}
 
+    {# ===== ทักษา (Taksa) — ดาวประจำวันเกิด + 8 บริวาร + ดาวเสวยอายุ ===== #}
+    {% if result.taksa %}
+    {% set tk = result.taksa %}
+    <section class="prophecy-section">
+      <div class="card taksa-card">
+        <h2><span class="title-deco">☸</span> ทักษา — ดาวประจำวันเกิด <span class="title-deco">☸</span></h2>
+
+        <div class="taksa-summary-bar">
+          <div class="taksa-summary-item">
+            <span class="taksa-label">เกิด</span>
+            <b>{{ tk.birth_weekday_name }}</b>
+          </div>
+          <div class="taksa-summary-item">
+            <span class="taksa-label">ดาวบริวาร</span>
+            <b>{{ tk.birth_planet }}</b>
+          </div>
+          <div class="taksa-summary-item">
+            <span class="taksa-label">อายุ</span>
+            <b>{{ tk.age_completed_years }}</b> ปี
+            <small>(ปีอายุที่ {{ tk.year_of_life }})</small>
+          </div>
+          <div class="taksa-summary-item highlight">
+            <span class="taksa-label">ดาวเสวยอายุ</span>
+            <b>{{ tk.current_dasa_planet }}</b>
+            <small>({{ tk.current_dasa_bhava_name }})</small>
+          </div>
+        </div>
+
+        {% if tk.birth_planet_note %}
+          <div class="taksa-note">📌 {{ tk.birth_planet_note }}</div>
+        {% endif %}
+
+        <div class="taksa-headline">{{ tk.summary }}</div>
+
+        {# === ทักษาจร summary === #}
+        {% if tk.transit_taksa %}
+          <div class="transit-taksa-summary {{ 'on-center' if tk.transit_taksa.is_on_center else '' }}">
+            <span class="tt-label">🔭 ทักษาจร ปีอายุที่ {{ tk.year_of_life }}</span>
+            <span class="tt-planet"><b>{{ tk.transit_taksa.current_planet }}</b></span>
+            <span class="tt-pos">(ตำแหน่งที่ {{ tk.transit_taksa.current_cycle_position }}/9)</span>
+            <span class="tt-bhava">→ ภพ<b>{{ tk.transit_taksa.natal_bhava_at_current }}</b></span>
+          </div>
+        {% endif %}
+
+        {# === 3x3 แผนภูมิทักษา === #}
+        <div class="taksa-grid-wrap">
+          <table class="taksa-grid">
+            {% for row in tk.grid %}
+              <tr>
+                {% for cell in row %}
+                  {% if cell %}
+                    <td class="taksa-cell {{ 'current-dasa' if cell.is_current_dasa else '' }} {{ 'transit-current' if cell.transit_is_current else '' }} bhava-{{ cell.tone }}">
+                      <div class="cell-direction">{{ cell.direction }} <small>({{ cell.direction_en }})</small></div>
+                      <div class="cell-planet">
+                        <span class="planet-chip {{ cell.color_class }} chip-sm">{{ cell.abbr }}</span>
+                        <b>{{ cell.planet }}</b>
+                      </div>
+                      <div class="cell-bhava-name">{{ cell.position }}. {{ cell.name }}</div>
+                      <div class="cell-age">อายุ {{ cell.age_range }}</div>
+                      {% if cell.transit_years %}
+                        <div class="cell-transit-years" title="ปีอายุที่ทักษาจรตกที่นี่">
+                          {% for y in cell.transit_years %}
+                            <span class="tt-year {{ 'current' if y == tk.year_of_life else '' }}">{{ y }}</span>
+                          {% endfor %}
+                        </div>
+                      {% endif %}
+                      {% if cell.is_current_dasa %}
+                        <div class="cell-dasa-badge">🌟 ดาวเสวยอายุ</div>
+                      {% endif %}
+                    </td>
+                  {% else %}
+                    <td class="taksa-cell taksa-center {{ 'transit-current' if tk.center_transit.is_current else '' }}">
+                      <div class="center-title">เจ้าชะตา / ตากลาง</div>
+                      <div class="center-planet-label">ลัคนา · พฤหัสบดี</div>
+                      <div class="center-age">อายุ {{ tk.age_completed_years }} ปี</div>
+                      <div class="center-dasa">
+                        <small>มหาทักษา: <b>{{ tk.current_dasa_bhava_name }}</b> ({{ tk.current_dasa_planet }})<br/>
+                        ปีที่ {{ tk.age_in_current_dasa }}/12</small>
+                      </div>
+                      {% if tk.center_transit.years_visited %}
+                        <div class="cell-transit-years center-years" title="ปีอายุที่ทักษาจรตกตากลาง">
+                          {% for y in tk.center_transit.years_visited %}
+                            <span class="tt-year {{ 'current' if y == tk.year_of_life else '' }}">{{ y }}</span>
+                          {% endfor %}
+                        </div>
+                      {% endif %}
+                    </td>
+                  {% endif %}
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </table>
+        </div>
+
+        {% if tk.transit_taksa %}
+          <div class="transit-taksa-explain">
+            <p>{{ tk.transit_taksa.summary }}</p>
+            <small>
+              💡 ตัวเลขเล็ก ๆ ในแต่ละช่อง = ปีอายุที่ทักษาจรตกช่องนั้น (เริ่มจากดาวบริวารปีที่ 1)
+              · เดินตามลำดับ 9 ตำแหน่ง (8 ทิศ + ตากลาง) ปีละ 1 ตา
+              · เมื่อนับถึงอาทิตย์จะแวะตากลาง (พฤหัสบดี) ก่อนแล้วต่อจันทร์
+            </small>
+          </div>
+
+          {% if tk.transit_taksa.overlay_chart %}
+            <div class="taksa-overlay">
+              <h3>🪷 ภพทักษาซ้อน (Overlay)</h3>
+              <p class="overlay-note">{{ tk.transit_taksa.overlay_note }}</p>
+              <div class="overlay-list">
+                {% for o in tk.transit_taksa.overlay_chart %}
+                  <div class="overlay-row bhava-{{ o.tone }}">
+                    <span class="overlay-num">{{ o.position }}</span>
+                    <div class="overlay-titles">
+                      <b>{{ o.name }}</b>
+                      <small>{{ o.theme }}</small>
+                    </div>
+                    <div class="overlay-planet">
+                      <span class="planet-chip {{ o.color_class }} chip-sm">{{ o.abbr }}</span>
+                      <b>{{ o.planet }}</b>
+                      <small>({{ o.direction }})</small>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          {% if tk.transit_taksa.overlay_combos %}
+            <div class="taksa-combos">
+              <h3>✨ ภพทักษาซ้อน × ทักษาเดิม — คำทำนายกระทบ</h3>
+              <p class="combos-intro">
+                แต่ละคู่ = ดาวเดียวกันที่ครองทั้ง<b>ภพ overlay</b>และ<b>ภพเดิม</b>ของเจ้าชะตา
+                อ่านความหมายผสม → จะเห็นว่าเรื่องช่วงนี้ส่งผลผ่านช่องทางไหน
+              </p>
+              <div class="combo-list">
+                {% for c in tk.transit_taksa.overlay_combos %}
+                  <div class="combo-row tone-{{ c.tone }}">
+                    <div class="combo-head">
+                      <span class="planet-chip {{ c.color_class }} chip-sm">{{ c.abbr }}</span>
+                      <div class="combo-label">
+                        <b>{{ c.label }}</b>
+                        <small>ผ่านดาว{{ c.planet }} ({{ c.direction }})</small>
+                      </div>
+                    </div>
+                    <div class="combo-themes">
+                      <span class="combo-theme overlay-side">
+                        <b>{{ c.overlay_name }}จร</b>: {{ c.overlay_theme }}
+                      </span>
+                      <span class="combo-arrow">×</span>
+                      <span class="combo-theme natal-side">
+                        <b>{{ c.natal_name }}เดิม</b>: {{ c.natal_theme }}
+                      </span>
+                    </div>
+                    <div class="combo-prediction">{{ c.prediction }}</div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+        {% endif %}
+
+        {# === รายการ 8 ตำแหน่ง พร้อมคำทำนาย === #}
+        <div class="taksa-bhava-list">
+          {% for b in tk.bhavas %}
+            <div class="taksa-bhava-row bhava-{{ b.tone }} {{ 'current-dasa' if b.is_current_dasa else '' }}">
+              <div class="taksa-bhava-head">
+                <span class="taksa-bhava-num">{{ b.position }}</span>
+                <div class="taksa-bhava-titles">
+                  <div class="taksa-bhava-name">{{ b.name }}
+                    {% if b.is_current_dasa %}<span class="dasa-tag">🌟 เสวยอยู่</span>{% endif %}
+                  </div>
+                  <div class="taksa-bhava-theme">{{ b.theme }}</div>
+                </div>
+                <div class="taksa-bhava-planet-info">
+                  <span class="planet-chip {{ b.color_class }} chip-sm">{{ b.abbr }}</span>
+                  <div class="planet-meta">
+                    <b>{{ b.planet }}</b>
+                    <small>{{ b.direction }} · อายุ {{ b.age_range }}</small>
+                  </div>
+                </div>
+              </div>
+              <div class="taksa-bhava-text">{{ b.prediction }}</div>
+            </div>
+          {% endfor %}
+        </div>
+
+        {# === ดาวจรกระทบดาวทักษา === #}
+        {% if tk.transit_aspects %}
+        <div class="taksa-transit-section">
+          <h3>🔭 ดาวจรกระทบดาวทักษา</h3>
+          <div class="taksa-transit-list">
+            {% for a in tk.transit_aspects %}
+              <div class="taksa-transit-row tone-{{ a.tone }}">
+                <div class="taksa-transit-tag">{{ a.bhava }}</div>
+                <div class="taksa-transit-note">{{ a.note }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <p class="prophecy-footer">
+          <small>* ทักษามาตรฐาน 8 ดาว (ดาวประจำวันเกิด + อัฏฐดาว) · มหาทักษาดาษา 96 ปี (12 ปีต่อดาว)
+          · พุธหลัง 18:00 = ราหู</small>
+        </p>
+      </div>
+    </section>
+    {% endif %}
+
     {# ===== บทพูดของโหร (Oracle Reading) — การ์ดสุดท้าย ===== #}
     {% if result.oracle %}
     {% set o = result.oracle %}

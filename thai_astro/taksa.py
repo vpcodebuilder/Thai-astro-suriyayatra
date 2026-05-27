@@ -1,0 +1,767 @@
+"""ทักษา (Taksa) — ระบบดาวประจำวันเกิด 8 ดวง 8 ทิศของโหราศาสตร์ไทย
+
+หลักการ:
+    1. ดาวประจำวันเกิดของเจ้าชะตา = "ดาวบริวาร"
+       - วันอาทิตย์ = อาทิตย์, จันทร์ = จันทร์, ... , เสาร์ = เสาร์
+       - วันพุธกลางวัน = พุธ, วันพุธกลางคืน (≥18:00) = ราหู
+    2. จากดาวบริวาร เดินลำดับทักษา "อัฏฐดาว" 8 ตำแหน่ง
+       ลำดับ: 1 อาทิตย์ → 2 จันทร์ → 3 อังคาร → 4 พุธ → 7 เสาร์
+              → 5 พฤหัสบดี → 8 ราหู → 6 ศุกร์ (วน)
+    3. 8 ตำแหน่ง:
+       1) บริวาร     ตัวเอง บริวารคนใต้บังคับ
+       2) อายุ        สุขภาพ ชีวิต
+       3) เดช         อำนาจ บารมี
+       4) ศรี         ทรัพย์สิน โชค
+       5) มูละ        ครอบครัว ราก
+       6) อุตสาหะ     การงาน ความพยายาม
+       7) มนตรี       ครู ผู้อุปถัมภ์
+       8) กาลกิณี     โชคร้าย ศัตรู
+    4. 8 ทิศ (อัฏฐทิศ) ของแต่ละดาว — FIX ไม่หมุน:
+       บูรพา-อาทิตย์ / อาคเนย์-จันทร์ / ทักษิณ-อังคาร / หรดี-พุธ
+       ประจิม-เสาร์ / พายัพ-พฤหัสบดี / อุดร-ราหู / อีสาน-ศุกร์
+
+มหาทักษา (Maha Taksa Dasa):
+    96 ปี = 8 ดาว × 12 ปี เริ่มจากดาวบริวาร
+    ปีที่ 1-12: บริวาร, 13-24: อายุ, 25-36: เดช, 37-48: ศรี,
+    49-60: มูละ, 61-72: อุตสาหะ, 73-84: มนตรี, 85-96: กาลกิณี
+    (อายุ > 96 → วนรอบใหม่)
+
+ตำราอ้างอิง:
+    - อ.เทพย์ สาริกบุตร, "ตำราทักษา 8 ดาว"
+    - พล.ต.ประยูร พลอารีย์, "ทักษา-พยากรณ์"
+    - ตำราหลวงพรหมโยธี
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta, timezone
+from typing import Dict, List, Optional, Tuple
+
+
+# ============================================================
+# Weekday → Planet (ดาวประจำวันเกิด)
+# ============================================================
+# Python datetime.weekday(): Mon=0, Tue=1, ..., Sun=6
+WEEKDAY_PLANET = {
+    0: "จันทร์",       # Mon
+    1: "อังคาร",       # Tue
+    2: "พุธ",          # Wed (day only — see compute_birth_planet)
+    3: "พฤหัสบดี",     # Thu
+    4: "ศุกร์",        # Fri
+    5: "เสาร์",        # Sat
+    6: "อาทิตย์",      # Sun
+}
+
+WEEKDAY_NAME_TH = {
+    0: "วันจันทร์",
+    1: "วันอังคาร",
+    2: "วันพุธ",
+    3: "วันพฤหัสบดี",
+    4: "วันศุกร์",
+    5: "วันเสาร์",
+    6: "วันอาทิตย์",
+}
+
+# ลำดับเดินดาวทักษา (อัฏฐดาว)
+# 1 อาทิตย์ → 2 จันทร์ → 3 อังคาร → 4 พุธ → 7 เสาร์ → 5 พฤหัสบดี → 8 ราหู → 6 ศุกร์
+TAKSA_CYCLE = [
+    "อาทิตย์", "จันทร์", "อังคาร", "พุธ",
+    "เสาร์", "พฤหัสบดี", "ราหู", "ศุกร์",
+]
+
+# 8 ทิศ ของแต่ละดาว (FIX layout) — ตามตำราไทยมาตรฐาน
+# ศุกร์ประจำทิศเหนือ (อุดร) แล้วไล่ตามลำดับทักษาเดินตามเข็มนาฬิกา:
+#   N=ศุกร์ → NE=อาทิตย์ → E=จันทร์ → SE=อังคาร → S=พุธ → SW=เสาร์ → W=พฤหัส → NW=ราหู
+PLANET_DIRECTION = {
+    "ศุกร์":    "อุดร",        # N
+    "อาทิตย์":   "อีสาน",      # NE
+    "จันทร์":    "บูรพา",      # E
+    "อังคาร":   "อาคเนย์",    # SE
+    "พุธ":       "ทักษิณ",     # S
+    "เสาร์":    "หรดี",       # SW
+    "พฤหัสบดี": "ประจิม",     # W
+    "ราหู":     "พายัพ",      # NW
+}
+DIRECTION_PLANET = {v: k for k, v in PLANET_DIRECTION.items()}
+
+DIRECTION_ABBR_EN = {
+    "บูรพา": "E",   "อาคเนย์": "SE",  "ทักษิณ": "S",  "หรดี": "SW",
+    "ประจิม": "W", "พายัพ": "NW",   "อุดร": "N",    "อีสาน": "NE",
+}
+
+# 8 ตำแหน่งบริวาร (Bhava names)
+BHAVA_NAMES = [
+    "บริวาร",   # 1
+    "อายุ",      # 2
+    "เดช",      # 3
+    "ศรี",       # 4
+    "มูละ",      # 5
+    "อุตสาหะ",  # 6
+    "มนตรี",    # 7
+    "กาลกิณี",  # 8
+]
+
+# ความหมายของแต่ละตำแหน่ง (modern wording)
+BHAVA_THEME = {
+    1: "ตัวเอง คนใต้บังคับ ลูกน้อง เพื่อนร่วมงาน บริวาร",
+    2: "สุขภาพกายและใจ พลังชีวิต อายุยืน",
+    3: "อำนาจ ตำแหน่ง บารมี ความเป็นที่ยอมรับ",
+    4: "ทรัพย์สิน เงินทอง โชคลาภ ความสุขสบาย",
+    5: "ครอบครัว บิดามารดา บ้าน ที่ดิน รากเหง้า",
+    6: "การงาน อาชีพ ความพยายาม กิจการที่ทำ",
+    7: "ครู ที่ปรึกษา ผู้ใหญ่อุปถัมภ์ คนค้ำชู",
+    8: "ศัตรู โชคร้าย ปัญหา สิ่งที่ควรหลีกเลี่ยง",
+}
+
+BHAVA_TONE = {
+    1: "good", 2: "good", 3: "good", 4: "good",
+    5: "good", 6: "good", 7: "good", 8: "bad",
+}
+
+# มหาทักษา dasa: 12 ปีต่อดาว
+DASA_YEARS_PER_PLANET = 12
+DASA_TOTAL = 96
+
+
+# ============================================================
+# คำทำนายดาว × ตำแหน่ง (8 × 8 = 64 combinations)
+# ============================================================
+PREDICTION: Dict[Tuple[str, int], str] = {
+    # === บริวาร (1) ===
+    ("อาทิตย์", 1):   "เจ้าชะตามีภาวะผู้นำ บุคลิกแข็งแกร่ง คนเคารพ บริวารยอมตาม มักได้รับงานคุมคน",
+    ("จันทร์", 1):    "เจ้าชะตาอ่อนโยนเข้ากับคนง่าย เป็นที่รักของคนรอบข้าง แต่อาจอ่อนต่อการตัดสินใจสำคัญ",
+    ("อังคาร", 1):   "เจ้าชะตากล้าหาญมุ่งมั่น สู้ชีวิต แต่ใจร้อน คนใต้บังคับต้องเป็นคนทน",
+    ("พุธ", 1):       "เจ้าชะตาฉลาด พูดเก่ง เข้าสังคมดี คนรอบข้างคุยถูกคอ มีเพื่อนหลากหลาย",
+    ("พฤหัสบดี", 1): "เจ้าชะตามีบุญวาสนา คนเคารพนับถือ บริวารดี ผู้ใหญ่เมตตา",
+    ("ศุกร์", 1):     "เจ้าชะตาเสน่ห์ดี คนรัก มีศิลปะในตัว บริวารเป็นมิตร ชอบของสวยงาม",
+    ("เสาร์", 1):    "เจ้าชะตาจริงจัง รับผิดชอบสูง บริวารต้องอดทน แต่มั่นคงในระยะยาว",
+    ("ราหู", 1):      "เจ้าชะตาแปลก ๆ เสน่ห์ลึกลับ บริวารหลากหลาย อาจมีเรื่องลึกลับ-ต่างชาติ",
+
+    # === อายุ (2) — สุขภาพ ===
+    ("อาทิตย์", 2):   "พลังกายเด่น แต่ระวังโรคหัวใจ ตา ความดัน หรือเรื่องบิดา",
+    ("จันทร์", 2):    "สุขภาพไวต่ออารมณ์ ระวังโรคกระเพาะ ระบบน้ำในร่างกาย",
+    ("อังคาร", 2):   "ร่างกายแข็งแรงพื้นฐานดี แต่ระวังอุบัติเหตุ-ผ่าตัด-ไข้สูง",
+    ("พุธ", 2):       "สุขภาพเส้นประสาท-สมอง ระวังความเครียดสะสมและความวิตกกังวล",
+    ("พฤหัสบดี", 2): "สุขภาพดีมีบุญหนุน อายุยืน แต่ระวังโรคที่มาจากการกินมากเกิน",
+    ("ศุกร์", 2):     "สุขภาพดูดี แต่ระวังโรคที่มาจากความสุข เช่น เบาหวาน ระบบสืบพันธุ์",
+    ("เสาร์", 2):    "สุขภาพเปราะบางในวัยเยาว์ แต่แข็งแรงในวัยผู้ใหญ่ ระวังกระดูก-ข้อ",
+    ("ราหู", 2):      "สุขภาพมีจุดลึกลับวินิจฉัยยาก ระวังโรคไม่ทราบสาเหตุ พิษ-แพ้",
+
+    # === เดช (3) — อำนาจ ตำแหน่ง ===
+    ("อาทิตย์", 3):   "อำนาจชัดเจน ได้รับการยอมรับในสาธารณะ มักได้ตำแหน่งผู้นำ",
+    ("จันทร์", 3):    "บารมีมาแบบนุ่มนวล คนยอมเพราะรักไม่ใช่กลัว ทำงานบริการคน",
+    ("อังคาร", 3):   "อำนาจมาจากการต่อสู้ ขึ้นด้วยฝีมือและความกล้า เหมาะงานเสี่ยง",
+    ("พุธ", 3):       "อำนาจจากปัญญาและคำพูด เหมาะเป็นนักพูด นักเขียน ครู ทนาย",
+    ("พฤหัสบดี", 3): "บารมีจากความรู้และคุณธรรม คนกราบไหว้ เหมาะงานราชการ-ครู-ที่ปรึกษา",
+    ("ศุกร์", 3):     "อำนาจจากเสน่ห์และศิลปะ เหมาะงานบันเทิง แฟชั่น ความงาม",
+    ("เสาร์", 3):    "อำนาจช้าแต่มั่นคง ขึ้นจากล่างสุดสู่สูงสุดด้วยความอดทน",
+    ("ราหู", 3):      "อำนาจแบบไม่ปกติ ขึ้นเร็วลงเร็ว เหมาะธุรกิจใหม่ ๆ เทคโนโลยี",
+
+    # === ศรี (4) — ทรัพย์สิน ===
+    ("อาทิตย์", 4):   "ทรัพย์มาจากตำแหน่งและการได้รับการยอมรับ มักมีคนช่วยส่งเสริม",
+    ("จันทร์", 4):    "ทรัพย์มาแบบเรียบ ๆ จากครอบครัวหรือสุภาพสตรี เก็บออมได้ดี",
+    ("อังคาร", 4):   "ทรัพย์ได้จากการลงทุน-เสี่ยง ต้องสู้แต่ได้มาก ระวังเสียเร็ว",
+    ("พุธ", 4):       "ทรัพย์จากการค้า การพูด การเขียน สัญญา และเทคโนโลยี",
+    ("พฤหัสบดี", 4): "ทรัพย์มีบุญหนุน รวยแบบไม่ต้องดิ้นมาก โชคจากผู้ใหญ่/ต่างประเทศ",
+    ("ศุกร์", 4):     "ทรัพย์มาจากความสวยงาม ศิลปะ แฟชั่น ของหรู มีลาภลอยบ่อย",
+    ("เสาร์", 4):    "ทรัพย์ค่อย ๆ สะสม ไม่รวยเร็วแต่มั่นคง อสังหาริมทรัพย์ระยะยาว",
+    ("ราหู", 4):      "ทรัพย์มาแบบฉับพลัน-ผิดปกติ มาเร็วไปเร็ว ระวังการลงทุนเสี่ยง",
+
+    # === มูละ (5) — ครอบครัว บ้าน ===
+    ("อาทิตย์", 5):   "บิดามีอำนาจ ครอบครัวมีเกียรติ บ้านเป็นศูนย์รวมคน",
+    ("จันทร์", 5):    "ครอบครัวอบอุ่น คุณแม่เป็นที่พึ่ง บ้านสงบสุข มีรากชัดเจน",
+    ("อังคาร", 5):   "ครอบครัวมีลักษณะแข็ง อาจขัดแย้งกันบ้าง แต่รักกัน บ้านอาจเปลี่ยนบ่อย",
+    ("พุธ", 5):       "พี่น้องเก่ง คุยกันถูกคอ บ้านเป็นที่รวมความรู้และความคิด",
+    ("พฤหัสบดี", 5): "ครอบครัวมีบุญ ผู้ใหญ่ในบ้านเป็นครู มรดกบุญสืบทอด",
+    ("ศุกร์", 5):     "ครอบครัวอบอุ่นมีความสุข บ้านสวยงาม เน้นความสบาย",
+    ("เสาร์", 5):    "ครอบครัวต้องอดทน บิดามารดาเข้มงวด แต่สอนชีวิตให้แกร่ง",
+    ("ราหู", 5):      "ครอบครัวซับซ้อน อาจห่างบ้านเกิด มีรากในต่างแดน",
+
+    # === อุตสาหะ (6) — การงาน ===
+    ("อาทิตย์", 6):   "การงานเด่น เหมาะงานคุมคน-ราชการ-ผู้บริหาร ตำแหน่งสูง",
+    ("จันทร์", 6):    "การงานเกี่ยวกับคน-บริการ-สาธารณสุข-ผู้หญิง-ของกิน",
+    ("อังคาร", 6):   "การงานต้องสู้ เหมาะวิศวกร ทหาร ตำรวจ กีฬา ผ่าตัด ช่าง",
+    ("พุธ", 6):       "การงานใช้สมอง-คำพูด เหมาะนักเขียน นักวิเคราะห์ ไอที สื่อ ครู",
+    ("พฤหัสบดี", 6): "การงานมีคุณธรรม เหมาะครู ที่ปรึกษา การเงิน กฎหมาย ศาสนา",
+    ("ศุกร์", 6):     "การงานเน้นความสวยงาม-สังคม เหมาะศิลปะ แฟชั่น บันเทิง บริการ",
+    ("เสาร์", 6):    "การงานต้องอดทน-รับผิดชอบสูง เหมาะวิศวกร ก่อสร้าง เกษตร เหมือง",
+    ("ราหู", 6):      "การงานสายใหม่-ผิดปกติ เทคโนโลยี ต่างประเทศ คริปโต อะไรที่คนไม่ค่อยทำ",
+
+    # === มนตรี (7) — ครู ผู้อุปถัมภ์ ===
+    ("อาทิตย์", 7):   "ผู้ใหญ่ที่มีอำนาจช่วยเหลือ เจ้านายเมตตา บิดาเป็นที่พึ่ง",
+    ("จันทร์", 7):    "ผู้หญิงผู้ใหญ่ คุณแม่ พี่สาว ครูผู้หญิง เป็นที่พึ่ง",
+    ("อังคาร", 7):   "คนสายแอ็คชั่นช่วยเหลือ นักธุรกิจตัวจริง ผู้นำที่กล้าตัดสินใจ",
+    ("พุธ", 7):       "ที่ปรึกษาด้านความรู้-การเงิน-กฎหมาย-เทคโนโลยีช่วยเหลือ",
+    ("พฤหัสบดี", 7): "ครูบาอาจารย์-พระสงฆ์-ผู้ใหญ่มีคุณธรรมช่วยเหลือ มีบุญพาเจอ",
+    ("ศุกร์", 7):     "ผู้หญิงสวย-คนในวงสังคมศิลปะช่วยเหลือ มีคนรักช่วยสนับสนุน",
+    ("เสาร์", 7):    "ผู้ใหญ่ที่ผ่านชีวิตมาแล้ว-คนแก่-คนวงราชการช่วย ค่อยเป็นค่อยไป",
+    ("ราหู", 7):      "คนต่างชาติ-คนหลากหลาย-คนวงการแปลก ๆ มาช่วยอย่างไม่คาดคิด",
+
+    # === กาลกิณี (8) — ระวัง ===
+    ("อาทิตย์", 8):   "ระวังเจ้านาย-ผู้ใหญ่-บิดาทำลายชะตา หลีกเลี่ยงการขัดแย้งกับคนมีอำนาจ",
+    ("จันทร์", 8):    "ระวังเรื่องครอบครัว-ผู้หญิง-อารมณ์ทำลายตัวเอง อย่าตัดสินใจด้วยอารมณ์",
+    ("อังคาร", 8):   "ระวังอุบัติเหตุ-การต่อสู้-การผ่าตัด หลีกเลี่ยงคนใจร้อนและของมีคม",
+    ("พุธ", 8):       "ระวังคำพูด-สัญญา-ข่าวลือ-การถูกหลอก ตรวจเอกสารทุกครั้ง",
+    ("พฤหัสบดี", 8): "ระวังคนที่ดูเป็นผู้ใหญ่/เป็นครูแต่ฉ้อโกง อย่าเชื่อใครง่ายเรื่องบุญ",
+    ("ศุกร์", 8):     "ระวังเรื่องความรัก-คู่ครอง-ของหรูทำให้เสียทรัพย์ อย่าหลงความสุขชั่วคราว",
+    ("เสาร์", 8):    "ระวังภาระหนัก-โรคเรื้อรัง-คดียืดเยื้อ อย่ายอมรับความรับผิดชอบที่ไม่ใช่ของตน",
+    ("ราหู", 8):      "ระวังเรื่องลึกลับ-การหลอกลวง-ของผิดกฎหมาย-การพนัน หลีกเลี่ยงทางลัด",
+}
+
+
+# ============================================================
+# Public API
+# ============================================================
+@dataclass
+class TaksaBhava:
+    position: int                      # 1-8
+    name: str                          # "บริวาร" ... "กาลกิณี"
+    theme: str                         # ความหมายของตำแหน่ง
+    tone: str                          # "good" | "bad"
+    planet: str                        # ดาวที่อยู่ตำแหน่งนี้
+    direction: str                     # ทิศของดาวนั้น (FIX)
+    direction_en: str                  # "E", "SE", ...
+    age_range: Tuple[int, int]         # (1, 12), (13, 24), ...
+    prediction: str                    # คำทำนายเฉพาะ
+    is_current_dasa: bool = False      # ดาวนี้กำลังเสวยอายุหรือเปล่า
+
+
+CENTER_PLANET = "พฤหัสบดี"   # ตากลาง = พฤหัสบดี (ลัคนา)
+CENTER_LABEL = "ตากลาง"
+
+# 9-cycle สำหรับทักษาจร (แทรกตากลางหลังอาทิตย์)
+# เดินรอบละ 1 ปี: ปี 1 = ดาวบริวาร, ปี 2 = ถัดไป, ...
+# เมื่อถึงอาทิตย์ → แวะตากลาง → ค่อยต่อจันทร์
+TRANSIT_CYCLE_9 = [
+    "อาทิตย์",     # 0
+    "ตากลาง",     # 1 (พฤหัสบดี-center)
+    "จันทร์",      # 2
+    "อังคาร",      # 3
+    "พุธ",         # 4
+    "เสาร์",       # 5
+    "พฤหัสบดี",    # 6 (outer)
+    "ราหู",        # 7
+    "ศุกร์",       # 8
+]
+
+
+@dataclass
+class TaksaTransitCell:
+    """1 ช่องในตารางทักษาจร"""
+    direction: str           # "บูรพา" หรือ "กลาง"
+    direction_en: str        # "E" หรือ "C"
+    planet: str              # ดาวที่ครองช่อง
+    is_center: bool
+    is_current: bool         # ดาวจรอยู่ที่นี่ ณ ปีอายุปัจจุบัน
+    years_visited: List[int] # ปีอายุที่ตกที่ช่องนี้ (1..year_of_life)
+    cycle_first_position: int  # ลำดับ 1-9 ของช่องนี้นับจากดาวบริวาร
+
+
+@dataclass
+class TransitTaksa:
+    year_of_life: int                     # ปีอายุปัจจุบัน
+    current_planet: str                   # ดาวที่ทักษาจรครอง ณ ปีนี้
+    current_cycle_position: int           # 1-9 (ตำแหน่งใน cycle จากบริวาร)
+    is_on_center: bool                    # ทักษาจรอยู่ตากลางหรือเปล่า
+    natal_bhava_at_current: str           # ปีนี้ตกในภพอะไรของทักษาเดิม
+    natal_bhava_tone: str                 # tone ของภพในชะตาเดิม
+    cells: List[TaksaTransitCell]         # 9 ช่อง
+    overlay_chart: Optional[List["TaksaBhava"]]  # ถ้าจรตกตากลาง: chart ใหม่
+    overlay_combos: Optional[List[dict]]  # ผลกระทบ overlay × natal (8 รายการ)
+    overlay_note: str                     # คำอธิบาย overlay
+    summary: str                          # สรุป 1-2 ประโยค
+
+
+@dataclass
+class Taksa:
+    birth_weekday: int                 # 0-6 (Mon=0)
+    birth_weekday_name: str            # "วันอาทิตย์"
+    birth_planet: str                  # ดาวประจำวันเกิด
+    birth_planet_note: str             # คำอธิบายเพิ่ม (เช่น "พุธกลางคืน=ราหู")
+    age_completed_years: int           # อายุครบปี
+    year_of_life: int                  # ปีอายุ (1-based)
+    current_dasa_planet: str           # ดาวเสวยอายุปัจจุบัน
+    current_dasa_bhava: TaksaBhava     # ตำแหน่งของดาวเสวยอายุ
+    age_in_current_dasa: int           # อยู่ในช่วงดาวนี้มากี่ปี (1-12)
+    next_dasa_age: int                 # อายุที่จะเปลี่ยนดาวเสวย
+    next_dasa_planet: str              # ดาวถัดไป
+    bhavas: List[TaksaBhava]           # 8 ตำแหน่ง
+    overall_summary: str               # สรุปสั้น
+
+
+# ============================================================
+# Computation
+# ============================================================
+def compute_birth_planet(weekday: int, hour: int) -> Tuple[str, str]:
+    """หาดาวประจำวันเกิด
+    weekday: 0=Mon ... 6=Sun (Python convention)
+    hour: 0-23
+    คืน (ดาว, note)
+    """
+    if weekday == 2:  # Wednesday
+        if hour >= 18 or hour < 6:
+            return "ราหู", "วันพุธกลางคืน (≥ 18:00) = ราหู"
+        return "พุธ", "วันพุธกลางวัน = พุธ"
+    return WEEKDAY_PLANET[weekday], ""
+
+
+def compute_age_years(birth_date: date, today: date) -> Tuple[int, int]:
+    """คืน (completed_years, year_of_life)
+    year_of_life = ปีอายุแบบไทย (1-based) = completed + 1
+    """
+    years = today.year - birth_date.year
+    # ถ้ายังไม่ถึงวันเกิดในปีนี้ ลบ 1
+    if (today.month, today.day) < (birth_date.month, birth_date.day):
+        years -= 1
+    if years < 0:
+        years = 0
+    return years, years + 1
+
+
+def _dasa_index_for_year(year_of_life: int) -> int:
+    """ปีอายุ → index ของ bhava (0-7) ในรอบ 96 ปี"""
+    if year_of_life < 1:
+        return 0
+    return ((year_of_life - 1) // DASA_YEARS_PER_PLANET) % len(BHAVA_NAMES)
+
+
+def compute_taksa(
+    birth_ce_year: int,
+    birth_month: int,
+    birth_day: int,
+    birth_hour: int,
+    birth_minute: int = 0,
+    today: Optional[date] = None,
+) -> Taksa:
+    """คำนวณทักษาทั้งหมด"""
+    birth = date(birth_ce_year, birth_month, birth_day)
+    if today is None:
+        thai_tz = timezone(timedelta(hours=7))
+        today = datetime.now(thai_tz).date()
+
+    weekday = birth.weekday()
+    weekday_name = WEEKDAY_NAME_TH[weekday]
+    birth_planet, planet_note = compute_birth_planet(weekday, birth_hour)
+
+    completed, year_of_life = compute_age_years(birth, today)
+
+    # หา index ของดาวบริวารใน TAKSA_CYCLE
+    start_idx = TAKSA_CYCLE.index(birth_planet)
+
+    # สร้าง 8 บริวาร
+    bhavas: List[TaksaBhava] = []
+    current_dasa_idx = _dasa_index_for_year(year_of_life)
+    for i in range(8):
+        bhava_position = i + 1
+        planet_idx = (start_idx + i) % len(TAKSA_CYCLE)
+        planet = TAKSA_CYCLE[planet_idx]
+        age_start = i * DASA_YEARS_PER_PLANET + 1
+        age_end = (i + 1) * DASA_YEARS_PER_PLANET
+        bhava = TaksaBhava(
+            position=bhava_position,
+            name=BHAVA_NAMES[i],
+            theme=BHAVA_THEME[bhava_position],
+            tone=BHAVA_TONE[bhava_position],
+            planet=planet,
+            direction=PLANET_DIRECTION[planet],
+            direction_en=DIRECTION_ABBR_EN[PLANET_DIRECTION[planet]],
+            age_range=(age_start, age_end),
+            prediction=PREDICTION.get(
+                (planet, bhava_position),
+                f"ดาว{planet}ครอง{BHAVA_NAMES[i]} — ผลผสมระหว่างคุณสมบัติของ{planet}กับเรื่อง{BHAVA_THEME[bhava_position]}",
+            ),
+            is_current_dasa=(i == current_dasa_idx),
+        )
+        bhavas.append(bhava)
+
+    current_bhava = bhavas[current_dasa_idx]
+    age_in_current = ((year_of_life - 1) % DASA_YEARS_PER_PLANET) + 1
+    next_dasa_age = current_dasa_idx * DASA_YEARS_PER_PLANET + DASA_YEARS_PER_PLANET + 1
+    next_idx = (current_dasa_idx + 1) % 8
+    next_planet = bhavas[next_idx].planet
+
+    # สรุป
+    if current_bhava.name == "กาลกิณี":
+        summary = (
+            f"ปีอายุที่ {year_of_life} อยู่ในช่วง \"กาลกิณี\" "
+            f"ดาวเสวยอายุคือ{current_bhava.planet} — เป็นช่วงทดสอบ "
+            f"ต้องระวังเรื่อง{BHAVA_THEME[8]} อีกประมาณ "
+            f"{next_dasa_age - year_of_life} ปีจะพ้นช่วงนี้"
+        )
+    elif current_bhava.name in ("ศรี", "เดช", "มนตรี"):
+        summary = (
+            f"ปีอายุที่ {year_of_life} อยู่ในช่วง \"{current_bhava.name}\" "
+            f"ดาวเสวยอายุคือ{current_bhava.planet} — ช่วงดี "
+            f"เรื่อง{BHAVA_THEME[current_bhava.position]}เด่นเป็นพิเศษ"
+        )
+    else:
+        summary = (
+            f"ปีอายุที่ {year_of_life} อยู่ในช่วง \"{current_bhava.name}\" "
+            f"ดาวเสวยอายุคือ{current_bhava.planet} — "
+            f"เน้นเรื่อง{BHAVA_THEME[current_bhava.position]}"
+        )
+
+    return Taksa(
+        birth_weekday=weekday,
+        birth_weekday_name=weekday_name,
+        birth_planet=birth_planet,
+        birth_planet_note=planet_note,
+        age_completed_years=completed,
+        year_of_life=year_of_life,
+        current_dasa_planet=current_bhava.planet,
+        current_dasa_bhava=current_bhava,
+        age_in_current_dasa=age_in_current,
+        next_dasa_age=next_dasa_age,
+        next_dasa_planet=next_planet,
+        bhavas=bhavas,
+        overall_summary=summary,
+    )
+
+
+# ============================================================
+# Transit Taksa (ทักษาจร) — เดินรอบ 9 ช่อง ปีละ 1 ตา
+# ============================================================
+def _start_idx_in_transit_cycle(birth_planet: str) -> int:
+    """หา index ของดาวบริวารใน TRANSIT_CYCLE_9
+    ถ้าเกิดวันพฤหัส (ดาวบริวาร = พฤหัส) — ใช้ตำแหน่ง outer ของพฤหัส (idx 6)
+    ไม่ใช่ center (idx 1)
+    """
+    # ค้นหา outer position ก่อน (สำคัญสำหรับพฤหัส)
+    for i, slot in enumerate(TRANSIT_CYCLE_9):
+        if slot == birth_planet:
+            return i
+    return 0  # fallback
+
+
+# ============================================================
+# Overlay × Natal combination predictions (ภพทักษาซ้อนกระทบทักษาเดิม)
+# ============================================================
+# Specific overrides — คู่ที่ตำราเน้นชัด
+OVERLAY_NATAL_OVERRIDES: Dict[Tuple[int, int], str] = {
+    # (overlay_position, natal_position) → text
+    (1, 1):  "บริวารจรซ้อนบริวารเดิม — ปีของตัวเองเต็มที่ ทุกอย่างหมุนรอบตัวคุณ ตัดสินใจชีวิตได้",
+    (1, 2):  "บริวารจร × อายุเดิม — ตัวคุณช่วงนี้สุขภาพจะเด่น ให้ความสำคัญกับร่างกายและจิตใจ",
+    (1, 3):  "บริวารจร × เดชเดิม — ตัวคุณช่วงนี้ก้าวขึ้นมีอำนาจ คนยอมรับ ภาพลักษณ์โดดเด่น",
+    (1, 4):  "บริวารจร × ศรีเดิม — ตัวคุณช่วงนี้สัมพันธ์กับทรัพย์ มีเงินมาเลี้ยงตัวเอง บุคลิกขึ้นเพราะฐานะ",
+    (1, 5):  "บริวารจร × มูละเดิม — ตัวคุณช่วงนี้กลับสู่ราก ครอบครัว/บ้านมีอิทธิพล",
+    (1, 6):  "บริวารจร × อุตสาหะเดิม — ตัวคุณช่วงนี้คือการงาน งานคือชีวิต ทุกอย่างผูกกับอาชีพ",
+    (1, 7):  "บริวารจร × มนตรีเดิม — ตัวคุณช่วงนี้ผูกกับครู/ผู้ใหญ่ มีคนคอยชี้แนะ",
+    (1, 8):  "บริวารจร × กาลกิณีเดิม — ⚠ ตัวคุณช่วงนี้ตกอยู่บนรากที่เคยมีปัญหา ใช้ช่วงนี้รื้อ-แก้ของเก่า",
+
+    (2, 4):  "อายุจร × ศรีเดิม — สุขภาพดี เพราะมีทรัพย์ดูแลตัวเอง",
+    (2, 6):  "อายุจร × อุตสาหะเดิม — งานหนักทำให้สุขภาพต้องระวัง พักผ่อนให้พอ",
+    (2, 8):  "อายุจร × กาลกิณีเดิม — ⚠ สุขภาพช่วงนี้กระทบกับปัญหาเก่าที่ค้างคา ตรวจร่างกายให้ละเอียด",
+
+    (3, 1):  "เดชจร × บริวารเดิม — อำนาจขึ้นจากตัวเอง ฝีมือล้วน ๆ คนเห็นความสามารถ",
+    (3, 4):  "เดชจร × ศรีเดิม — อำนาจและทรัพย์ขึ้นพร้อมกัน เป็นช่วงทอง — รับโอกาสก้าวขึ้นได้เลย",
+    (3, 6):  "เดชจร × อุตสาหะเดิม — ตำแหน่งสูงขึ้นในที่ทำงาน — เลื่อนขั้น/เลื่อนตำแหน่ง",
+    (3, 8):  "เดชจร × กาลกิณีเดิม — ⚠ อำนาจที่จะมา ระวังจะถูกใส่ร้าย/ทำลายชื่อ",
+
+    (4, 1):  "ศรีจร × บริวารเดิม — ทรัพย์มาเลี้ยงตัวคุณโดยตรง รายได้พุ่ง",
+    (4, 6):  "ศรีจร × อุตสาหะเดิม — ทรัพย์มาจากการงานหลัก — กำไรจากอาชีพ โบนัส",
+    (4, 7):  "ศรีจร × มนตรีเดิม — ผู้ใหญ่/ครูช่วยเรื่องการเงิน — มีคนช่วยให้รวย",
+    (4, 8):  "ศรีจร × กาลกิณีเดิม — ⚠ ทรัพย์ที่จะมาอาจกระทบของเก่าที่เป็นปัญหา ระวังการลงทุน-การกู้",
+
+    (5, 1):  "มูละจร × บริวารเดิม — ครอบครัวยอมรับตัวคุณ บ้านอบอุ่น คนในครอบครัวเห็นค่า",
+    (5, 4):  "มูละจร × ศรีเดิม — ครอบครัวรับทรัพย์ บ้านมั่นคงเพราะการเงิน — ซื้อบ้าน/รถได้",
+    (5, 6):  "มูละจร × อุตสาหะเดิม — ครอบครัวกับการงานเชื่อมกัน อาจสืบทอดกิจการ",
+    (5, 8):  "มูละจร × กาลกิณีเดิม — ⚠ ปัญหาครอบครัว/บ้านที่ค้างคาจะปะทุขึ้น แก้ไขให้ดี",
+
+    (6, 1):  "อุตสาหะจร × บริวารเดิม — การงานที่ทำจะแสดงตัวตน — โปรเจกต์ที่ตัวเองเป็นจุดเด่น",
+    (6, 3):  "อุตสาหะจร × เดชเดิม — งานนำอำนาจ — ตำแหน่งสูงจากผลงาน",
+    (6, 4):  "อุตสาหะจร × ศรีเดิม — การงานนำทรัพย์ — รายได้เพิ่มจากการทำงานหนัก",
+    (6, 8):  "อุตสาหะจร × กาลกิณีเดิม — ⚠ การงานช่วงนี้ลำบาก — คู่แข่งเยอะ คนยังไม่เห็นค่า",
+
+    (7, 1):  "มนตรีจร × บริวารเดิม — ผู้ใหญ่/ครูทำให้ตัวคุณเปลี่ยน — มี mentor ที่เปลี่ยนชีวิต",
+    (7, 4):  "มนตรีจร × ศรีเดิม — ครู/ผู้อุปถัมภ์ช่วยเรื่องทรัพย์ — มีคนชี้ทางทำเงิน",
+    (7, 6):  "มนตรีจร × อุตสาหะเดิม — มีครู/ที่ปรึกษาช่วยเรื่องการงาน — ขอคำแนะนำได้",
+    (7, 8):  "มนตรีจร × กาลกิณีเดิม — ครู/ผู้ใหญ่ช่วยแก้ปัญหาเก่า — รับคำปรึกษาจริงจัง",
+
+    (8, 1):  "กาลกิณีจร × บริวารเดิม — ⚠ ระวังสุขภาพและบุคลิกของตัวเอง — อย่าโชว์-อย่าแสดงเด่นเกิน",
+    (8, 2):  "กาลกิณีจร × อายุเดิม — ⚠ ระวังสุขภาพช่วงนี้เป็นพิเศษ ตรวจร่างกายให้ละเอียด",
+    (8, 3):  "กาลกิณีจร × เดชเดิม — ⚠ ระวังถูกแย่งอำนาจ-ทำลายชื่อ อย่าทะเลาะกับเจ้านาย",
+    (8, 4):  "กาลกิณีจร × ศรีเดิม — ⚠⚠ ระวังทรัพย์ที่สุด — อย่าลงทุนเสี่ยง อย่าให้กู้",
+    (8, 5):  "กาลกิณีจร × มูละเดิม — ⚠ ระวังเรื่องครอบครัว/บ้าน อาจมีคนป่วย-ของเสีย",
+    (8, 6):  "กาลกิณีจร × อุตสาหะเดิม — ⚠ ระวังการงาน — อย่าลาออกเร่งด่วน รักษาตำแหน่งไว้",
+    (8, 7):  "กาลกิณีจร × มนตรีเดิม — ⚠ ระวังครู/ที่ปรึกษาเสีย — อย่าไว้ใจที่ปรึกษาคนใหม่",
+    (8, 8):  "กาลกิณีจร × กาลกิณีเดิม — ⚠⚠⚠ ทุกข์ซ้อนทุกข์ แต่ถ้าผ่านได้คือวิปริต-ราชโยค (พลิกร้ายเป็นดี)",
+}
+
+
+def _combo_text(o_bhava: TaksaBhava, n_bhava: TaksaBhava) -> str:
+    """สร้างคำทำนายเมื่อ overlay bhava × natal bhava มากระทบกัน"""
+    key = (o_bhava.position, n_bhava.position)
+    if key in OVERLAY_NATAL_OVERRIDES:
+        return OVERLAY_NATAL_OVERRIDES[key]
+
+    o_name = o_bhava.name
+    n_name = n_bhava.name
+    o_theme = o_bhava.theme
+    n_theme = n_bhava.theme
+    planet = o_bhava.planet
+    o_bad = o_bhava.tone == "bad"
+    n_bad = n_bhava.tone == "bad"
+
+    if o_bad and n_bad:
+        return (
+            f"⚠⚠⚠ ทุกข์ซ้อนทุกข์ — ดาว{planet}ครองทั้งกาลกิณีจรและเดิม "
+            f"ระวังเรื่อง{o_theme} × {n_theme}ที่สุด (แต่ถ้าผ่านได้เปิดวิปริต-ราชโยค)"
+        )
+    if o_bad:
+        return (
+            f"⚠ {o_name}จร × {n_name}เดิม — ดาว{planet}กำลังเป็นกาลกิณีจร "
+            f"กระทบเรื่อง{n_theme} (ภพดีเดิม) → ระวังถูกบั่นทอน"
+        )
+    if n_bad:
+        return (
+            f"{o_name}จร × {n_name}เดิม — {o_name}จรเดินผ่านรากที่เคยมีปัญหา ({n_name}เดิม) "
+            f"ผ่านดาว{planet} → ใช้ช่วงนี้แก้ของเก่า ถ้าผ่านได้จะปลดล็อก"
+        )
+    if o_name == n_name:
+        return (
+            f"{o_name}จร ซ้อน {o_name}เดิม — ดาว{planet}เป็นเจ้าของเรื่องนี้สองชั้น "
+            f"เรื่อง{o_theme}เด่นมากในช่วงนี้"
+        )
+    return (
+        f"{o_name}จร × {n_name}เดิม — เรื่อง{o_theme}กำลังเดินผ่านช่องทาง{n_theme} "
+        f"ผ่านดาว{planet} → สองภพดีหนุนกันได้"
+    )
+
+
+def _combo_tone(o_bhava: TaksaBhava, n_bhava: TaksaBhava) -> str:
+    """tone สำหรับสี UI: good | warn | critical | neutral"""
+    o_bad = o_bhava.tone == "bad"
+    n_bad = n_bhava.tone == "bad"
+    if o_bad and n_bad:
+        return "critical"
+    if o_bad:
+        return "warn"
+    if n_bad:
+        return "neutral"
+    return "good"
+
+
+def build_overlay_natal_combos(
+    natal_taksa: Taksa,
+    overlay_bhavas: List[TaksaBhava],
+) -> List[dict]:
+    """สำหรับ overlay bhava แต่ละตัว หา natal bhava ของดาวเดียวกัน
+    แล้วสร้างคำทำนาย overlay × natal
+    """
+    natal_planet_to_bhava = {b.planet: b for b in natal_taksa.bhavas}
+    combos = []
+    for o_bhava in overlay_bhavas:
+        n_bhava = natal_planet_to_bhava.get(o_bhava.planet)
+        if n_bhava is None:
+            continue
+        combos.append({
+            "overlay_position": o_bhava.position,
+            "overlay_name": o_bhava.name,
+            "overlay_theme": o_bhava.theme,
+            "natal_position": n_bhava.position,
+            "natal_name": n_bhava.name,
+            "natal_theme": n_bhava.theme,
+            "planet": o_bhava.planet,
+            "direction": o_bhava.direction,
+            "direction_en": o_bhava.direction_en,
+            "label": f"{o_bhava.name}จร + {n_bhava.name}เดิม",
+            "prediction": _combo_text(o_bhava, n_bhava),
+            "tone": _combo_tone(o_bhava, n_bhava),
+        })
+    return combos
+
+
+def _compute_overlay_bhavas(new_birth_planet: str) -> List[TaksaBhava]:
+    """สร้างชาร์ตทักษาใหม่โดยใช้ดาวที่ระบุเป็น 'บริวาร'
+    ใช้เมื่อทักษาจรตกตากลาง (ดาวบริวารใหม่ = พฤหัส)
+    """
+    if new_birth_planet not in TAKSA_CYCLE:
+        return []
+    start = TAKSA_CYCLE.index(new_birth_planet)
+    out: List[TaksaBhava] = []
+    for i in range(8):
+        planet = TAKSA_CYCLE[(start + i) % 8]
+        pos = i + 1
+        out.append(TaksaBhava(
+            position=pos,
+            name=BHAVA_NAMES[i],
+            theme=BHAVA_THEME[pos],
+            tone=BHAVA_TONE[pos],
+            planet=planet,
+            direction=PLANET_DIRECTION[planet],
+            direction_en=DIRECTION_ABBR_EN[PLANET_DIRECTION[planet]],
+            age_range=(0, 0),
+            prediction=PREDICTION.get(
+                (planet, pos),
+                f"ดาว{planet} ครอง{BHAVA_NAMES[i]}",
+            ),
+            is_current_dasa=False,
+        ))
+    return out
+
+
+def compute_transit_taksa(taksa: Taksa, year_of_life: int) -> TransitTaksa:
+    """คำนวณดาวจรทักษาสำหรับปีอายุที่ระบุ
+    ปี 1 ของชีวิต = ดาวบริวารกำเนิด
+    เดินตามลำดับ TRANSIT_CYCLE_9 ปีละ 1 ช่อง วนซ้ำเมื่อครบ 9 ปี
+    """
+    start_idx = _start_idx_in_transit_cycle(taksa.birth_planet)
+
+    # คำนวณว่าแต่ละปีตกที่ index ใดในcycle
+    year_buckets: Dict[int, List[int]] = {i: [] for i in range(9)}
+    for y in range(1, max(year_of_life, 1) + 1):
+        idx = (start_idx + y - 1) % 9
+        year_buckets[idx].append(y)
+
+    # ปีปัจจุบัน
+    current_idx = (start_idx + year_of_life - 1) % 9 if year_of_life >= 1 else start_idx
+    current_slot = TRANSIT_CYCLE_9[current_idx]
+    is_on_center = current_slot == CENTER_LABEL
+    current_planet = CENTER_PLANET if is_on_center else current_slot
+
+    # สร้าง 9 cells
+    cells: List[TaksaTransitCell] = []
+    for i, slot in enumerate(TRANSIT_CYCLE_9):
+        cycle_pos = ((i - start_idx) % 9) + 1
+        if slot == CENTER_LABEL:
+            cells.append(TaksaTransitCell(
+                direction="กลาง",
+                direction_en="C",
+                planet=CENTER_PLANET,
+                is_center=True,
+                is_current=(i == current_idx),
+                years_visited=year_buckets[i],
+                cycle_first_position=cycle_pos,
+            ))
+        else:
+            planet = slot
+            direction = PLANET_DIRECTION[planet]
+            cells.append(TaksaTransitCell(
+                direction=direction,
+                direction_en=DIRECTION_ABBR_EN[direction],
+                planet=planet,
+                is_center=False,
+                is_current=(i == current_idx),
+                years_visited=year_buckets[i],
+                cycle_first_position=cycle_pos,
+            ))
+
+    # ปีนี้ตกในภพไหนของทักษาเดิม
+    natal_bhava = "ตากลาง (ลัคนา)" if is_on_center else ""
+    natal_tone = "center" if is_on_center else "neutral"
+    if not is_on_center:
+        for b in taksa.bhavas:
+            if b.planet == current_planet:
+                natal_bhava = b.name
+                natal_tone = b.tone
+                break
+
+    # overlay chart ถ้าจรตกตากลาง
+    overlay = None
+    overlay_combos = None
+    overlay_note = ""
+    if is_on_center:
+        overlay = _compute_overlay_bhavas(CENTER_PLANET)
+        overlay_combos = build_overlay_natal_combos(taksa, overlay)
+        overlay_note = (
+            "ทักษาจรตกตากลาง = พฤหัสบดี (ลัคนา) → ตั้งภพใหม่ "
+            "โดยใช้พฤหัสบดีเป็น \"บริวาร\" — อ่านทักษาซ้อนกระทบทักษาเดิมได้"
+        )
+
+    # สรุป
+    cycle_pos = ((year_of_life - 1) % 9) + 1
+    if is_on_center:
+        summary = (
+            f"ปีอายุที่ {year_of_life} ทักษาจรตก \"ตากลาง\" (พฤหัสบดี/ลัคนา) "
+            f"— ปีพิเศษ เริ่มภพใหม่ ตั้งหลักชีวิต บุญเก่าออกผล"
+        )
+    elif natal_tone == "bad":
+        summary = (
+            f"ปีอายุที่ {year_of_life} ทักษาจรตก{current_planet} "
+            f"ซึ่งเป็นภพ \"กาลกิณี\" ในทักษาเดิม — ต้องระวังเป็นพิเศษ"
+        )
+    else:
+        summary = (
+            f"ปีอายุที่ {year_of_life} ทักษาจรตก{current_planet} "
+            f"ซึ่งอยู่ที่ภพ \"{natal_bhava}\" ในทักษาเดิม"
+        )
+
+    return TransitTaksa(
+        year_of_life=year_of_life,
+        current_planet=current_planet,
+        current_cycle_position=cycle_pos,
+        is_on_center=is_on_center,
+        natal_bhava_at_current=natal_bhava,
+        natal_bhava_tone=natal_tone,
+        cells=cells,
+        overlay_chart=overlay,
+        overlay_combos=overlay_combos,
+        overlay_note=overlay_note,
+        summary=summary,
+    )
+
+
+# ============================================================
+# Transit interaction — ดาวจรกระทบทักษา
+# ============================================================
+def transit_aspects_on_taksa(
+    taksa: Taksa,
+    natal_planets: Dict[str, "object"],
+    transit_planets: Optional[Dict[str, "object"]] = None,
+) -> List[dict]:
+    """หาความเชื่อมโยงระหว่างดาวจร × ดาวทักษา
+    เน้นที่:
+    - ดาวจรเข้าราศีเดียวกับดาวเดิมของดาวทักษา (กุม) → จุดสำคัญ
+    - ดาวจรเข้าราศีตรงข้าม (เล็ง) → ปะทะ
+    คืน list ของ dict สำหรับแสดงผล
+    """
+    if not transit_planets:
+        return []
+
+    results = []
+    for bhava in taksa.bhavas:
+        planet = bhava.planet
+        if planet not in natal_planets:
+            continue
+        natal_rasi = natal_planets[planet].zodiac.rasi
+
+        for tname, tplanet in transit_planets.items():
+            if tname == planet:
+                continue
+            diff = (tplanet.zodiac.rasi - natal_rasi) % 12
+            if diff == 0:
+                aspect = "กุม"
+            elif diff == 6:
+                aspect = "เล็ง"
+            else:
+                continue
+
+            if bhava.tone == "bad":  # กาลกิณี
+                tone = "warning"
+                note = (
+                    f"ดาว{tname}จรมา{aspect}ดาว{planet}เดิม "
+                    f"ซึ่งเป็นดาว\"กาลกิณี\" — เรื่องที่ไม่ควรเกิดอาจถูกกระตุ้น"
+                )
+            elif aspect == "กุม":
+                tone = "good" if bhava.tone == "good" else "neutral"
+                note = (
+                    f"ดาว{tname}จรกุมดาว{planet}เดิม "
+                    f"ซึ่งเป็นดาว\"{bhava.name}\" — กระตุ้นเรื่อง{bhava.theme}"
+                )
+            else:  # เล็ง
+                tone = "neutral"
+                note = (
+                    f"ดาว{tname}จรเล็งดาว{planet}เดิม "
+                    f"ซึ่งเป็นดาว\"{bhava.name}\" — มีการปะทะ-เปลี่ยนแปลงในเรื่อง{bhava.theme}"
+                )
+
+            results.append({
+                "bhava": bhava.name,
+                "bhava_position": bhava.position,
+                "natal_planet": planet,
+                "transit_planet": tname,
+                "aspect": aspect,
+                "tone": tone,
+                "note": note,
+            })
+    return results

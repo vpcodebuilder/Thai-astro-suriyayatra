@@ -1489,3 +1489,574 @@ footer {
     min-height: 44px;
   }
 }
+
+/* ---------- Taksa Card ---------- */
+.taksa-card {
+  background: linear-gradient(180deg, var(--paper) 0%, var(--cream-soft) 100%);
+}
+.taksa-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  justify-content: center;
+  margin: 0.5rem 0 1rem;
+  padding: 0.85rem 1rem;
+  background: rgba(232, 197, 112, 0.15);
+  border: 1px dashed var(--gold);
+  border-radius: 10px;
+}
+.taksa-summary-item {
+  text-align: center;
+  padding: 0.3rem 0.8rem;
+  border-right: 1px solid rgba(138, 106, 31, 0.3);
+}
+.taksa-summary-item:last-child { border-right: none; }
+.taksa-summary-item.highlight {
+  background: linear-gradient(135deg, rgba(232, 197, 112, 0.4), rgba(232, 197, 112, 0.15));
+  border-radius: 8px;
+  border-right: none;
+  padding: 0.4rem 1rem;
+}
+.taksa-label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  opacity: 0.85;
+  margin-bottom: 0.15rem;
+}
+.taksa-summary-item b { color: var(--maroon-dark); font-size: 1.1rem; }
+.taksa-summary-item small { color: var(--ink-soft); opacity: 0.75; }
+
+.taksa-note {
+  margin: 0.4rem 0;
+  padding: 0.45rem 0.8rem;
+  background: rgba(120, 80, 30, 0.08);
+  border-left: 3px solid var(--gold-deep);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+.taksa-headline {
+  text-align: center;
+  margin: 1rem 0;
+  padding: 0.8rem 1rem;
+  background: linear-gradient(135deg, rgba(107, 14, 27, 0.08), rgba(232, 197, 112, 0.1));
+  border-radius: 10px;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--maroon-dark);
+  font-weight: 500;
+}
+
+/* === 3x3 grid === */
+.taksa-grid-wrap {
+  margin: 1.5rem auto;
+  display: flex;
+  justify-content: center;
+}
+.taksa-grid {
+  border-collapse: separate;
+  border-spacing: 6px;
+  table-layout: fixed;
+  width: 100%;
+  max-width: 720px;
+}
+.taksa-cell {
+  background: var(--paper);
+  border: 2px solid var(--gold);
+  border-radius: 10px;
+  padding: 0.7rem 0.6rem;
+  vertical-align: top;
+  position: relative;
+  min-width: 0;
+  text-align: center;
+  transition: transform 0.2s;
+}
+.taksa-cell.bhava-bad {
+  background: linear-gradient(180deg, #fff0e8 0%, #f9d5c0 100%);
+  border-color: #d97a4f;
+}
+.taksa-cell.current-dasa {
+  border-color: var(--maroon);
+  border-width: 3px;
+  background: linear-gradient(180deg, #fff7d8 0%, #f5d770 100%);
+  box-shadow: 0 0 15px rgba(232, 197, 112, 0.7);
+  transform: scale(1.02);
+}
+.cell-direction {
+  font-family: "Mali", serif;
+  font-weight: 700;
+  color: var(--maroon-dark);
+  font-size: 0.95rem;
+  margin-bottom: 0.3rem;
+}
+.cell-direction small {
+  font-weight: normal;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+.cell-planet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0.35rem 0;
+}
+.cell-planet b { color: var(--ink); }
+.cell-bhava-name {
+  font-family: "Kanit", sans-serif;
+  font-weight: 700;
+  color: var(--maroon);
+  font-size: 1rem;
+  margin: 0.25rem 0;
+}
+.taksa-cell.bhava-bad .cell-bhava-name { color: #a04020; }
+.cell-age {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  opacity: 0.85;
+}
+.cell-dasa-badge {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--maroon-deep);
+  font-weight: 700;
+}
+
+.taksa-center {
+  background: linear-gradient(135deg, var(--maroon) 0%, var(--maroon-dark) 100%);
+  border-color: var(--gold-bright);
+  color: var(--cream);
+}
+.taksa-center .center-title {
+  font-family: "Mali", serif;
+  font-size: 1.15rem;
+  color: var(--gold-bright);
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+.taksa-center .center-age {
+  font-family: "Kanit", sans-serif;
+  font-size: 1.15rem;
+  color: var(--cream);
+  margin: 0.3rem 0;
+}
+.taksa-center .center-dasa,
+.taksa-center .center-next {
+  margin: 0.3rem 0;
+  font-size: 0.78rem;
+  color: var(--cream-soft);
+  opacity: 0.95;
+  line-height: 1.4;
+}
+.taksa-center .center-next {
+  border-top: 1px dashed rgba(232, 197, 112, 0.5);
+  padding-top: 0.35rem;
+  margin-top: 0.4rem;
+}
+
+/* === 8 bhava list === */
+.taksa-bhava-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 1.5rem 0;
+}
+.taksa-bhava-row {
+  background: var(--paper);
+  border: 1.5px solid var(--gold);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+}
+.taksa-bhava-row.bhava-bad {
+  background: linear-gradient(180deg, #fff5ed 0%, #fae0d0 100%);
+  border-color: #d97a4f;
+}
+.taksa-bhava-row.current-dasa {
+  border-color: var(--maroon);
+  border-width: 2.5px;
+  background: linear-gradient(180deg, #fffae0 0%, #fbedb5 100%);
+  box-shadow: 0 4px 12px rgba(232, 197, 112, 0.45);
+}
+.taksa-bhava-head {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.4rem;
+}
+.taksa-bhava-num {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--maroon-deep);
+  font-weight: 700;
+  font-family: "Kanit", sans-serif;
+}
+.taksa-bhava-titles { flex: 1; }
+.taksa-bhava-name {
+  font-family: "Mali", serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--maroon-dark);
+}
+.taksa-bhava-row.bhava-bad .taksa-bhava-name { color: #a04020; }
+.taksa-bhava-theme {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  margin-top: 0.15rem;
+}
+.taksa-bhava-planet-info {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.taksa-bhava-planet-info .planet-meta b { color: var(--maroon-dark); }
+.taksa-bhava-planet-info .planet-meta small {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  opacity: 0.8;
+}
+.taksa-bhava-text {
+  line-height: 1.7;
+  color: var(--ink);
+  font-size: 0.95rem;
+  padding-left: 2.6rem;
+}
+.dasa-tag {
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.5rem;
+  background: var(--maroon);
+  color: var(--gold-bright);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* === Transit aspects on Taksa === */
+.taksa-transit-section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--gold);
+}
+.taksa-transit-section h3 {
+  color: var(--maroon-dark);
+  text-align: center;
+  margin: 0 0 0.8rem;
+}
+.taksa-transit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.taksa-transit-row {
+  display: flex;
+  gap: 0.7rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  border-left: 4px solid var(--gold);
+  background: rgba(255, 249, 237, 0.6);
+  align-items: center;
+  line-height: 1.55;
+  font-size: 0.93rem;
+}
+.taksa-transit-row.tone-good {
+  background: rgba(120, 180, 90, 0.1);
+  border-left-color: #6aa83e;
+}
+.taksa-transit-row.tone-warning {
+  background: rgba(220, 100, 60, 0.1);
+  border-left-color: #d97a4f;
+}
+.taksa-transit-tag {
+  font-family: "Kanit", sans-serif;
+  font-weight: 700;
+  color: var(--maroon-dark);
+  min-width: 80px;
+  font-size: 0.9rem;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .taksa-summary-item { border-right: none; padding: 0.3rem 0.5rem; }
+  .taksa-grid { border-spacing: 3px; }
+  .taksa-cell { padding: 0.45rem 0.35rem; }
+  .cell-direction { font-size: 0.78rem; }
+  .cell-direction small { display: none; }
+  .cell-bhava-name { font-size: 0.85rem; }
+  .cell-age { font-size: 0.7rem; }
+  .taksa-center .center-title { font-size: 0.95rem; }
+  .taksa-center .center-age { font-size: 0.95rem; }
+  .taksa-bhava-text { padding-left: 0; }
+  .taksa-bhava-head { flex-wrap: wrap; }
+}
+
+/* ---------- Transit Taksa ---------- */
+.transit-taksa-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, rgba(107, 14, 27, 0.08), rgba(232, 197, 112, 0.15));
+  border: 1.5px solid var(--maroon);
+  border-radius: 10px;
+  font-size: 0.98rem;
+}
+.transit-taksa-summary.on-center {
+  background: linear-gradient(135deg, rgba(232, 197, 112, 0.4), rgba(232, 197, 112, 0.15));
+  border-color: var(--gold-bright);
+  border-width: 2.5px;
+  box-shadow: 0 0 18px rgba(232, 197, 112, 0.4);
+}
+.tt-label { font-weight: 600; color: var(--maroon-dark); }
+.tt-planet { color: var(--maroon); font-size: 1.05rem; }
+.tt-pos { color: var(--ink-soft); font-size: 0.88rem; }
+.tt-bhava { color: var(--ink); }
+.tt-bhava b { color: var(--maroon-dark); }
+
+/* Year chips inside cells */
+.cell-transit-years {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.18rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed rgba(138, 106, 31, 0.4);
+}
+.tt-year {
+  display: inline-block;
+  min-width: 22px;
+  padding: 0.12rem 0.32rem;
+  border-radius: 999px;
+  background: rgba(201, 162, 74, 0.25);
+  color: var(--maroon-deep);
+  font-family: "Kanit", sans-serif;
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.3;
+}
+.tt-year.current {
+  background: var(--maroon);
+  color: var(--gold-bright);
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transform: scale(1.15);
+}
+
+/* Cell that holds current transit */
+.taksa-cell.transit-current {
+  outline: 3px solid var(--maroon);
+  outline-offset: -2px;
+}
+.taksa-cell.transit-current.current-dasa {
+  /* both natal dasa AND transit current */
+  outline: 3px double var(--maroon);
+}
+
+.taksa-center .center-planet-label {
+  font-size: 0.78rem;
+  color: var(--gold-bright);
+  opacity: 0.95;
+  margin-bottom: 0.3rem;
+}
+.center-years .tt-year {
+  background: rgba(232, 197, 112, 0.35);
+  color: var(--maroon-deep);
+}
+.center-years .tt-year.current {
+  background: var(--gold-bright);
+  color: var(--maroon-deep);
+}
+
+.transit-taksa-explain {
+  margin: 1rem 0;
+  padding: 0.7rem 1rem;
+  background: rgba(255, 249, 237, 0.6);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 8px 8px 0;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--ink);
+}
+.transit-taksa-explain p { margin: 0 0 0.4rem; }
+.transit-taksa-explain small { color: var(--ink-soft); opacity: 0.85; }
+
+/* Overlay chart */
+.taksa-overlay {
+  margin-top: 1.5rem;
+  padding: 1.2rem;
+  background: linear-gradient(180deg, #fff7e0 0%, #f5e6b8 100%);
+  border: 2px double var(--gold-bright);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(232, 197, 112, 0.3);
+}
+.taksa-overlay h3 {
+  text-align: center;
+  margin: 0 0 0.5rem;
+  color: var(--maroon-dark);
+  font-family: "Mali", serif;
+}
+.overlay-note {
+  text-align: center;
+  font-size: 0.9rem;
+  margin: 0 0 0.8rem;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+.overlay-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.overlay-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.8rem;
+  background: rgba(255, 249, 237, 0.7);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 6px 6px 0;
+}
+.overlay-row.bhava-bad {
+  background: rgba(255, 230, 215, 0.7);
+  border-left-color: #d97a4f;
+}
+.overlay-num {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--maroon-deep);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.overlay-titles { flex: 1; min-width: 0; }
+.overlay-titles b { color: var(--maroon-dark); font-family: "Mali", serif; }
+.overlay-titles small { display: block; font-size: 0.78rem; color: var(--ink-soft); }
+.overlay-planet {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+.overlay-planet b { color: var(--maroon-dark); }
+.overlay-planet small { color: var(--ink-soft); opacity: 0.8; }
+
+@media (max-width: 768px) {
+  .tt-year { min-width: 18px; padding: 0.08rem 0.22rem; font-size: 0.65rem; }
+  .tt-year.current { font-size: 0.75rem; }
+  .cell-transit-years { gap: 0.12rem; }
+}
+
+/* ---------- Taksa Combos (overlay × natal) ---------- */
+.taksa-combos {
+  margin-top: 1.5rem;
+  padding: 1.2rem 1.3rem;
+  background: linear-gradient(180deg, #fffae0 0%, #f8edb0 100%);
+  border: 2px solid var(--gold-bright);
+  border-radius: 12px;
+}
+.taksa-combos h3 {
+  text-align: center;
+  margin: 0 0 0.5rem;
+  color: var(--maroon-dark);
+  font-family: "Mali", serif;
+  font-size: 1.15rem;
+}
+.combos-intro {
+  text-align: center;
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+.combos-intro b { color: var(--maroon); }
+.combo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.combo-row {
+  padding: 0.75rem 1rem;
+  background: rgba(255, 249, 237, 0.7);
+  border-radius: 8px;
+  border-left: 4px solid var(--gold);
+}
+.combo-row.tone-good {
+  background: linear-gradient(135deg, rgba(120, 180, 90, 0.12), rgba(255, 249, 237, 0.7));
+  border-left-color: #6aa83e;
+}
+.combo-row.tone-warn {
+  background: linear-gradient(135deg, rgba(220, 140, 60, 0.15), rgba(255, 249, 237, 0.7));
+  border-left-color: #d97a4f;
+}
+.combo-row.tone-critical {
+  background: linear-gradient(135deg, rgba(220, 60, 60, 0.18), rgba(255, 249, 237, 0.7));
+  border-left-color: #c92a2a;
+  border-left-width: 5px;
+}
+.combo-row.tone-neutral {
+  background: rgba(232, 197, 112, 0.1);
+  border-left-color: var(--gold-deep);
+}
+.combo-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+.combo-label b {
+  font-family: "Mali", serif;
+  color: var(--maroon-dark);
+  font-size: 1rem;
+}
+.combo-label small {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  opacity: 0.85;
+}
+.combo-themes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.4rem 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.combo-theme {
+  padding: 0.2rem 0.6rem;
+  background: rgba(232, 197, 112, 0.2);
+  border-radius: 6px;
+}
+.combo-theme.overlay-side { background: rgba(107, 14, 27, 0.1); color: var(--maroon-dark); }
+.combo-theme.natal-side { background: rgba(232, 197, 112, 0.25); color: var(--ink); }
+.combo-theme b { color: var(--maroon-dark); }
+.combo-arrow {
+  font-weight: 700;
+  color: var(--gold-deep);
+  font-size: 1.05rem;
+}
+.combo-prediction {
+  margin-top: 0.5rem;
+  padding-top: 0.45rem;
+  border-top: 1px dashed rgba(138, 106, 31, 0.3);
+  line-height: 1.7;
+  color: var(--ink);
+  font-size: 0.96rem;
+}
