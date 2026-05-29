@@ -94,34 +94,30 @@ body::before {
   z-index: 1;
 }
 
-/* 3 คอลัมน์เมื่อมีผลลัพธ์: ฟอร์ม | จักรราศี | ตารางดาว
-   แถวล่างเต็มความกว้าง: คำทำนายดาวจร */
+/* 2 คอลัมน์เสมอเมื่อมีผลลัพธ์: ฟอร์ม | จักรราศี (แถวบนสุด)
+   ส่วนอื่น ๆ (detail, bhava-card, prophecy) ลงไปแถวล่างเต็มความกว้าง */
 .container.has-result {
-  grid-template-columns: minmax(290px, 340px) minmax(0, 1fr) minmax(310px, 400px);
+  grid-template-columns: minmax(290px, 340px) minmax(0, 1fr);
   align-items: start;
 }
 
-/* prophecy-section อยู่แถวล่างเต็มความกว้าง 3 คอลัมน์ */
-.prophecy-section {
+/* prophecy-section + detail-section อยู่เต็มความกว้าง */
+.prophecy-section,
+.detail-section {
   grid-column: 1 / -1;
 }
 
-@media (max-width: 1300px) {
-  /* 2 คอลัมน์: ฟอร์ม | จักรราศี โดยตารางลงไปอยู่ใต้ */
-  .container.has-result {
-    grid-template-columns: minmax(290px, 340px) 1fr;
-  }
-  .detail-section {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.25rem;
-  }
-  .detail-section > .card { margin-bottom: 0; }
+/* detail-section: แสดงเป็น sub-grid (planet table, transit table, calc info) */
+.detail-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.25rem;
+  align-items: start;
 }
+.detail-section > .card { margin-bottom: 0; }
 
 @media (max-width: 900px) {
-  /* 1 คอลัมน์ */
+  /* 1 คอลัมน์: form อยู่บน chart อยู่ล่าง */
   .container.has-result {
     grid-template-columns: 1fr;
   }
@@ -551,6 +547,7 @@ body::before {
 .planet-svg-group .planet-chip-svg.planet-saturn{ fill: #3e2723; }
 .planet-svg-group .planet-chip-svg.planet-rahu  { fill: #424242; }
 .planet-svg-group .planet-chip-svg.planet-ketu  { fill: #6a1b9a; }
+.planet-svg-group .planet-chip-svg.planet-uranus{ fill: #0d47a1; }
 
 /* จันทร์ตัวสว่าง ใช้สีตัวอักษรเข้ม */
 .planet-svg-group:has(.planet-moon) .planet-abbr-svg { fill: #4a3500; }
@@ -678,6 +675,7 @@ body::before {
 .planet-saturn  { background: linear-gradient(135deg, #6d4c41, #3e2723); }
 .planet-rahu    { background: linear-gradient(135deg, #757575, #212121); }
 .planet-ketu    { background: linear-gradient(135deg, #ab47bc, #4a148c); }
+.planet-uranus  { background: linear-gradient(135deg, #4fc3f7, #0d47a1); }
 
 /* ---------- Planet table ---------- */
 
@@ -2059,4 +2057,97 @@ footer {
   line-height: 1.7;
   color: var(--ink);
   font-size: 0.96rem;
+}
+
+/* ---------- View Tabs (ดูดวง / ศึกษาโหราศาสตร์) ---------- */
+.view-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin: -1rem -1.5rem 0;
+  background: linear-gradient(180deg, rgba(46, 0, 8, 0.95) 0%, rgba(74, 7, 18, 0.95) 100%);
+  backdrop-filter: blur(8px);
+  border-bottom: 2px solid var(--gold);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  justify-content: center;
+}
+.tab-btn {
+  flex: 0 1 auto;
+  min-width: 160px;
+  padding: 0.65rem 1.4rem;
+  background: transparent;
+  color: var(--cream-soft);
+  border: 2px solid var(--gold);
+  border-radius: 999px;
+  font-family: "Kanit", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: rgba(232, 197, 112, 0.3);
+  touch-action: manipulation;
+}
+.tab-btn:hover {
+  background: rgba(232, 197, 112, 0.15);
+}
+.tab-btn:active { transform: scale(0.97); }
+.tab-btn.active {
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  color: var(--maroon-deep);
+  box-shadow: 0 4px 10px rgba(232, 197, 112, 0.4);
+  border-color: var(--gold-bright);
+}
+.tab-emoji { margin-right: 0.3rem; }
+
+/* Default state — hide nothing until JS sets body class */
+body:not(.view-general):not(.view-student) .view-student { display: none; }
+
+/* Active state: hide opposite */
+body.view-general .view-student { display: none !important; }
+body.view-student .view-general { display: none !important; }
+
+/* Highlight card (เจ้าเรือนไฮไลต์ 5 ตัว สำหรับโหมดดูดวง) */
+.highlight-card {
+  background: linear-gradient(180deg, #fff5d6 0%, #f6e5a8 100%);
+  border: 2.5px solid var(--gold-bright);
+}
+.highlight-card h2 { color: var(--maroon-deep); }
+
+@media (max-width: 600px) {
+  .view-tabs {
+    margin: -1rem -1rem 0;
+    padding: 0.6rem 0.5rem;
+    gap: 0.35rem;
+  }
+  .tab-btn {
+    min-width: 0;
+    flex: 1;
+    padding: 0.55rem 0.8rem;
+    font-size: 0.9rem;
+  }
+  .tab-emoji { font-size: 1.05rem; }
+}
+
+/* ---------- Lunar date in header card ---------- */
+.lunar-meta {
+  display: inline-block;
+  margin-top: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  background: rgba(232, 197, 112, 0.2);
+  border: 1px solid rgba(201, 162, 74, 0.5);
+  border-radius: 999px;
+  font-size: 0.88rem;
+  color: var(--maroon-dark);
+  font-weight: 500;
+}
+.calc-lunar {
+  grid-column: 1 / -1;
+  background: rgba(232, 197, 112, 0.15);
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  margin-top: 0.3rem;
 }

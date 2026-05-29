@@ -212,12 +212,22 @@ def compute_lakkana(
     anto_sec = anto_min * 60
     seconds_per_arcmin = anto_sec / RASI_ARCMIN
 
-    rasi_remain_arcmin = remaining / seconds_per_arcmin
-    somput = compact_angle(int(rasi_position * RASI_ARCMIN + rasi_remain_arcmin))
+    rasi_remain_arcmin = remaining / seconds_per_arcmin  # fractional arcmin
+    somput_float = rasi_position * RASI_ARCMIN + rasi_remain_arcmin
+    somput = compact_angle(int(somput_float))
+    # arc-second = เศษทศนิยมของ arcmin × 60
+    frac = somput_float - int(somput_float)
+    arcsecond = int(round(frac * 60))
+    if arcsecond >= 60:
+        arcsecond = 59  # safety
+
+    zodiac = Zodiac.from_arcminutes(somput)
+    # mutate arcsecond ใส่ใน zodiac
+    zodiac.arcsecond = arcsecond
 
     return Lakkana(
         somput=somput,
-        zodiac=Zodiac.from_arcminutes(somput),
+        zodiac=zodiac,
         sunrise_hours=sunrise_hours,
         locality_seconds=locality_seconds,
     )

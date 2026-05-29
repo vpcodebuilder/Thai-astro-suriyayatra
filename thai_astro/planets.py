@@ -51,7 +51,7 @@ RASI_LORD = {
 # ลำดับแสดงผล
 PLANET_ORDER = [
     "อาทิตย์", "จันทร์", "อังคาร", "พุธ",
-    "พฤหัสบดี", "ศุกร์", "เสาร์", "ราหู", "เกตุ",
+    "พฤหัสบดี", "ศุกร์", "เสาร์", "ราหู", "เกตุ", "มฤตยู",
 ]
 
 
@@ -175,6 +175,41 @@ class Planet:
 
 
 # ============================================================
+# Mean daily motion of each planet (arcseconds per day)
+# ใช้ derive ค่าฟิลิปดา (arc-second) จากเศษเวลาภายในหน่วย Kammatchaphon
+# (1 หน่วย = 24/800 ชม. = 1.8 นาที, การเคลื่อนที่ใน 1.8 นาที = daily/800 arcsec)
+# ============================================================
+DAILY_MOTION_ARCSEC: Dict[str, int] = {
+    "อาทิตย์":   3548,    # 59'08"/day (mean sun)
+    "จันทร์":    47436,   # 13°10.6'/day (mean moon)
+    "อังคาร":   1879,    # 31'19"/day
+    "พุธ":       14724,   # 4°05'/day (mean)
+    "พฤหัสบดี": 299,     # 4'59"/day
+    "ศุกร์":     4320,    # 1°12'/day (mean)
+    "เสาร์":    120,     # 2'/day
+    "ราหู":     188,     # 3'08"/day (retrograde |magnitude|)
+    "เกตุ":     188,     # 3'08"/day (retrograde |magnitude|)
+    "มฤตยู":    42,      # 0'42"/day (Uranus mean)
+    "ยูเรนัส":   42,
+}
+
+
+def derive_arcsecond(planet_name: str, time_hours: float) -> int:
+    """คำนวณ arc-second (ฟิลิปดา) จากเศษเวลาภายในหน่วย Kammatchaphon
+
+    Devtino formula ปัดเป็น integer arcminute (kammatchaphon = floor)
+    เศษเวลา 0-1 ของหน่วย × อัตราการเคลื่อนที่ของดาว → arcsec จริง
+    """
+    units = time_hours * 800.0 / 24.0
+    unit_frac = units - math.floor(units)
+    daily = DAILY_MOTION_ARCSEC.get(planet_name, 0)
+    # การเคลื่อนที่ภายในหน่วย (เป็น arcsec): daily * 1.8min / 1440min = daily / 800
+    arcsec_in_unit = daily / 800.0
+    arcsec = unit_frac * arcsec_in_unit
+    return int(round(arcsec)) % 60
+
+
+# ============================================================
 # Sun (อาทิตย์)
 # ============================================================
 
@@ -209,11 +244,13 @@ def compute_sun(desire: Desire) -> Planet:
     ))
 
     somput = compact_angle(mattayom + phutchapon * p.p_sign)
+    z = Zodiac.from_arcminutes(somput)
+    z.arcsecond = derive_arcsecond("อาทิตย์", desire.time_hours)
     return Planet(
         name="อาทิตย์",
         mattayom=mattayom,
         somput=somput,
-        zodiac=Zodiac.from_arcminutes(somput),
+        zodiac=z,
         extra={"mattayom_rawi": mattayom_rawi, "phutchapon": phutchapon},
     )
 
@@ -253,11 +290,13 @@ def compute_moon(desire: Desire) -> Planet:
     ))
 
     somput = compact_angle(mattayom + phutchapon * p.p_sign)
+    z = Zodiac.from_arcminutes(somput)
+    z.arcsecond = derive_arcsecond("จันทร์", desire.time_hours)
     return Planet(
         name="จันทร์",
         mattayom=mattayom,
         somput=somput,
-        zodiac=Zodiac.from_arcminutes(somput),
+        zodiac=z,
         extra={"mattayom_uja": mattayom_uja, "phutchapon": phutchapon},
     )
 
@@ -397,11 +436,14 @@ def compute_minor_planet(name: str, desire: Desire, power: PowerPlanet) -> Plane
 
     somput = compact_angle(montasomput + mahaphon * p2.p_sign)
 
+    z = Zodiac.from_arcminutes(somput)
+    # ใช้ "name" สำหรับ derive arcsec — รองรับชื่อ "ยูเรนัส" ด้วย
+    z.arcsecond = derive_arcsecond(name, desire.time_hours)
     return Planet(
         name=name,
         mattayom=mattayom,
         somput=somput,
-        zodiac=Zodiac.from_arcminutes(somput),
+        zodiac=z,
         extra={
             "phon": phon,
             "mahaphon": mahaphon,
@@ -414,7 +456,7 @@ def compute_minor_planet(name: str, desire: Desire, power: PowerPlanet) -> Plane
 # Rahu (ราหู)
 # ============================================================
 
-def compute_rahu(power: PowerPlanet) -> Planet:
+def compute_rahu(power: PowerPlanet, desire: Desire = None) -> Planet:
     """port จาก Rahu.cs
 
     BaseUp = ValueMinutes / 20
@@ -426,11 +468,14 @@ def compute_rahu(power: PowerPlanet) -> Planet:
     base_down = power.value_minutes // 265
     mattayom = compact_angle(base_up + base_down)
     somput = compact_angle(15150 - mattayom)
+    z = Zodiac.from_arcminutes(somput)
+    if desire is not None:
+        z.arcsecond = derive_arcsecond("ราหู", desire.time_hours)
     return Planet(
         name="ราหู",
         mattayom=mattayom,
         somput=somput,
-        zodiac=Zodiac.from_arcminutes(somput),
+        zodiac=z,
         retrograde=True,
     )
 
@@ -453,11 +498,13 @@ def compute_ketu(desire: Desire) -> Planet:
         int(math.floor((pon + desire.time_hours / 24.0) * 21600 / 679.0))
     )
     somput = compact_angle(21600 - mattayom)
+    z = Zodiac.from_arcminutes(somput)
+    z.arcsecond = derive_arcsecond("เกตุ", desire.time_hours)
     return Planet(
         name="เกตุ",
         mattayom=mattayom,
         somput=somput,
-        zodiac=Zodiac.from_arcminutes(somput),
+        zodiac=z,
         retrograde=True,
     )
 
@@ -467,8 +514,11 @@ def compute_ketu(desire: Desire) -> Planet:
 # ============================================================
 
 def compute_all(desire: Desire) -> Dict[str, Planet]:
-    """คำนวณดาวทั้ง 9 ดวง (ไม่รวมยูเรนัส) ตามมาตรฐานโหราศาสตร์ไทย"""
+    """คำนวณดาวทั้ง 10 ดวง (รวม มฤตยู/ยูเรนัส ตามที่ Devtino ใส่)"""
     power = compute_power(desire)
+    uranus_planet = compute_minor_planet("ยูเรนัส", desire, power)
+    # rename เป็น "มฤตยู" สำหรับโหราศาสตร์ไทย
+    uranus_planet.name = "มฤตยู"
     return {
         "อาทิตย์": compute_sun(desire),
         "จันทร์": compute_moon(desire),
@@ -477,6 +527,7 @@ def compute_all(desire: Desire) -> Dict[str, Planet]:
         "พฤหัสบดี": compute_minor_planet("พฤหัสบดี", desire, power),
         "ศุกร์": compute_minor_planet("ศุกร์", desire, power),
         "เสาร์": compute_minor_planet("เสาร์", desire, power),
-        "ราหู": compute_rahu(power),
+        "ราหู": compute_rahu(power, desire),
         "เกตุ": compute_ketu(desire),
+        "มฤตยู": uranus_planet,
     }

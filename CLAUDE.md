@@ -220,27 +220,203 @@ JDN = Horakhun + 1954167
 
 ## ไอเดียพัฒนาต่อ (ที่ยังไม่ทำ)
 
-- เพิ่มคำพยากรณ์ตามทักษา (Taksa) ในตัว Chart
 - เพิ่มกาลโยค (Kalayok)
 - export PDF/PNG ผังดวง
 - เก็บประวัติดวงผู้ใช้ (DB)
 - เพิ่ม transit aspect แบบ orb (precise degree) นอกเหนือจาก rashi-based
 - ราหู-เกตุให้ตรงข้ามกัน option (สำหรับคนที่ต้องการ)
-- ตรวจอายุของผู้ขอดวง + เพิ่ม dasha prediction
 - สูตรปรับ ayanamsa หากต้องการ tropical output
+- ตำราจันทรคติแม่นยำสุด: ใส่ตารางอธิกวาร (8/8 vs 7-30) แทน approximation จาก synodic
+- ดาวเคราะห์ทั้ง 10 ให้ออก arc-second จริง (ต้องเขียนสูตรใหม่ไม่ใช้ truncate)
 
 ---
 
 ## Key files to reference quickly
 
-| ต้องการแก้                | ไฟล์                              |
-|---------------------------|-----------------------------------|
-| สูตรสมผุสดาว             | `thai_astro/planets.py`           |
-| สูตรลัคนา / locality      | `thai_astro/lakkana.py`           |
-| Horakhun / DesireFactory  | `thai_astro/boonnak.py`           |
-| คำทำนายดาวจร              | `thai_astro/transit_prophecy.py`  |
-| ความหมายภพ 12             | `webapp/server.py` (BHAVA_MEANINGS) |
-| layout / form / UI        | `webapp/templates/index.html`     |
-| ธีม / สี / responsive     | `webapp/static/styles.css`        |
-| tooltip / date sync       | `webapp/static/script.js`         |
+| ต้องการแก้                                | ไฟล์                                     |
+|-------------------------------------------|------------------------------------------|
+| สูตรสมผุสดาว 10 ดวง (รวมมฤตยู)            | `thai_astro/planets.py`                  |
+| สูตรลัคนา + arc-second + locality 77 จว.   | `thai_astro/lakkana.py`                  |
+| Horakhun / DesireFactory                  | `thai_astro/boonnak.py`                  |
+| คำทำนายดาวจรกระทบดาวเดิม                 | `thai_astro/transit_prophecy.py`         |
+| **เจ้าเรือนครองภพ (natal + transit)**     | `thai_astro/bhava_lord_prophecy.py`      |
+| **ตำแหน่งกำลังดาว + เกณฑ์โยค**            | `thai_astro/dignities.py`                |
+| **ทักษา (natal + transit + overlay)**     | `thai_astro/taksa.py`                    |
+| **บทพูดของโหร (oracle synthesis)**        | `thai_astro/oracle_narrative.py`         |
+| **ปฏิทินจันทรคติไทย**                     | `thai_astro/lunar.py`                    |
+| ความหมายภพ 12                             | `webapp/server.py` (BHAVA_MEANINGS)      |
+| layout / form / view tabs / UI            | `webapp/templates/index.html`            |
+| ธีม / สี / responsive / view rules        | `webapp/static/styles.css`               |
+| tooltip / date sync / tab switching       | `webapp/static/script.js`                |
+| Deploy config (Railway)                   | `Procfile`, `requirements.txt`, `runtime.txt` |
+
+---
+
+# ===== Session 2 Updates =====
+# ฟีเจอร์ที่เพิ่มหลังจาก Initial commit ทั้งหมด
+
+## โมดูลใหม่ใน `thai_astro/`
+
+### `bhava_lord_prophecy.py` — เจ้าเรือนครองภพ
+- **หลักการ**: เจ้าเรือนภพ X (ดาวเจ้าราศีที่ครองภพ) ไปสถิตภพ Y → ทาย "เรื่อง X เกิดผ่าน Y"
+- 144 combinations (12×12) — 80+ override (เฉพาะคู่สำคัญ) + template generic ตาม tone
+- **2 มุมมอง**:
+  1. `predict_natal_lords()` — ดูดวงพื้นฐาน (ตลอดชีวิต)
+  2. `predict_transit_lords()` — เจ้าเรือนเดิม ขณะนี้ดาวจรอยู่ภพไหน
+- จำแนกโทน: good / warning / neutral พร้อมตรวจ **วิปริต-ราชโยค** (ทุกข์ชนทุกข์ = ดี)
+
+### `dignities.py` — ตำแหน่งกำลังดาว + เกณฑ์โยค
+- **Dignities รายดวง**: อุจน์ / นิจ / มูลตรีโกณ / เกษตร / มิตร / ประ (ศัตรู) / สมพล
+  - Strength score: -3 ถึง +3
+  - `EXALTATION_RASI`, `DEBILITATION_RASI`, `SWAKSHETRA`, `MULATRIKONA`, `PLANET_RELATIONS`
+- **เกณฑ์โยค auto-detect**:
+  - **ปทุมเกณฑ์** (Padma) — ดาวหลัก ≥ 4 ดวงในเกณฑ์ (1,4,7,10)
+  - **มหาภูตเกณฑ์** — ดาวหลัก ≥ 3 ดวงในตรีโกณ (1,5,9)
+  - **อุดมเกณฑ์** — ดาวอุจน์ ≥ 2 ดวง
+  - **องค์เกณฑ์** — ดาวกำลังแข็ง (อุจน์/เกษตร/มูล) ≥ 3 ดวง
+  - **นิจภังคราชโยค** — ดาวนิจ แต่เจ้าราศีที่รับได้ตำแหน่งดี → พลิกร้ายเป็นดี
+  - **<ดาว>ได้อุจน์** — โยคย่อยรายดวง
+
+### `taksa.py` — ทักษา (ดาวประจำวันเกิด 8 ดวง 8 ทิศ)
+- **ดาวประจำวันเกิด** จาก weekday() + กฎพิเศษ: พุธหลัง 18:00 = ราหู
+- **ลำดับ 8 ดาวทักษา (อัฏฐดาว)**: `TAKSA_CYCLE = อาทิตย์→จันทร์→อังคาร→พุธ→เสาร์→พฤหัสบดี→ราหู→ศุกร์`
+- **8 ตำแหน่งบริวาร**: บริวาร / อายุ / เดช / ศรี / มูละ / อุตสาหะ / มนตรี / กาลกิณี
+- **8 ทิศ (FIX, ตำราไทยมาตรฐาน)**: ศุกร์-อุดร(N) / อาทิตย์-อีสาน(NE) / จันทร์-บูรพา(E) / อังคาร-อาคเนย์(SE) / พุธ-ทักษิณ(S) / เสาร์-หรดี(SW) / พฤหัสบดี-ประจิม(W) / ราหู-พายัพ(NW)
+- **มหาทักษาดาษา 96 ปี**: 8 ดาว × 12 ปีต่อดาว (`DASA_YEARS_PER_PLANET = 12`)
+- **คำทำนาย 64 cells** (`PREDICTION`): ดาว × ตำแหน่งบริวาร เขียนเฉพาะแต่ละบท
+- **ทักษาจร (Transit Taksa)** — `TRANSIT_CYCLE_9 = 8 ทิศ + ตากลาง` (= พฤหัสบดี)
+  - เดิน 1 ตา/ปี เริ่มจากดาวบริวาร, เมื่อถึงอาทิตย์→แวะตากลาง→ต่อจันทร์
+  - แสดงเลขอารบิกในแต่ละช่อง = ปีอายุที่ทักษาจรตก
+- **Overlay × Natal combos** (เมื่อทักษาจรตกตากลาง):
+  - ตั้งภพใหม่ใช้พฤหัสบดีเป็นบริวาร → จับคู่ overlay×natal ผ่านดาวเดียวกัน
+  - ตัวอย่าง: เกิดอาทิตย์, ปีตากลาง → บริวารจร(พฤหัส) + อุตสาหะเดิม(พฤหัส) = ตัวคุณ × การงาน
+  - 40+ overrides เฉพาะคู่สำคัญใน `OVERLAY_NATAL_OVERRIDES`
+- **ดาวจรกระทบดาวทักษา (transit_aspects_on_taksa)**:
+  - `TRANSIT_PLANET_X_BHAVA` 9 ดาว × 8 ภพ = 72 entries
+  - กระจายตามคุณสมบัติของดาวจร (ไม่ใช่แค่ธีมภพ) ป้องกันคำซ้ำ
+
+### `oracle_narrative.py` — บทพูดของโหร (Oracle Reading)
+- สังเคราะห์ทุก source: transit aspects + bhava lord (natal+transit) + dignities + yogas
+- โครงสร้าง: greeting → yoga callouts → headline → life_areas → opportunities/warnings → closing
+- **คำศัพท์ร่วมสมัย** (`MODERN_NATAL_THEME`, `LIFE_AREAS`): แปลภพโบราณ→คำคนยุคนี้
+- **กลไกพลิกร้ายเป็นดี**: ถ้ามี ปทุม/อุดม/นิจภังค → ทุกคำเตือนเติมท้าย "แต่ด้วยเกณฑ์ดวงพื้นฐาน เรื่องนี้จะไม่หนักเท่าที่ควรเป็น"
+- **Deterministic randomness**: seed จาก birth date/time → บทพูดของคนเดียวกันคงที่
+- 4 tone classes: good / heavy / mixed / neutral
+
+### `lunar.py` — ปฏิทินจันทรคติไทย
+- **ดิถี → ขึ้น/แรม X ค่ำ** จาก `desire.dithi` (0-29)
+  - 0-14 = ขึ้น 1-15 ค่ำ (waxing)
+  - 15-29 = แรม 1-15 ค่ำ (waning)
+- **เดือนจันทรคติ** (1-12: อ้าย ยี่ สาม ... สิบสอง)
+  - สูตร: `((floor((surathin_days + 7) / 29.530588) + 4) % 12) + 1`
+  - offset 7 + synodic month 29.530588 — verified กับวันสำคัญพุทธ 10/10 ผ่าน
+- **ปีอธิกมาส** (port `ThaiLunarYear.cs`): `(grate_year - 0.45222) % 2.7118886 < 1`
+- **ปีนักษัตร 12 ตัว**: ชวด ฉลู ขาล ... กุน. CE 1972 = ปีชวด (`(ce - 1972) % 12`)
+- ใช้ `desire.surathin.thaloengsok_cs_year` เป็น CS อ้างอิง (ครอบคลุม Songkran boundary)
+
+## โมดูลเดิมที่ปรับ
+
+### `planets.py`
+- **เพิ่ม "มฤตยู" (Uranus)** เป็นดาวที่ 10 ใน `compute_all()`
+  - ใช้ `MINOR_PLANET_DATA_URANUS = (1, 84, 1, 7224, 16277, 7440, 38640, 3/7)` (port จาก Devtino)
+  - `PLANET_ORDER` มี 10 ดวง: + "มฤตยู" ท้าย
+- `Zodiac.from_arcminutes()` มี field `arcsecond` (default 0)
+
+### `lakkana.py`
+- **คำนวณ arc-second จริงสำหรับลัคนา**: เก็บ fractional arcmin → `arcsecond = (frac × 60)`
+- ดาวเคราะห์ทั่วไปยัง 00″ (เพราะ Devtino formula = integer arcmin)
+
+## UI ใน `webapp/`
+
+### View Tabs (`templates/index.html` + `static/script.js`)
+- **2 tabs sticky บนแถวล่าง**: 📖 ดูดวง / 🔬 ศึกษาโหราศาสตร์
+- HTML class system: `view-general` / `view-student` / `view-both`
+- CSS: `body.view-X .view-Y { display: none }` (specificity-based)
+- **Body default**: `class="view-general"` ตั้งใน HTML (JS overrides จาก localStorage)
+- **Layout เป็น 2-col เสมอ** (form 340 | chart 1fr): กลายเป็น 1-col ที่ <900px
+  - แถวบน (chart-section) **อยู่ทั้ง 2 view** เพราะเป็น "หัวใจ" ของผัง
+  - view-tabs sticky ใต้แถวบน
+  - detail-section ลงไปใต้ tabs (full width ด้วย `grid-column: 1/-1`)
+
+### การ์ดเนื้อหา (เรียงตาม DOM)
+| Card | view | หมายเหตุ |
+|------|------|---------|
+| Birth header + lakkana badge + zodiac SVG | both | แถวบนสุด |
+| ตารางดาวกำเนิด 10 ดวง + ดาวจร + calc info | student | full width ใต้ tabs |
+| ความหมายภพ 12 | student | full width |
+| **เรื่องสำคัญในชีวิตคุณ (top 5 highlights)** | general | bhava 2/7/10/11 + 1 warn |
+| เจ้าเรือนครองภพ ครบ 12 (natal) | student | |
+| สรุปดาวจร (top 3 + good/warn) | both | |
+| เจ้าเรือนเดิม ณ ดาวจรครบ 12 | student | |
+| ตารางคำทำนายดาวจรเต็ม | student | |
+| ทักษา: summary bar + headline + ทักษาจร bar | both | |
+| ทักษา: 3×3 grid + 8 บริวาร + overlay + combos | student | |
+| คำพยากรณ์จากโหร 🔮 | both | การ์ดท้ายสุด, ธีมแดง-ทอง |
+
+### ดวงชะตา banner
+- "เกิด**วันอาทิตย์**ที่ 2 กันยายน พ.ศ. 2522 เวลา 14:18 น."
+- 🌙 จันทรคติ chip: "ขึ้น 11 ค่ำ เดือน 9 ปีมะแม"
+- ลัคนา badge: "พิจิก 15°14'47″" (มี arcsec แล้ว)
+
+### Mobile fixes
+- ลบ `inputmode="numeric"` ที่ block พิมพ์ `/`
+- ลบ `pattern` attribute ที่บางมือถือ reject
+- เปลี่ยน date picker จาก CSS-overlay เป็น `<button>` + JS `showPicker()`
+- `font-size: 16px` บน inputs/selects ที่ <768px กัน iOS auto-zoom
+- `appearance: menulist` บังคับ native dropdown
+- 44px+ touch targets
+
+### Form
+- **Transit pre-fill**: วันเวลาปัจจุบัน (Thai TZ) + กรุงเทพฯ เป็น default
+- ทำเป็น `required` (ไม่ใช่ optional แล้ว)
+
+### ข้อมูลการคำนวณ (สำหรับผู้ศึกษา)
+- แก้ "กรรมจุปา" → **"กัมมัชพล"** ✓
+- เพิ่ม 5 ฟิลด์: หรคุณกึ่งคืน / ศักราชใหม่ / มาสเกณฑ์ / อวมาน / เศษอุจจพล
+- เพิ่ม **จันทรคติ** บรรทัดสุดท้าย (เต็มรูปแบบ "ขึ้น 11 ค่ำ เดือน 9 (เก้า) ปีมะแม จ.ศ. 1341")
+
+## Deploy (Railway)
+- **Repo**: `https://github.com/vpcodebuilder/Thai-astro-suriyayatra.git`
+- ไฟล์ที่ต้องมีสำหรับ Railway:
+  - `requirements.txt`: fastapi, uvicorn[standard], jinja2, python-multipart
+  - `Procfile`: `web: uvicorn webapp.server:app --host 0.0.0.0 --port $PORT`
+  - `runtime.txt`: `python-3.11`
+- **`.gitignore`** ignore `Devtino.Astrology/` (เป็น C# ของบุคคลที่สาม ห้าม redistribute)
+
+### Bug ที่เคยเจอ + วิธีแก้
+1. **Railway "Internal Server Error"** จาก `TypeError: unhashable type: 'dict'`
+   - สาเหตุ: Starlette ≥ 0.40 เปลี่ยน API ของ `TemplateResponse`
+   - แก้: ส่ง `request` เป็น argument แรก: `templates.TemplateResponse(request, "index.html", {...})`
+2. **CSS/JS cache เก่าใน browser** หลัง deploy
+   - แก้: ใส่ `?v=YYYYMMDDx` ใน `<link href>` และ `<script src>`
+3. **Layout เปลี่ยน tab แล้ว grid column 3 ยังกินที่**
+   - สาเหตุ: `display: none` ลบ item แต่ track ยังสงวน width
+   - แก้: ใช้ 2-col grid เสมอ, ของ student ใส่ `grid-column: 1/-1` ให้ flow ลงแถวล่าง
+
+## หลักการแสดงผล Arc-second
+- **ลัคนา**: คำนวณจริงจาก fractional arcmin (แสดงได้ 0-59 sec)
+- **ดาวเคราะห์ 10 ดวง**: 00″ เสมอ — เป็น by-design ของ Devtino formula
+- ใน template: ทุก label `{{ degree }}°{{ arcminute }}′{{ arcsecond }}″` (default 0)
+
+## Cycle versioning ของ static assets
+ถ้าจะเปลี่ยน CSS/JS ให้บังคับ browser โหลดใหม่ ปรับ query version ใน `index.html`:
+- ปัจจุบัน: `?v=20260528d`
+- format: `YYYYMMDDx` ที่ `x` = a/b/c/... bump เรื่อย ๆ
+
+## ตำราที่ใช้อ้างอิง (ระบุใน docstring แต่ละโมดูล)
+- อ.เทพย์ สาริกบุตร: โหราศาสตร์ภาคพยากรณ์ / ตำราทักษา 8 ดาว
+- พล.ต.ประยูร พลอารีย์: โหราศาสตร์ไทยมาตรฐาน / ทักษา-พยากรณ์
+- อ.จรัญ พิกุล: คัมภีร์โหราศาสตร์ไทย
+- หลวงพรหมโยธี: ตำราทักษา
+- Loy Chunpongthong: สูตรอธิกมาส (port ใน ThaiLunarYear.cs)
+- B.V. Raman: Three Hundred Important Combinations (แปลไทย)
+
+## หมายเหตุสำคัญสำหรับการแก้ครั้งต่อไป
+1. **ดาว 10 ดวง** ทำให้ test เก่าที่ assert `len(planets) == 9` ต้อง update เป็น 10
+2. **มฤตยูใช้ชื่อไทย "มฤตยู" ในผลลัพธ์** แต่ตอน compute ใน `compute_minor_planet()` ส่งเป็น `"ยูเรนัส"` (เพราะ formula key) แล้ว rename ใน `compute_all()`
+3. **PLANET_INFO ใน server.py มี 10 entries** — abbr เป็น `๐` (ศูนย์ไทย) / `0`
+4. **CSS planet color**: ต้องมี `.planet-uranus` (เพิ่งเพิ่ม สีน้ำเงิน gradient)
+5. **Taksa cycle เริ่มที่ N (ศุกร์)** ไม่ใช่ E (อาทิตย์) — เปลี่ยนตามตำราไทยมาตรฐาน
+6. **สูตรเดือนจันทรคติใหม่**: ใช้ surathin + 7 / 29.53 — ไม่ใช่ sun_rasi เก่า (มี off-by-1)
+7. **อย่าใช้ library ดาราศาสตร์ตะวันตก** (Swiss Ephemeris, Astropy ฯลฯ) — ต้อง port จาก Devtino ทุกอย่าง
 | ค่าคงที่ SVG วงกลม        | `webapp/server.py` (R_OUTER, R_TRANSIT ฯลฯ) |

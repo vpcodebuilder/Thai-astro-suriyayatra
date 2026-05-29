@@ -35,6 +35,7 @@ from thai_astro.dignities import compute_all_dignities, detect_yogas
 from thai_astro.taksa import (
     compute_taksa, compute_transit_taksa, transit_aspects_on_taksa,
 )
+from thai_astro.lunar import compute_lunar_date
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -59,6 +60,7 @@ PLANET_INFO = [
     {"name": "เสาร์",    "abbr": "๗", "abbr_arabic": "7", "color_class": "planet-saturn"},
     {"name": "ราหู",      "abbr": "๘", "abbr_arabic": "8", "color_class": "planet-rahu"},
     {"name": "เกตุ",      "abbr": "๙", "abbr_arabic": "9", "color_class": "planet-ketu"},
+    {"name": "มฤตยู",    "abbr": "๐", "abbr_arabic": "0", "color_class": "planet-uranus"},
 ]
 PLANET_INFO_MAP = {p["name"]: p for p in PLANET_INFO}
 
@@ -392,6 +394,7 @@ def chart_to_view(
                 "rasi_name": RASI_NAMES_TH[p.zodiac.rasi],
                 "degree": p.zodiac.degree,
                 "arcminute": p.zodiac.arcminute,
+                "arcsecond": p.zodiac.arcsecond,
                 "retrograde": p.retrograde,
             })
 
@@ -429,6 +432,7 @@ def chart_to_view(
             "rasi_name": RASI_NAMES_TH[p.zodiac.rasi],
             "degree": p.zodiac.degree,
             "arcminute": p.zodiac.arcminute,
+            "arcsecond": p.zodiac.arcsecond,
             "house": house,
             "bhava": BHAVA_NAMES[house - 1],
             "retrograde": p.retrograde,
@@ -437,6 +441,8 @@ def chart_to_view(
     # คำทำนายเจ้าเรือนครองภพ (Bhava Lord)
     natal_lord_preds = predict_natal_lords(chart.ascendant.zodiac.rasi, chart.planets)
     natal_lord_summary = generate_bhava_lord_summary(natal_lord_preds)
+    # ไฮไลต์ 5 ภพสำคัญสำหรับโหมดดูดวง
+    natal_lord_summary["highlights_top5"] = _pick_lord_highlights(natal_lord_preds)
     transit_lord_data = None
     if transit_chart is not None:
         transit_lord_preds = predict_transit_lords(
@@ -461,6 +467,9 @@ def chart_to_view(
     )
     # ทักษาจร (Transit Taksa) — เดิน 9 ช่องปีละ 1 ตา
     transit_taksa = compute_transit_taksa(taksa, taksa.year_of_life)
+
+    # ปฏิทินจันทรคติ (Thai Lunar Calendar)
+    lunar = compute_lunar_date(chart.desire, chart.planets["อาทิตย์"].zodiac.rasi)
 
     # บทพูดโหร (oracle narrative) — สังเคราะห์ทุก source
     oracle_seed = f"{chart.ce_year}-{chart.month}-{chart.day}-{chart.hour}-{chart.minute}"
@@ -489,6 +498,7 @@ def chart_to_view(
             "rasi_name": chart.ascendant.zodiac.rasi_name,
             "degree": chart.ascendant.zodiac.degree,
             "arcminute": chart.ascendant.zodiac.arcminute,
+            "arcsecond": chart.ascendant.zodiac.arcsecond,
         },
         "chart_lord": chart.chart_lord,
         "rasis": rasis,
@@ -514,15 +524,33 @@ def chart_to_view(
         "natal_bhava_lords": natal_lord_summary,
         "oracle": oracle_reading,
         "taksa": _taksa_to_view(taksa, taksa_transit_aspects, transit_taksa),
+        "birth_weekday_name": taksa.birth_weekday_name,
+        "lunar": {
+            "phase_name": lunar.phase_name,
+            "day_in_phase": lunar.day_in_phase,
+            "lunar_month": lunar.lunar_month,
+            "lunar_month_name": lunar.lunar_month_name,
+            "zodiac_year_name": lunar.zodiac_year_name,
+            "zodiac_animal_en": lunar.zodiac_animal_en,
+            "is_leap_month_year": lunar.is_leap_month_year,
+            "cs_year": lunar.cs_year,
+            "pretty": lunar.pretty,
+            "pretty_short": lunar.pretty_short,
+        },
         "info": {
             "cs_year": sr.thaloengsok_cs_year,
             "thaloengsok": f"{sr.thaloengsok.day} {THAI_MONTHS[sr.thaloengsok.month]} {sr.thaloengsok.be_year}",
             "surathin": sr.total_days,
             "horakhun": d.horakhun,
+            "horakhun_at_midnight": d.horakhun_at_midnight,
             "julian": d.julian_date,
+            "thai_minor_era": d.thai_minor_era,
             "kammatchaphon": d.kammatchaphon,
             "ujapon": d.ujapon,
+            "mas": d.mas,
+            "awaman": d.awaman,
             "dithi": d.dithi,
+            "ujapon_remainder": d.ujapon_remainder,
         },
     }
 
@@ -642,6 +670,62 @@ def _taksa_to_view(taksa, transit_aspects, transit_taksa=None):
             if transit_taksa is not None else None
         ),
     }
+
+
+def _pick_lord_highlights(predictions) -> list:
+    """เลือก 5 ภพสำคัญสำหรับโหมดดูดวง:
+       ภพ 2 (การเงิน), 7 (คู่ครอง), 10 (การงาน), 11 (ลาภ) + 1 warn
+       ถ้าไม่มี warn → เลือกภพ 4 (ครอบครัว) แทน
+    """
+    by_bhava = {p.lord_bhava: p for p in predictions}
+    important = [2, 7, 10, 11]
+    out = []
+    for b in important:
+        if b in by_bhava:
+            p = by_bhava[b]
+            out.append({
+                "lord_bhava": p.lord_bhava,
+                "lord_bhava_name": p.lord_bhava_name,
+                "lord_planet": p.lord_planet,
+                "lord_rasi": p.lord_rasi,
+                "located_bhava": p.located_bhava,
+                "located_bhava_name": p.located_bhava_name,
+                "prediction": p.prediction,
+                "tone": p.tone,
+                "tone_label": p.tone_label,
+            })
+    # หา 1 warn ที่ไม่ซ้ำ
+    warn = next(
+        (p for p in predictions
+         if p.tone == "warning" and p.lord_bhava not in important),
+        None,
+    )
+    if warn:
+        out.append({
+            "lord_bhava": warn.lord_bhava,
+            "lord_bhava_name": warn.lord_bhava_name,
+            "lord_planet": warn.lord_planet,
+            "lord_rasi": warn.lord_rasi,
+            "located_bhava": warn.located_bhava,
+            "located_bhava_name": warn.located_bhava_name,
+            "prediction": warn.prediction,
+            "tone": warn.tone,
+            "tone_label": warn.tone_label,
+        })
+    elif 4 in by_bhava and not any(o["lord_bhava"] == 4 for o in out):
+        p = by_bhava[4]
+        out.append({
+            "lord_bhava": p.lord_bhava,
+            "lord_bhava_name": p.lord_bhava_name,
+            "lord_planet": p.lord_planet,
+            "lord_rasi": p.lord_rasi,
+            "located_bhava": p.located_bhava,
+            "located_bhava_name": p.located_bhava_name,
+            "prediction": p.prediction,
+            "tone": p.tone,
+            "tone_label": p.tone_label,
+        })
+    return out
 
 
 def _default_form() -> dict:

@@ -10,9 +10,9 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260528e" />
 </head>
-<body>
+<body class="view-general">
   <header class="site-header">
     <div class="ornament">❀</div>
     <h1>ผูกดวงโหราศาสตร์ไทย</h1>
@@ -154,8 +154,8 @@
     </section>
 
     {% if result %}
-    <!-- ===== กลาง: ผังจักรราศี ===== -->
-    <section class="chart-section">
+    <!-- ===== กลาง: ผังจักรราศี (อยู่บนสุดเสมอ ทั้งสอง view) ===== -->
+    <section class="chart-section view-both">
       <div class="card result-header-card">
         <div class="result-header">
           <div>
@@ -165,15 +165,19 @@
               <h2>ดวงชะตา</h2>
             {% endif %}
             <p class="meta">
-              เกิดวัน{{ result.birth_date_th }} เวลา {{ result.birth_time }} น.
+              เกิด{{ result.birth_weekday_name }}ที่ {{ result.birth_date_th }}
+              เวลา {{ result.birth_time }} น.
               <br/>ณ จังหวัด{{ result.province }}
+              {% if result.lunar %}
+                <br/><span class="lunar-meta">🌙 {{ result.lunar.pretty_short }}</span>
+              {% endif %}
             </p>
           </div>
           <div class="lakkana-badge">
             <div class="badge-label">ลัคนา</div>
             <div class="badge-value">
               {{ result.ascendant.rasi_name }}
-              {{ result.ascendant.degree }}°{{ "%02d"|format(result.ascendant.arcminute) }}′
+              {{ result.ascendant.degree }}°{{ "%02d"|format(result.ascendant.arcminute) }}′{{ "%02d"|format(result.ascendant.arcsecond or 0) }}″
             </div>
             <div class="badge-sub">เจ้าชะตา: {{ result.chart_lord }}</div>
           </div>
@@ -306,13 +310,85 @@
             </div>
             <div class="center-lakkana">
               ลัคนา {{ result.ascendant.rasi_name }}
-              {{ result.ascendant.degree }}°{{ "%02d"|format(result.ascendant.arcminute) }}′
+              {{ result.ascendant.degree }}°{{ "%02d"|format(result.ascendant.arcminute) }}′{{ "%02d"|format(result.ascendant.arcsecond or 0) }}″
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ความหมายภพ (อยู่กลางตามผังดวง เพื่อให้คอลัมน์ขวาเห็นตำแหน่งดาวได้กระชับ) -->
+    </section>
+
+    {# ===== Tab Switcher: ดูดวง / ศึกษาโหราศาสตร์ (อยู่ใต้แถวบนสุด) ===== #}
+    <nav class="view-tabs" aria-label="โหมดการอ่าน">
+      <button type="button" class="tab-btn" data-view="general">
+        <span class="tab-emoji">📖</span> ดูดวง
+      </button>
+      <button type="button" class="tab-btn" data-view="student">
+        <span class="tab-emoji">🔬</span> ศึกษาโหราศาสตร์
+      </button>
+    </nav>
+
+    <!-- ===== ตารางดาวกำเนิด + ดาวจร + ข้อมูลคำนวณ (โหมดศึกษาเท่านั้น) ===== -->
+    <section class="detail-section view-student">
+      <div class="card">
+        <h2><span class="title-deco">✦</span> ดาวกำเนิด <span class="title-deco">✦</span></h2>
+        <div class="planet-table">
+          {% for p in result.planets %}
+            <div class="planet-row">
+              <span class="planet-chip {{ p.color_class }} chip-lg">{{ p.abbr }}</span>
+              <span class="planet-name">{{ p.name }}{% if p.retrograde %} <em class="retro">(พักร์)</em>{% endif %}</span>
+              <span class="planet-pos">{{ p.rasi_name }} {{ p.degree }}°{{ "%02d"|format(p.arcminute) }}′{{ "%02d"|format(p.arcsecond or 0) }}″</span>
+              <span class="planet-house">ภพ{{ p.bhava }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if result.transit %}
+      <div class="card">
+        <h2><span class="title-deco">✦</span> ดาวจร <span class="title-deco">✦</span></h2>
+        <p class="transit-meta">
+          ดู ณ <b>{{ result.transit.date_th }}</b><br/>
+          เวลา <b>{{ result.transit.time }} น.</b> · จังหวัด<b>{{ result.transit.province }}</b>
+        </p>
+        <div class="planet-table">
+          {% for p in result.transit.planets %}
+            <div class="planet-row">
+              <span class="planet-chip {{ p.color_class }} chip-lg chip-arabic">{{ p.abbr }}</span>
+              <span class="planet-name">{{ p.name }}{% if p.retrograde %} <em class="retro">(พักร์)</em>{% endif %}</span>
+              <span class="planet-pos">{{ p.rasi_name }} {{ p.degree }}°{{ "%02d"|format(p.arcminute) }}′{{ "%02d"|format(p.arcsecond or 0) }}″</span>
+              <span class="planet-house"></span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <details class="card collapsible">
+        <summary>ข้อมูลการคำนวณ (สำหรับผู้ศึกษา)</summary>
+        <div class="calc-info">
+          <div><b>จุลศักราช (จ.ศ.):</b> {{ result.info.cs_year }}</div>
+          <div><b>เถลิงศก:</b> {{ result.info.thaloengsok }}</div>
+          <div><b>สุรทิน:</b> {{ result.info.surathin }} วัน</div>
+          <div><b>หรคุณ:</b> {{ result.info.horakhun }}</div>
+          <div><b>หรคุณกึ่งคืน:</b> {{ result.info.horakhun_at_midnight }}</div>
+          <div><b>จูเลียนเดย์ (JDN):</b> {{ result.info.julian }}</div>
+          <div><b>ศักราชใหม่:</b> {{ result.info.thai_minor_era }}</div>
+          <div><b>กัมมัชพล:</b> {{ result.info.kammatchaphon }}</div>
+          <div><b>อุจจพล:</b> {{ result.info.ujapon }}</div>
+          <div><b>มาสเกณฑ์:</b> {{ result.info.mas }}</div>
+          <div><b>อวมาน:</b> {{ result.info.awaman }}</div>
+          <div><b>ดิถี:</b> {{ result.info.dithi }}</div>
+          <div><b>เศษอุจจพล:</b> {{ result.info.ujapon_remainder }}</div>
+          {% if result.lunar %}
+            <div class="calc-lunar"><b>จันทรคติ:</b> {{ result.lunar.pretty }}</div>
+          {% endif %}
+        </div>
+      </details>
+    </section>
+
+    {# ===== ความหมายของภพ 12 — เต็มความกว้าง โหมดศึกษาเท่านั้น ===== #}
+    <section class="prophecy-section view-student">
       <div class="card bhava-card">
         <h2><span class="title-deco">✦</span> ความหมายของภพทั้ง 12 <span class="title-deco">✦</span></h2>
         <p class="bhava-intro">
@@ -332,61 +408,38 @@
       </div>
     </section>
 
-    <!-- ===== ขวา: ตารางดาวกำเนิด + ดาวจร + ข้อมูลคำนวณ ===== -->
-    <section class="detail-section">
-      <div class="card">
-        <h2><span class="title-deco">✦</span> ดาวกำเนิด <span class="title-deco">✦</span></h2>
-        <div class="planet-table">
-          {% for p in result.planets %}
-            <div class="planet-row">
-              <span class="planet-chip {{ p.color_class }} chip-lg">{{ p.abbr }}</span>
-              <span class="planet-name">{{ p.name }}{% if p.retrograde %} <em class="retro">(พักร์)</em>{% endif %}</span>
-              <span class="planet-pos">{{ p.rasi_name }} {{ p.degree }}°{{ "%02d"|format(p.arcminute) }}′</span>
-              <span class="planet-house">ภพ{{ p.bhava }}</span>
-            </div>
-          {% endfor %}
-        </div>
-      </div>
-
-      {% if result.transit %}
-      <div class="card">
-        <h2><span class="title-deco">✦</span> ดาวจร <span class="title-deco">✦</span></h2>
-        <p class="transit-meta">
-          ดู ณ <b>{{ result.transit.date_th }}</b><br/>
-          เวลา <b>{{ result.transit.time }} น.</b> · จังหวัด<b>{{ result.transit.province }}</b>
+    {# ===== โหมดดูดวง: เจ้าเรือนไฮไลต์ 5 ตัวสำคัญ ===== #}
+    {% if result.natal_bhava_lords and result.natal_bhava_lords.highlights_top5 %}
+    <section class="prophecy-section view-general">
+      <div class="card prophecy-card highlight-card">
+        <h2><span class="title-deco">✦</span> เรื่องสำคัญในชีวิตคุณ <span class="title-deco">✦</span></h2>
+        <p class="prophecy-intro">
+          จุดเน้นจากดวงพื้นฐาน — <b>การเงิน · คู่ครอง · การงาน · ลาภยศ</b> และเรื่องที่ควรระวัง
         </p>
-        <div class="planet-table">
-          {% for p in result.transit.planets %}
-            <div class="planet-row">
-              <span class="planet-chip {{ p.color_class }} chip-lg chip-arabic">{{ p.abbr }}</span>
-              <span class="planet-name">{{ p.name }}{% if p.retrograde %} <em class="retro">(พักร์)</em>{% endif %}</span>
-              <span class="planet-pos">{{ p.rasi_name }} {{ p.degree }}°{{ "%02d"|format(p.arcminute) }}′</span>
-              <span class="planet-house"></span>
+        <div class="prophecy-list">
+          {% for p in result.natal_bhava_lords.highlights_top5 %}
+            <div class="prophecy-row tone-{{ p.tone }}">
+              <div class="prophecy-pair">
+                <span class="tone-tag tone-{{ p.tone }}">{{ p.tone_label }}</span>
+              </div>
+              <div class="prophecy-detail">
+                <div class="prophecy-headline">
+                  <b>{{ p.lord_bhava_name }}</b> (ภพ {{ p.lord_bhava }})
+                  → <b>{{ p.located_bhava_name }}</b> (ผ่าน{{ p.lord_planet }})
+                </div>
+                <div class="prophecy-text">{{ p.prediction }}</div>
+              </div>
             </div>
           {% endfor %}
         </div>
       </div>
-      {% endif %}
-
-      <details class="card collapsible">
-        <summary>ข้อมูลการคำนวณ (สำหรับผู้ศึกษา)</summary>
-        <div class="calc-info">
-          <div><b>จุลศักราช:</b> {{ result.info.cs_year }}</div>
-          <div><b>เถลิงศก:</b> {{ result.info.thaloengsok }}</div>
-          <div><b>สุรทิน:</b> {{ result.info.surathin }} วัน</div>
-          <div><b>หรคุณ:</b> {{ result.info.horakhun }}</div>
-          <div><b>Julian Day:</b> {{ result.info.julian }}</div>
-          <div><b>กรรมจุปา:</b> {{ result.info.kammatchaphon }}</div>
-          <div><b>อุจจพล:</b> {{ result.info.ujapon }}</div>
-          <div><b>ดิถี:</b> {{ result.info.dithi }}</div>
-        </div>
-      </details>
     </section>
+    {% endif %}
 
     {# ===== แถวล่าง: คำทำนายเจ้าเรือนครองภพ (ดวงพื้นฐาน) ===== #}
     {% if result.natal_bhava_lords %}
     {% set nbl = result.natal_bhava_lords %}
-    <section class="prophecy-section">
+    <section class="prophecy-section view-student">
       <div class="card prophecy-card">
         <h2><span class="title-deco">✦</span> คำทำนายเจ้าเรือนครองภพ (ดวงพื้นฐาน) <span class="title-deco">✦</span></h2>
         <p class="prophecy-intro">
@@ -421,7 +474,7 @@
 
     {# ===== แถวล่าง: คำทำนายดาวจรกระทบดาวเดิม (เต็มความกว้าง 3 คอลัมน์) ===== #}
     {% if result.transit and result.transit.aspects %}
-    <section class="prophecy-section">
+    <section class="prophecy-section view-both">
       {# === กล่องสรุป (อ่านง่าย) === #}
       {% if result.transit.summary %}
         {% set s = result.transit.summary %}
@@ -480,7 +533,7 @@
       {# === เจ้าเรือนเดิม ณ ตำแหน่งดาวจร === #}
       {% if result.transit.bhava_lords %}
       {% set tbl = result.transit.bhava_lords %}
-      <div class="card prophecy-card">
+      <div class="card prophecy-card view-student">
         <h2><span class="title-deco">✦</span> เจ้าเรือนเดิม ณ ตำแหน่งดาวจร <span class="title-deco">✦</span></h2>
         <p class="prophecy-intro">
           ดูดาว<b>เจ้าเรือน</b>ของชะตาเดิม ขณะนี้กำลังโคจรอยู่ภพไหน
@@ -508,7 +561,7 @@
       {% endif %}
 
       {# === ตารางคำทำนายเต็มเรียงตามความสำคัญ === #}
-      <div class="card prophecy-card">
+      <div class="card prophecy-card view-student">
         <h2><span class="title-deco">✦</span> คำทำนายโดยละเอียด (เรียงตามลำดับความสำคัญ) <span class="title-deco">✦</span></h2>
         <p class="prophecy-intro">
           ดาวจรเคลื่อนผ่านราศีต่าง ๆ เมื่อ<b>กุม</b> (ราศีเดียวกัน) หรือ
@@ -544,7 +597,7 @@
       </div>
     </section>
     {% elif result %}
-    <section class="prophecy-section">
+    <section class="prophecy-section view-student">
       <div class="card prophecy-card">
         <h2><span class="title-deco">✦</span> คำทำนายดาวจรกระทบดาวเดิม <span class="title-deco">✦</span></h2>
         <p class="prophecy-empty">
@@ -558,7 +611,7 @@
     {# ===== ทักษา (Taksa) — ดาวประจำวันเกิด + 8 บริวาร + ดาวเสวยอายุ ===== #}
     {% if result.taksa %}
     {% set tk = result.taksa %}
-    <section class="prophecy-section">
+    <section class="prophecy-section view-both">
       <div class="card taksa-card">
         <h2><span class="title-deco">☸</span> ทักษา — ดาวประจำวันเกิด <span class="title-deco">☸</span></h2>
 
@@ -598,6 +651,8 @@
             <span class="tt-bhava">→ ภพ<b>{{ tk.transit_taksa.natal_bhava_at_current }}</b></span>
           </div>
         {% endif %}
+
+        <div class="view-student">
 
         {# === 3x3 แผนภูมิทักษา === #}
         <div class="taksa-grid-wrap">
@@ -760,6 +815,8 @@
           <small>* ทักษามาตรฐาน 8 ดาว (ดาวประจำวันเกิด + อัฏฐดาว) · มหาทักษาดาษา 96 ปี (12 ปีต่อดาว)
           · พุธหลัง 18:00 = ราหู</small>
         </p>
+
+        </div>{# /view-student wrapper inside taksa-card #}
       </div>
     </section>
     {% endif %}
@@ -767,7 +824,7 @@
     {# ===== บทพูดของโหร (Oracle Reading) — การ์ดสุดท้าย ===== #}
     {% if result.oracle %}
     {% set o = result.oracle %}
-    <section class="prophecy-section">
+    <section class="prophecy-section view-both">
       <div class="card oracle-card oracle-{{ o.tone_class }}">
         <h2><span class="title-deco">🔮</span> คำพยากรณ์จากโหร <span class="title-deco">🔮</span></h2>
         <div class="oracle-subtitle">บทสรุปจากดวงดาวทั้งหมด — อ่านเหมือนนั่งคุยกับโหรหนึ่งคน</div>
@@ -861,6 +918,6 @@
     <p>คำนวณตามคัมภีร์สุริยยาตร์ของไทย · port มาจาก Devtino.Astrology</p>
   </footer>
 
-  <script src="/static/script.js"></script>
+  <script src="/static/script.js?v=20260528a"></script>
 </body>
 </html>

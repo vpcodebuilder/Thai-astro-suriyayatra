@@ -41,7 +41,7 @@ class TestPlanets(unittest.TestCase):
         d = build_desire(2543, 1, 1, 12, 0)  # 1 ม.ค. 2000
         planets = compute_all(d)
         expected = {"อาทิตย์", "จันทร์", "อังคาร", "พุธ",
-                    "พฤหัสบดี", "ศุกร์", "เสาร์", "ราหู", "เกตุ"}
+                    "พฤหัสบดี", "ศุกร์", "เสาร์", "ราหู", "เกตุ", "มฤตยู"}
         self.assertEqual(set(planets.keys()), expected)
         for p in planets.values():
             self.assertTrue(0 <= p.somput < ZODIAC_ARCMIN)

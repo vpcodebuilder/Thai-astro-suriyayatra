@@ -15,7 +15,7 @@ class TestChart(unittest.TestCase):
     def test_basic_fields(self):
         self.assertEqual(self.chart.ce_year, 1990)
         self.assertEqual(self.chart.be_year, 2533)
-        self.assertEqual(len(self.chart.planets), 9)
+        self.assertEqual(len(self.chart.planets), 10)  # 9 ดวงดั้งเดิม + มฤตยู
 
     def test_ascendant_valid(self):
         asc = self.chart.ascendant
@@ -34,7 +34,7 @@ class TestChart(unittest.TestCase):
 
     def test_all_planets_in_houses(self):
         total = sum(len(v) for v in self.chart.house_planets.values())
-        self.assertEqual(total, 9)
+        self.assertEqual(total, 10)  # รวมมฤตยู
 
     def test_render_chart(self):
         text = render_chart(self.chart)

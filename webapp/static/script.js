@@ -143,9 +143,44 @@ function setupPlanetTooltip() {
 
 /* ====================================================================== */
 
+/* ======================================================================
+   3) View tabs (ดูดวง / ศึกษาโหราศาสตร์)
+   ====================================================================== */
+
+function setupViewTabs() {
+  const tabs = document.querySelectorAll(".tab-btn");
+  if (tabs.length === 0) return;
+
+  function applyView(view) {
+    document.body.classList.remove("view-general", "view-student");
+    document.body.classList.add("view-" + view);
+    tabs.forEach((t) => t.classList.toggle("active", t.dataset.view === view));
+    try {
+      localStorage.setItem("preferred_view", view);
+    } catch (e) {
+      /* localStorage may be blocked — ignore */
+    }
+  }
+
+  tabs.forEach((btn) => {
+    btn.addEventListener("click", () => applyView(btn.dataset.view));
+  });
+
+  // Restore preferred view, default to "general"
+  let saved = "general";
+  try {
+    saved = localStorage.getItem("preferred_view") || "general";
+  } catch (e) {
+    saved = "general";
+  }
+  if (saved !== "general" && saved !== "student") saved = "general";
+  applyView(saved);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   setupDateSync("birth_date_th", "birth_date_picker");
   setupDateSync("transit_date_th", "transit_date_picker");
   setupDatePickerButtons();
   setupPlanetTooltip();
+  setupViewTabs();
 });
