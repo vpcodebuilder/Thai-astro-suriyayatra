@@ -568,3 +568,260 @@ thai_astro/horathaynu/
    ขยาย QUESTION_KEYWORDS, BHAVA_LOCATIONS, _make_text_* ได้
 7. **CSS class นาม `time-ring`, `lord-num-bg/text`, `qa-chip`** อยู่ inline ใน
    horathaynu.html ไม่ใช่ styles.css — เพราะใช้เฉพาะหน้านี้
+
+---
+
+# ===== Planned Feature (ยังไม่ทำ — รอผู้ใช้เรียก) =====
+# Chat กับ Claude (โหราจารย์ AI) + ระบบสมาชิก
+# วันที่คุย: 2026-05-30
+
+## สถานะ
+**เก็บไว้ก่อน** — ผู้ใช้จะเรียกมาทำเมื่อพร้อม อย่าเริ่มเขียนโค้ดจนกว่าจะสั่ง
+
+## แนวคิด
+เพิ่มกล่อง chat ใน 2 หน้า (`/` สุริยยาตร์ + `/horathaynu` โหรทายหนู)
+ให้ผู้ใช้คุยกับ Claude ที่สวมบทบาท "โหราจารย์ผู้เชี่ยวชาญ" โดยใช้ข้อมูล
+ดวงที่คำนวณแล้วเป็น context อ้างอิงตำราไทย (อ.เทพย์ / อ.ประยูร / อ.กานดา)
+ห้ามผสมโหราศาสตร์ตะวันตก
+
+## เทคโนโลยีที่เลือก
+- **Anthropic API (Claude Sonnet 4.6)** + prompt caching
+- ไม่ใช้ฟรี tier (ไม่มี) / ไม่ embed claude.ai (ไม่ได้)
+- ประเมินค่าใช้จ่าย: ~0.6 บาท/ข้อความ (cache hit)
+- เริ่มเติม $20 → ใช้ Sonnet ได้ ~1,200 ข้อความ
+
+## ระบบสมาชิก (กันค่าใช้จ่ายบาน)
+- **Guest**: ใช้ผูกดวงทุกอย่างได้ฟรี แต่ chat ล็อค 🔒
+- **Member**: chat ได้ 5 ข้อความ/วัน (reset เที่ยงคืน Asia/Bangkok)
+- **Premium** (อนาคต): ไม่จำกัด — เตรียม field `tier: free|premium` ไว้
+
+## OAuth
+- เฟส 1: **Google เท่านั้น** (ง่ายสุด ครอบคลุมคนไทย)
+- เฟส 2: เพิ่ม LINE / Facebook ถ้ามีคนขอ
+- ใช้ Authlib + cookie session (FastAPI SessionMiddleware) ไม่ใช้ JWT
+
+## DB Schema (PostgreSQL บน Railway)
+```
+User              { id, provider, provider_user_id, email, display_name,
+                    avatar_url, tier, created_at, last_login_at }
+DailyQuota        { user_id, date, used }  -- PK (user_id, date)
+ChatSession       { id, user_id, chart_type, chart_snapshot(JSON), created_at }
+ChatMessage       { id, session_id, role, content, tokens_in, tokens_out, created_at }
+```
+- ORM: SQLAlchemy + Alembic migrations
+- Chart snapshot **pin ตอนสร้าง session** (เปลี่ยนดวง = session ใหม่)
+- History retention: ผู้ใช้ลบเอง + auto cleanup >90 วัน
+
+## หน้าที่ต้องเพิ่ม/แก้
+| Path | สถานะ | หมายเหตุ |
+|---|---|---|
+| `/` | **ใหม่** | Landing page (hero + 2 CTA + feature comparison) |
+| `/chart` | **ย้ายจาก /** | ผูกดวงสุริยยาตร์ (เดิม) — chat ล็อคถ้า guest |
+| `/horathaynu` | แก้ | เพิ่ม chat (ล็อคถ้า guest) |
+| `/login` | **ใหม่** | ปุ่ม OAuth |
+| `/auth/google/{start,callback}` | **ใหม่** | OAuth flow |
+| `/logout`, `/account` | **ใหม่** | session mgmt + quota display + history |
+| `/privacy`, `/terms` | **ใหม่** | จำเป็นตาม OAuth ToS |
+
+## Routes API
+```
+POST /chat/start                สร้าง ChatSession จากดวงปัจจุบัน
+POST /chat/send                 ส่งข้อความ → consume quota → Claude
+GET  /chat/history/{session_id} ดึงข้อความเก่า
+DELETE /chat/{session_id}       ลบ
+GET  /api/quota                 quota เหลือสำหรับ UI badge
+```
+
+## Env Vars ที่ต้องเพิ่มบน Railway
+```
+ANTHROPIC_API_KEY
+DATABASE_URL
+SESSION_SECRET
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+GOOGLE_REDIRECT_URI
+```
+
+## Phases (โดยประมาณ 4-5 สัปดาห์)
+1. Foundation: landing + ย้าย route + DB + session middleware
+2. Auth: Google OAuth + User CRUD + /account
+3. Chat + Quota: Anthropic SDK + ChatSession/Message + quota enforcement + UI
+4. Polish: history view + rate limit + (optional) LINE OAuth
+
+## ประเด็นที่ตัดสินแล้ว (default ถ้าผู้ใช้ไม่บอกเป็นอื่น)
+1. OAuth เฟสแรก: **Google เท่านั้น**
+2. DB: **Railway PostgreSQL**
+3. Chart snapshot: **pin ตอนสร้าง session**
+4. History: **ผู้ใช้ลบเอง + auto >90 วัน**
+5. Quota reset: **เที่ยงคืน Asia/Bangkok**
+6. Guest trial: **ไม่ให้ลอง** (force signup conversion)
+7. Premium tier: **เตรียม field ไว้ แต่ยังไม่ implement**
+8. Domain: **ยังไม่ได้คุย** — ถามผู้ใช้ตอนเริ่มทำ (OAuth ต้อง redirect URI ที่แน่นอน)
+
+## System prompt (โครง draft)
+```
+คุณคือ "อาจารย์โหร" ผู้เชี่ยวชาญโหราศาสตร์ไทยสายสุริยยาตร์
+- ตอบเป็นภาษาไทย น้ำเสียงสุภาพแบบโหรอาวุโส
+- อ้างตำรา: อ.เทพย์ สาริกบุตร / อ.ประยูร / อ.กานดา (โหรทายหนู)
+- ห้ามใช้ศัพท์โหราศาสตร์ตะวันตก (ใช้ภพไทย ราศีไทย)
+- ตอบตามดวงที่ให้เท่านั้น ห้ามแต่งดาวเพิ่ม
+- คำถามนอกขอบเขตโหราศาสตร์ → ปฏิเสธอ่อนๆ
+## ข้อมูลดวงของผู้ถาม
+{chart_summary จาก context builder}
+```
+
+## กลยุทธ์ลดต้นทุน (รวมในแผนแล้ว)
+- Prompt caching system+chart context (ลด ~40%)
+- จำกัด history 3-5 รอบล่าสุด
+- `max_tokens=800`
+- Quota แข็ง 5/วัน
+- Spending limit บนแดชบอร์ด Anthropic
+- Log token count ทุก request
+
+## ไฟล์ที่จะแตะ (เมื่อเริ่มทำจริง)
+- `requirements.txt` — เพิ่ม anthropic, sqlalchemy, alembic, psycopg2-binary, authlib, itsdangerous
+- `webapp/server.py` — routes ใหม่ + auth middleware
+- `webapp/chat.py` **(ใหม่)** — context builders + Anthropic client
+- `webapp/auth.py` **(ใหม่)** — OAuth flow
+- `webapp/db.py` **(ใหม่)** — SQLAlchemy session + models
+- `webapp/templates/` — landing.html, login.html, account.html, privacy.html, terms.html
+- `webapp/templates/index.html` + `horathaynu.html` — chat UI + auth gate
+- `webapp/static/styles.css` — chat bubbles + landing
+- `alembic/` **(ใหม่)** — migrations folder
+
+---
+
+# ===== Feature 2 — ขยายคำทำนายโหรทายหนูให้ลึก (เสร็จแล้ว) =====
+# วันที่คุย: 2026-05-30
+# สถานะ: ✅ ทำเสร็จครบทั้ง 7 Phase
+
+## ปัญหาเดิม
+`thai_astro/horathaynu/core/prophecy.py` ปัจจุบันทำได้แค่
+"ดาว X อยู่ภพ Y + ครองร่วม Z" — ไม่ตีความความหมายจริง
+ทุกคำถามที่ map ไปดาวเดียวกันได้คำตอบเหมือนกัน
+
+## หลักการ 3 ชั้น (จากตำรา อ.ประทีป อัครา 2528)
+1. **ชั้น 1**: คำถาม → ภพหลัก (significator bhava)
+2. **ชั้น 2**: เจ้าเรือนภพหลักไปสถิตภพไหน (ภพผสมภพ 12×12 = 144 combos)
+3. **ชั้น 3**: ดาวที่อยู่ในภพหลัก + ดาวครองร่วม (ดาว×ภพ 11×12 = 132)
+
+โค้ดเดิมทำชั้น 3 แบบจำกัด ขาดชั้น 1+2 ทั้งดุ้น
+
+## โครงสร้างที่จะเพิ่มใน `thai_astro/horathaynu/data/`
+- `question_mapping.py`        — keyword → (bhava, significator, category)
+- `bhava_meanings_prashna.py`  — 12 ภพ น้ำเสียง prashna (ไม่ใช่ natal)
+- `planet_in_bhava.py`         — 132 entries (11×12)
+- `lord_in_bhava.py`           — 144 entries (port จาก `bhava_lord_prophecy.py`
+                                  ปรับภาษาเป็น prashna)
+- `planet_combo.py`            — ดาวครองร่วมที่มีนัยพิเศษ ~20 คู่
+
+## Phases
+| # | งาน | entries | เวลา |
+|---|---|---|---|
+| 1 | question→bhava mapping (ขยาย 20 cat) | 20 | 1 วัน |
+| 2 | bhava_meanings_prashna 12 ภพ | 12 | 1 วัน |
+| 3 | planet_in_bhava (เริ่ม 7 ดาว × 12) | 84 | 3-4 วัน |
+| 4 | lord_in_bhava port + ปรับภาษา | 144 | 2 วัน |
+| 5 | planet_combo | ~20 | 1 วัน |
+| 6 | rewrite prophecy.py 3-layer render | — | 1 วัน |
+| 7 | test + tune | — | 1 วัน |
+
+**คำแนะนำที่ user approve:** เริ่ม Phase 1+2 (ชั้น 1+2 ครอบ 80% insight)
+ขยาย 8 categories ที่มี chips อยู่แล้ว → Phase 3-5 ทำทีหลัง
+
+## แหล่งอ้างอิง
+- **ตำราหลัก**: ตำราโหรทายหนู โดย ประทีป อัครา (2528, 241 หน้า) — ★
+- **ตำราอ.กานดา** (8 หน้า, ใช้แล้ว) — เฉพาะวิธีตั้งดวง
+- **เว็บฟรี** (อ้างได้):
+  - palachote.com — ดาว 7 ดวง × 12 ภพ
+  - horawej.com — "วิธีพยากรณ์แบบภพผสมภพ"
+  - horoscope.trueid.net — ความหมายภพ 12
+  - baankhunyai.com — คำทำนายภพ
+  - tandhava.in.th — ดาวเกษตร + เจ้าเรือน
+  - YouTube อ.เซิน — demo หาของหาย
+- **ใช้ของในโปรเจกต์ซ้ำได้**: `thai_astro/bhava_lord_prophecy.py` (80+ override
+  natal — port มา prashna ได้)
+
+## ประเด็นที่ตัดสินแล้ว (Phase 1 scope)
+1. เริ่มจาก 8 categories ที่มี chips อยู่แล้วก่อน
+2. ใช้ template + override pattern (เหมือน bhava_lord_prophecy เดิม)
+3. ไม่ต้องหาตำราจริง — เว็บฟรี + การ port จากโมดูลเดิมพอ
+4. คำเขียนเป็น original ของเรา ไม่ copy ตำรา (กัน copyright)
+
+---
+
+## ผลการทำจริง (Session 2026-05-30/31)
+
+### ไฟล์ที่สร้าง/แก้
+```
+thai_astro/horathaynu/
+├── data/
+│   ├── question_mapping.py           ✅ ใหม่ — 25 categories (ขยายจาก 8 เดิม)
+│   ├── bhava_meanings_prashna.py     ✅ ใหม่ — 12 ภพ × 8 field/ภพ
+│   ├── planet_in_bhava.py            ✅ ใหม่ — 84 entries (7 ดาว × 12 ภพ)
+│   ├── lord_in_bhava.py              ✅ ใหม่ — wrapper reuse bhava_lord_prophecy
+│   └── planet_combo.py               ✅ ใหม่ — 35 คู่ดาวพิเศษ
+└── core/
+    └── prophecy.py                   ✅ แก้ — เพิ่ม verdict + lens + on-topic
+webapp/
+├── server.py                         ✅ แก้ — gibberish guard + warning field
+└── templates/horathaynu.html         ✅ แก้ — accordion + warning box + maxlen
+```
+
+### Architecture สุดท้าย — 4 ชั้นในคำตอบ
+
+```
+🎯 Verdict          ← Phase C: synthesize tone จากทุกชั้น
+📌 Headline         ← ที่อยู่ของ significator
+🌌 Category lens    ← Phase A: frame ดาว×ภพ ในบริบทคำถาม (เสมอ)
+✨ Planet × Bhava   ← Phase 3: 84 entries (เฉพาะเมื่อ on-topic)
+🤝 Combo            ← Phase 5: 35 คู่ — filter ตาม category
+🌟 Lord × Bhava     ← Phase 4: 144 entries (ภพผสมภพ — chart-derived)
+```
+
+### Question handling pipeline
+1. **Length check** — max 200 chars
+2. **Gibberish guard** — 5 heuristics:
+   - อักษรซ้ำติดกัน ≥ 4 ตัว
+   - สระ > พยัญชนะ + 2
+   - พยัญชนะที่ใช้ ≤ 2 ชนิดในข้อความ ≥ 8 ตัว
+   - ≥ 8 อักษรไทย แต่ไม่มีสระเลย
+   - Pattern ซ้ำ 3 ครั้ง+ และครอบคลุม ≥ 60%
+3. **Keyword classify** — score-based matching (`priority × len(keyword)`)
+4. **Fallback** — ถ้าไม่ match + Thai ≥ 5 → general + warning banner UI
+5. **Reject** — อื่น ๆ → 400 พร้อมข้อความแนะนำ
+
+### Verdict synthesis logic
+- รวบ tone จาก 3 source: planet×bhava, lord×bhava, combos (×0.5)
+- ถ้า good มากกว่า warning + 0.3 → "แนวโน้มดี — เดินหน้าได้"
+- ถ้า warning มากกว่า good + 0.3 → "ต้องระวัง"
+- อื่น → "ก้ำกึ่ง"
+
+### On-topic detection (กัน text หลุดบริบท)
+`CATEGORY_RELEVANT_BHAVAS` — 25 entries map category → set of relevant houses
+ถ้า `sig_house` ไม่อยู่ใน set → ซ่อน generic planet×bhava text
+(เช่น เสาร์อยู่ภพ 7 สำหรับคำถาม "ลาออก" — ไม่แสดง "คู่ครองอายุห่าง" เพราะ off-topic)
+
+### UI ปรับ
+- **Accordion 9 groups** ใน suggestion panel (`<details>` native HTML)
+- คำถามตัวอย่างเป็น **ประโยคเต็ม** (เช่น "สัมภาษณ์งานมาจะได้งานมั้ย?")
+- **Warning box สีเหลือง** (background #fff3cd, border-left #d49100)
+  แสดงก่อน answer เมื่อ category=general
+- ปุ่ม "ทำนาย" align กับ input (เปลี่ยน flex-start → stretch)
+- input `maxlength="200"`
+
+### Tests
+- 81/81 unit tests ผ่านตลอดทั้ง 7 Phase
+- ไม่มี test ใหม่สำหรับ data files (ค่อยทำเพิ่มถ้าจำเป็น) — manual integration test เพียงพอ
+
+### Key learnings / gotchas
+1. **Horathaynu chart กระจายดาวมาก** — co-planets ใน same rashi น้อย
+   ต้องใช้ same-bhava ด้วยใน combo finder
+2. **Generic planet×bhava text หลุดบริบทง่าย** — entry เดียวต่อคู่ (planet, bhava)
+   แต่ดาวคู่เดียวกันตีความต่างตามเรื่องที่ถาม → ใช้ on-topic filter
+3. **Keyword "ยา" / "หาย" สั้นเกิน** — false positive กับคำในประโยคเช่น "อยาก"
+   → ลบออก/แทนด้วย compound keyword
+4. **Cache version** ต้อง bump ทุกครั้งที่แก้ HTML/CSS (ตอนนี้ `?v=20260530c`)
+5. **uvicorn --reload ไม่ pickup data file ใหม่** — ต้อง kill process แล้วรันใหม่
+6. **Pre-existing `bhava_lord_prophecy.py`** ที่ port natal ใช้ได้กับ prashna ด้วย
+   — ประหยัดเขียน 144 entries ใหม่

@@ -1109,6 +1109,103 @@ async def horathaynu_calculate(
     )
 
 
+def _count_thai_chars(s: str) -> int:
+    """นับเฉพาะตัวอักษรไทย (consonant + vowel) — ตัด space/punct/ASCII/digits"""
+    return sum(
+        1 for c in s
+        if ("ก" <= c <= "ฮ")    # consonant ก-ฮ
+        or ("ะ" <= c <= "ฺ")    # vowel ะ-ฺ
+        or ("เ" <= c <= "๎")    # vowel เ-๎
+    )
+
+
+# Thai vowel/tone characters (ไม่ใช่พยัญชนะ)
+_THAI_VOWELS_TONES = set("ะาำิีึืุูเแโใไๅัๆ์ฺ่้๊๋๎")
+
+
+def _looks_like_gibberish(s: str) -> bool:
+    """Heuristic ตรวจ "ฟ้อนคีย์มั่ว" (พิมพ์ตัวอักษรซ้ำหรือไม่เป็นคำ)
+
+    เกณฑ์:
+    1. มีอักษรซ้ำติดกัน ≥ 4 ตัว (เช่น "าาาาา") → gibberish
+    2. สัดส่วนสระ/วรรณยุกต์ > พยัญชนะ + 2 → gibberish (ภาษาไทยจริงพยัญชนะมากกว่า)
+    3. ใช้พยัญชนะไม่ซ้ำกัน ≤ 2 ตัวในข้อความยาว ≥ 8 → gibberish
+    """
+    if len(s) < 4:
+        return False
+
+    # (1) อักษรซ้ำติดกัน 4+
+    for i in range(len(s) - 3):
+        if s[i] == s[i + 1] == s[i + 2] == s[i + 3]:
+            return True
+
+    # (2) สระเยอะกว่าพยัญชนะ + 2
+    consonants = sum(1 for c in s if "ก" <= c <= "ฮ")
+    vowels_tones = sum(1 for c in s if c in _THAI_VOWELS_TONES)
+    if vowels_tones > consonants + 2:
+        return True
+
+    # (3) พยัญชนะที่ใช้มีน้อยกว่า 3 ชนิด ในข้อความยาว ≥ 8 อักษรไทย
+    thai_total = consonants + vowels_tones
+    if thai_total >= 8:
+        unique_consonants = len(
+            {c for c in s if "ก" <= c <= "ฮ"}
+        )
+        if unique_consonants <= 2:
+            return True
+
+    # (4) ข้อความยาว ≥ 8 อักษรไทย แต่ไม่มีสระเลย → พิมพ์มั่ว
+    if thai_total >= 8 and vowels_tones == 0:
+        return True
+
+    # (5) Pattern ซ้ำ — เช่น "ทดสอบทดสอบทดสอบ" หรือ "กขกขกข"
+    # หา pattern ความยาว 2-8 ที่ซ้ำต่อกัน ≥ 3 ครั้งและกินพื้นที่ ≥ 60% ของข้อความ
+    n = len(s)
+    if n >= 9:
+        for plen in range(2, 9):
+            if plen * 3 > n:
+                break
+            pattern = s[:plen]
+            repeat_count = 1
+            for i in range(plen, n - plen + 1, plen):
+                if s[i:i + plen] == pattern:
+                    repeat_count += 1
+                else:
+                    break
+            if repeat_count >= 3 and repeat_count * plen >= n * 0.6:
+                return True
+
+    return False
+
+
+# จำกัดความยาวคำถาม — ป้องกันการพิมพ์ยาวเกินจำเป็น
+MAX_QUESTION_LENGTH = 200
+
+
+def _validate_horathaynu_question(q: str, matched_count: int) -> str | None:
+    """ตรวจคำถาม gibberish หรือเปล่า.
+
+    คืน None ถ้าผ่าน, คืน error message ถ้าไม่ผ่าน
+    """
+    # ตรวจ gibberish ก่อน — ต่อให้ Thai >= 5 ถ้ารูปแบบมั่ว ก็ปฏิเสธ
+    if _looks_like_gibberish(q):
+        return (
+            "🤔 ดูเหมือนคำถามจะพิมพ์มั่วไปนิด ลองพิมพ์เป็นประโยคจริง "
+            "หรือเลือกหัวข้อจากแนวคำถามข้างบนครับ"
+        )
+
+    # ถ้า match keyword อย่างน้อย 1 → ผ่านเสมอ (กัน reject คำสั้นๆ ที่ valid เช่น "งาน")
+    if matched_count > 0:
+        return None
+    # ไม่ match แต่ภาษาไทย ≥ 5 ตัว → ผ่าน (general + banner)
+    if _count_thai_chars(q) >= 5:
+        return None
+    return (
+        "🤔 ไม่เข้าใจคำถามครับ ลองพิมพ์เป็นภาษาไทยให้ครบความ "
+        "หรือเลือกหัวข้อจากแนวคำถามข้างบน"
+    )
+
+
 @app.post("/horathaynu/ask")
 async def horathaynu_ask(
     date_th: str = Form(""),
@@ -1119,6 +1216,21 @@ async def horathaynu_ask(
     q = question.strip()
     if not q:
         return JSONResponse({"error": "กรุณาพิมพ์คำถาม"}, status_code=400)
+
+    # length guard
+    if len(q) > MAX_QUESTION_LENGTH:
+        return JSONResponse(
+            {"error": f"คำถามยาวเกินไป (สูงสุด {MAX_QUESTION_LENGTH} ตัวอักษร) "
+                      f"— ลองพิมพ์ใหม่ให้สั้นและตรงประเด็น"},
+            status_code=400,
+        )
+
+    # gibberish guard — ตรวจก่อนเข้าระบบทำนาย
+    from thai_astro.horathaynu.data.question_mapping import classify_question as _cq
+    _mapping, _matched = _cq(q)
+    err = _validate_horathaynu_question(q, len(_matched))
+    if err is not None:
+        return JSONResponse({"error": err}, status_code=400)
     try:
         if not date_th.strip() or not time.strip():
             return JSONResponse(
@@ -1136,10 +1248,20 @@ async def horathaynu_ask(
         return JSONResponse({"error": f"กรอกข้อมูลไม่ถูกต้อง: {e}"}, status_code=400)
 
     now = datetime.now(THAI_TZ)
+    # warning เมื่อคำถามตกใน general fallback (ไม่ match keyword)
+    warning = None
+    if prophecy.get("category") == "general":
+        warning = (
+            "ระบบไม่พบคำสำคัญในคำถาม จึงตีความเป็นภาพรวมจากลัคนา "
+            "— เพื่อความแม่นยำ ลองเลือกหัวข้อด้านบน หรือใช้คำเฉพาะ "
+            "เช่น \"การงาน\" \"ความรัก\" \"หวย\" \"ของหาย\" \"คดี\""
+        )
     return JSONResponse({
         "question": q,
         "answer": prophecy["text"],
         "significator": prophecy["significator"],
+        "category": prophecy.get("category"),
+        "warning": warning,
         "rashi": prophecy["rashi"],
         "bhava": prophecy["bhava"],
         "house": prophecy["house"],

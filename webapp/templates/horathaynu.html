@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260528e" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260530c" />
   <style>
     /* ===== nav links ===== */
     .nav-links { text-align: center; margin: 0 0 18px 0; }
@@ -154,18 +154,23 @@
     /* ===== Q&A section ===== */
     .qa-card { margin-top: 14px; }
     .qa-form {
-      display: flex; gap: 8px; align-items: flex-start; margin-bottom: 12px;
+      display: flex; gap: 8px; align-items: stretch; margin-bottom: 12px;
     }
     .qa-form input[type="text"] {
       flex: 1; padding: 10px 14px;
       border: 2px solid var(--gold-deep); border-radius: 6px;
       font-size: 1em; font-family: "Sarabun", sans-serif; background: #fff;
+      line-height: 1.4; box-sizing: border-box;
     }
     .qa-form input[type="text"]:focus {
       outline: none; border-color: var(--maroon);
       box-shadow: 0 0 0 3px rgba(122,45,18,0.15);
     }
-    .qa-form .btn-primary { padding: 10px 22px; white-space: nowrap; }
+    .qa-form .btn-primary {
+      padding: 0 22px; white-space: nowrap;
+      display: inline-flex; align-items: center; justify-content: center;
+      line-height: 1.4; box-sizing: border-box;
+    }
     @media (max-width: 600px) {
       .qa-form { flex-direction: column; }
       .qa-form .btn-primary { width: 100%; }
@@ -203,6 +208,21 @@
       white-space: pre-wrap; margin-top: 6px;
       font-size: 0.93em;
     }
+    /* กล่องเตือนสีเหลือง — เมื่อคำถามไม่ชัด (general fallback) */
+    .qa-warning {
+      background: #fff3cd;
+      border: 1px solid #ffd966;
+      border-left: 4px solid #d49100;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin: 6px 0 4px 0;
+      font-size: 0.86em;
+      color: #6c4a00;
+      line-height: 1.55;
+    }
+    .qa-warning::before {
+      content: "⚠️ "; font-size: 1.05em;
+    }
     .qa-meta {
       margin-top: 6px; padding-top: 6px;
       border-top: 1px dashed rgba(184, 132, 58, 0.4);
@@ -229,29 +249,63 @@
       margin-bottom: 8px;
     }
     .qa-suggest-title .icon { margin-right: 4px; }
-    .qa-suggest-list {
-      display: flex; flex-wrap: wrap; gap: 6px;
+
+    /* accordion group */
+    .qa-group {
+      border: 1px solid var(--gold-deep);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      background: rgba(255,255,255,0.5);
+      overflow: hidden;
+    }
+    .qa-group summary {
+      cursor: pointer;
+      padding: 8px 12px;
+      font-weight: 600;
+      font-size: 0.92em;
+      color: var(--maroon-dark);
+      user-select: none;
+      list-style: none;
+      transition: background 0.15s;
+    }
+    .qa-group summary::-webkit-details-marker { display: none; }
+    .qa-group summary::before {
+      content: "▸";
+      display: inline-block;
+      margin-right: 8px;
+      transition: transform 0.15s;
+      color: var(--gold-deep);
+    }
+    .qa-group[open] summary::before { transform: rotate(90deg); }
+    .qa-group summary:hover { background: rgba(217,164,84,0.15); }
+    .qa-group[open] summary {
+      border-bottom: 1px solid rgba(217,164,84,0.4);
+      background: rgba(255,249,237,0.7);
+    }
+    .qa-group-list {
+      display: flex; flex-direction: column; gap: 4px;
+      padding: 8px 12px;
     }
     .qa-chip {
-      display: inline-block;
-      padding: 5px 12px;
+      display: block;
+      padding: 7px 12px;
       background: #fff;
-      border: 1.5px solid var(--gold-deep);
-      border-radius: 14px;
-      font-size: 0.85em;
+      border: 1px solid var(--gold-deep);
+      border-radius: 6px;
+      font-size: 0.88em;
       color: var(--maroon-dark);
       cursor: pointer;
       transition: all 0.15s;
       font-family: "Sarabun", sans-serif;
       user-select: none;
+      text-align: left;
     }
     .qa-chip:hover {
       background: var(--maroon);
       color: #fde9c8;
       border-color: var(--maroon);
-      transform: translateY(-1px);
+      transform: translateX(3px);
     }
-    .qa-chip .chip-icon { margin-right: 4px; }
 
     /* ฟอร์มข้อมูล (col ซ้าย) */
     .form-section .card { padding: 16px; }
@@ -460,37 +514,94 @@
         <div class="card qa-card">
           <h2><span class="title-deco">✦</span> ถาม-ทำนาย <span class="title-deco">✦</span></h2>
 
-          <!-- suggestion chips -->
+          <!-- suggestion accordion (9 groups) -->
           <div class="qa-suggest">
             <div class="qa-suggest-title">
-              <span class="icon">💡</span>แนวคำถามที่นิยมในวิชาโหรทายหนู — คลิกเพื่อกรอกลงช่องคำถาม
+              <span class="icon">💡</span>แนวคำถามที่นิยม — คลิกหัวข้อเพื่อขยาย แล้วเลือกคำถามที่ใกล้เคียง
             </div>
-            <div class="qa-suggest-list">
-              <span class="qa-chip" data-q="ของรักหายไปไหน">
-                <span class="chip-icon">🔍</span>ตามหาของหาย
-              </span>
-              <span class="qa-chip" data-q="เหตุการณ์ที่กำลังจะเกิดขึ้น">
-                <span class="chip-icon">⏳</span>เหตุการณ์ปัจจุบัน
-              </span>
-              <span class="qa-chip" data-q="การเดินทางจะราบรื่นไหม">
-                <span class="chip-icon">🚗</span>การเดินทาง
-              </span>
-              <span class="qa-chip" data-q="คดีความและการทะเลาะเบาะแว้ง">
-                <span class="chip-icon">⚖️</span>คดีความ/พิพาท
-              </span>
-              <span class="qa-chip" data-q="สุขภาพและการเจ็บป่วย">
-                <span class="chip-icon">🩺</span>สุขภาพ
-              </span>
-              <span class="qa-chip" data-q="โชคลาภและทิศทางเงินทอง">
-                <span class="chip-icon">💰</span>โชคลาภ
-              </span>
-              <span class="qa-chip" data-q="ความรักจะเป็นอย่างไร">
-                <span class="chip-icon">💕</span>ความรัก
-              </span>
-              <span class="qa-chip" data-q="การงานและตำแหน่ง">
-                <span class="chip-icon">💼</span>การงาน
-              </span>
-            </div>
+
+            <details class="qa-group">
+              <summary>💼 การงาน / อาชีพ</summary>
+              <div class="qa-group-list">
+                <span class="qa-chip" data-q="สัมภาษณ์งานมาจะได้งานมั้ย">สัมภาษณ์งานมาจะได้งานมั้ย?</span>
+                <span class="qa-chip" data-q="จะได้เลื่อนตำแหน่งไหม">จะได้เลื่อนตำแหน่งไหม?</span>
+                <span class="qa-chip" data-q="ควรลาออกจากงานตอนนี้หรือเปล่า">ควรลาออกจากงานตอนนี้หรือเปล่า?</span>
+                <span class="qa-chip" data-q="อยากเดินทางไปทำงานต่างประเทศ">อยากเดินทางไปทำงานต่างประเทศ?</span>
+                <span class="qa-chip" data-q="อุปสรรคเรื่องงานเกี่ยวกับคนมั้ย">อุปสรรคเรื่องงานเกี่ยวกับคนมั้ย?</span>
+              </div>
+            </details>
+
+            <details class="qa-group">
+              <summary>💕 ความรัก / คู่ครอง</summary>
+              <div class="qa-group-list">
+                <span class="qa-chip" data-q="ความรักช่วงนี้จะเป็นยังไง">ความรักช่วงนี้จะเป็นยังไง?</span>
+                <span class="qa-chip" data-q="จะแต่งงานกับใครเมื่อไหร่">จะแต่งงานกับใครเมื่อไหร่?</span>
+                <span class="qa-chip" data-q="เลิกกันแล้วจะคืนดีไหม">เลิกกันแล้วจะคืนดีไหม?</span>
+                <span class="qa-chip" data-q="คนรักนอกใจหรือเปล่า">คนรักนอกใจหรือเปล่า?</span>
+              </div>
+            </details>
+
+            <details class="qa-group">
+              <summary>💰 ทรัพย์ / โชคลาภ / หนี้สิน</summary>
+              <div class="qa-group-list">
+                <span class="qa-chip" data-q="หวยงวดนี้จะถูกไหม">หวยงวดนี้จะถูกไหม?</span>
+                <span class="qa-chip" data-q="การเงินช่วงนี้จะเป็นยังไง">การเงินช่วงนี้จะเป็นยังไง?</span>
+                <span class="qa-chip" data-q="โชคลาภช่วงนี้มีไหม">โชคลาภช่วงนี้มีไหม?</span>
+                <span class="qa-chip" data-q="หนี้สินจะคลี่คลายเมื่อไหร่">หนี้สินจะคลี่คลายเมื่อไหร่?</span>
+              </div>
+            </details>
+
+            <details class="qa-group">
+              <summary>🔍 ของหาย / คนหาย / สัตว์หาย</summary>
+              <div class="qa-group-list">
+                <span class="qa-chip" data-q="ของรักหายไปอยู่ที่ไหน">ของรักหายไปอยู่ที่ไหน?</span>
+                <span class="qa-chip" data-q="หมาแมวหายจะกลับมาไหม">หมา/แมวหายจะกลับมาไหม?</span>
+                <span class="qa-chip" data-q="คนที่ติดต่อไม่ได้อยู่ที่ไหน">คนที่ติดต่อไม่ได้อยู่ที่ไหน?</span>
+              </div>
+            </details>
+
+            <details class="qa-group">
+              <summary>🩺 สุขภาพ</summary>
+              <div class="qa-group-list">
+                <span class="qa-chip" data-q="สุขภาพช่วงนี้จะเป็นยังไง">สุขภาพช่วงนี้จะเป็นยังไง?</span>
+                <span class="qa-chip" data-q="อาการป่วยจะหายเมื่อไหร่">อาการป่วยจะหายเมื่อไหร่?</span>
+              </div>
+            </details>
+
+            <details class="qa-group">
+              <summary>👨‍👩‍👧 ครอบครัว / บุตร</summary>
+              <div class="qa-group-list">
+                <span class="qa-chip" data-q="จะมีลูกได้ไหม">จะมีลูกได้ไหม?</span>
+                <span class="qa-chip" data-q="พ่อแม่ตอนนี้จะเป็นยังไง">พ่อแม่ตอนนี้จะเป็นยังไง?</span>
+                <span class="qa-chip" data-q="พี่น้องจะช่วยเหลือกันไหม">พี่น้องจะช่วยเหลือกันไหม?</span>
+              </div>
+            </details>
+
+            <details class="qa-group">
+              <summary>⚖️ คดี / พิพาท / ศัตรู</summary>
+              <div class="qa-group-list">
+                <span class="qa-chip" data-q="คดีความจะชนะไหม">คดีความจะชนะไหม?</span>
+                <span class="qa-chip" data-q="ทะเลาะกับใครจะคืนดีไหม">ทะเลาะกับใครจะคืนดีไหม?</span>
+                <span class="qa-chip" data-q="ใครเป็นศัตรูกับเราตอนนี้">ใครเป็นศัตรูกับเราตอนนี้?</span>
+              </div>
+            </details>
+
+            <details class="qa-group">
+              <summary>✈️ เดินทาง / การศึกษา / บ้าน</summary>
+              <div class="qa-group-list">
+                <span class="qa-chip" data-q="การเดินทางครั้งนี้จะปลอดภัยไหม">การเดินทางครั้งนี้จะปลอดภัยไหม?</span>
+                <span class="qa-chip" data-q="ผลสอบจะออกมาดีไหม">ผลสอบจะออกมาดีไหม?</span>
+                <span class="qa-chip" data-q="ซื้อบ้านจังหวะนี้ดีไหม">ซื้อบ้านจังหวะนี้ดีไหม?</span>
+              </div>
+            </details>
+
+            <details class="qa-group">
+              <summary>🔮 ดูดวงทั่วไป</summary>
+              <div class="qa-group-list">
+                <span class="qa-chip" data-q="เหตุการณ์ตอนนี้จะเป็นยังไง">เหตุการณ์ตอนนี้จะเป็นยังไง?</span>
+                <span class="qa-chip" data-q="ดวงวันนี้จะดีไหม">ดวงวันนี้จะดีไหม?</span>
+              </div>
+            </details>
           </div>
 
           <form id="qa-form" class="qa-form" autocomplete="off">
@@ -499,6 +610,7 @@
             <input
               type="text" name="question" id="qa-question"
               placeholder="พิมพ์คำถาม หรือคลิกเลือกจากตัวอย่างข้างบน..."
+              maxlength="200"
               required
             />
             <button type="submit" class="btn-primary">
@@ -635,7 +747,10 @@
             <div class="ts">⏱ ${escapeHtml(d.timestamp || "")}</div>
           </div>
         `;
-        const answerHtml = `<div class="a">${escapeHtml(d.answer)}</div>`;
+        const warningHtml = d.warning
+          ? `<div class="qa-warning">${escapeHtml(d.warning)}</div>`
+          : "";
+        const answerHtml = `${warningHtml}<div class="a">${escapeHtml(d.answer)}</div>`;
         let metaHtml = "";
         if (d.significator) {
           const co = (d.co_planets && d.co_planets.length)
