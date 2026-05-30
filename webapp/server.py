@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -36,6 +36,15 @@ from thai_astro.taksa import (
     compute_taksa, compute_transit_taksa, transit_aspects_on_taksa,
 )
 from thai_astro.lunar import compute_lunar_date
+from thai_astro.horathaynu.api import predict as horathaynu_predict, predict_from_datetime as horathaynu_predict_dt
+from thai_astro.horathaynu.core.caster import cast_chain as horathaynu_cast
+from thai_astro.horathaynu.core.bhava import BHAVA_NAMES_TH as HORATHAYNU_BHAVA_NAMES
+from thai_astro.horathaynu.core.caster import PLACEMENT_ORDER as HORATHAYNU_PLACEMENT_ORDER
+from thai_astro.horathaynu.core.time_to_yam import yam_range as horathaynu_yam_range
+from thai_astro.horathaynu.core.time_precision import time_to_bhava_cell as horathaynu_time_cell
+from thai_astro.horathaynu.data.lordship import lord_of as horathaynu_lord_of
+from thai_astro.horathaynu.data.planet_meanings import PLANET_NAME_TH as HORATHAYNU_PLANET_NAME_TH
+from thai_astro.horathaynu.core.prophecy import predict as horathaynu_prophecy
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -841,6 +850,305 @@ async def calculate(
             error=error,
         ),
     )
+
+
+# ============================================================
+# โหรทายหนู (ดวงยามอัฐุกาล — ฉบับ อ.กานดา)
+# ============================================================
+
+HORATHAYNU_WEEKDAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ",
+                      "พฤหัสบดี", "ศุกร์", "เสาร์"]
+
+HORATHAYNU_RASHI_TH = ["เมษ", "พฤษภ", "เมถุน", "กรกฎ", "สิงห์", "กันย์",
+                       "ตุล", "พิจิก", "ธนู", "มกร", "กุมภ์", "มีน"]
+
+HORATHAYNU_ORDER_LABEL = [
+    "ดาว ๑", "ดาว ๒", "ดาว ๓", "ดาว ๔", "ดาว ๕",
+    "ดาว ๖", "ดาว ๗", "ดาว ๘", "ลัคนา", "ดาว ๙", "ดาว ๐",
+]
+
+# เลขดาวเกษตรประจำราศี (เมษ → มีน, เวียนซ้าย)
+# 1=อาทิตย์ 2=จันทร์ 3=อังคาร 4=พุธ 5=พฤหัส 6=ศุกร์ 7=เสาร์ 8=ราหู
+# หมายเหตุ: กุมภ์ใช้ราหู (=8) ไม่ใช่เสาร์ ตามตำราโหรทายหนู
+HORATHAYNU_LORD_NUMBERS = [3, 6, 4, 2, 1, 4, 6, 3, 5, 7, 8, 5]
+
+# รัศมีของเลขเกษตรในผัง — อยู่ระหว่างวงในกับ chip ดาว
+R_HORATHAYNU_LORD = 138
+
+# วงนอกเวลายาม — แสดง 12 cell ละ 7.5 นาที (เริ่มที่ภพของเจ้าเรือนลัคนา)
+R_HORATHAYNU_TIME_INNER = 268   # ขอบในของวงเวลา
+R_HORATHAYNU_TIME_OUTER = 308   # ขอบนอก
+R_HORATHAYNU_TIME_LABEL = 288   # รัศมีของ text เวลา
+
+
+def _horathaynu_default_form() -> dict:
+    """ค่าเริ่มต้น — วันนี้/เวลานี้"""
+    now = datetime.now(THAI_TZ)
+    return {
+        "date_th": f"{now.day:02d}/{now.month:02d}/{now.year + 543}",
+        "time": f"{now.hour:02d}:{now.minute:02d}",
+    }
+
+
+def _horathaynu_prophesy(question: str, chart) -> dict:
+    """พยากรณ์ผ่าน prophecy module → คืน dict สำหรับ JSON response"""
+    r = horathaynu_prophecy(chart, question)
+    return {
+        "significator": r.significator_th,
+        "category": r.category,
+        "rashi": r.sig_rashi_name,
+        "bhava": r.sig_bhava,
+        "house": r.sig_house,
+        "tone": r.tone,
+        "is_own_sign": r.is_own_sign,
+        "co_planets": [HORATHAYNU_PLANET_NAME_TH[k] for k in r.co_planets],
+        "sign_lord": r.sign_lord_th,
+        "text": r.text,
+    }
+
+
+def _horathaynu_chart_view(chart, asked_time: Optional[str] = None,
+                           date_th: str = "", question: str = "") -> dict:
+    """แปลง horathaynu Chart → dict สำหรับ template"""
+    placements = []
+    for i, key in enumerate(HORATHAYNU_PLACEMENT_ORDER):
+        p = chart.placements[key]
+        info = PLANET_INFO_MAP.get(HORATHAYNU_PLANET_NAME_TH.get(key, ""))
+        placements.append({
+            "order": HORATHAYNU_ORDER_LABEL[i],
+            "key": key,
+            "name_th": HORATHAYNU_PLANET_NAME_TH.get(key, key),
+            "count": chart.counts[i],
+            "rashi": HORATHAYNU_RASHI_TH[p.sign],
+            "rashi_index": p.sign,
+            "house": p.house,
+            "bhava": HORATHAYNU_BHAVA_NAMES[p.house - 1],
+            "abbr": info["abbr"] if info else "?",
+            "color_class": info["color_class"] if info else "",
+        })
+
+    # group ดาวตามราศี (สำหรับวงกลม)
+    by_sign: dict[int, list[dict]] = {i: [] for i in range(12)}
+    for pl in placements:
+        if pl["key"] == "lagna":
+            continue  # ลัคนาแสดงเป็น marker แยก
+        by_sign[pl["rashi_index"]].append(pl)
+
+    # สร้าง rasis layout
+    asc = chart.ascendant_sign
+    rasis = []
+    for rasi_idx in range(12):
+        house_num = ((rasi_idx - asc) % 12) + 1
+        rasis.append({
+            "index": rasi_idx,
+            "name": HORATHAYNU_RASHI_TH[rasi_idx],
+            "house": house_num,
+            "bhava": HORATHAYNU_BHAVA_NAMES[house_num - 1],
+            "planets": by_sign[rasi_idx],
+            "is_ascendant": rasi_idx == asc,
+        })
+
+    circle = build_circular_layout(
+        rasis,
+        transits_by_rasi=None,
+        ascendant={"rasi": asc, "degree": 15, "arcminute": 0},
+    )
+
+    # เพิ่มเลขดาวเกษตรในแต่ละช่องราศี (เฉพาะ horathaynu)
+    for r in circle["rasis"]:
+        lord_num = HORATHAYNU_LORD_NUMBERS[r["index"]]
+        lord_x, lord_y = _polar_to_xy(r["center_angle"], R_HORATHAYNU_LORD)
+        r["lord_number"] = lord_num
+        r["lord_x"] = lord_x
+        r["lord_y"] = lord_y
+
+    # เจ้าเรือนลัคนา + จุดลงเวลา
+    lagna_lord_key = horathaynu_lord_of(asc)
+    lagna_lord_th = HORATHAYNU_PLANET_NAME_TH.get(lagna_lord_key, lagna_lord_key)
+    lord_house = chart.placements[lagna_lord_key].house
+    lord_bhava = HORATHAYNU_BHAVA_NAMES[lord_house - 1]
+
+    # วงนอกเวลายาม — 12 cell ตามภพ เริ่มที่ภพของเจ้าเรือนลัคนา
+    # ตัวอย่างหน้า 8: ลัคนาพฤษภ → เจ้าเรือน=ศุกร์ → ศุกร์อยู่ภพ 6 (อริ=ตุล)
+    #                ยาม 4 (10:30-12:00) → cell แรก 10:30-10:37.30 ที่ตุล
+    yam_start_t, _yam_end_t = horathaynu_yam_range(chart.yam_index)
+    start_minutes = yam_start_t.hour * 60 + yam_start_t.minute
+    # ราศีของ start_bhava (เจ้าเรือนลัคนาอยู่ที่ภพ lord_house)
+    start_sign = (asc + lord_house - 1) % 12
+
+    def _fmt_time(total_min: float) -> str:
+        h = int(total_min // 60) % 24
+        m_float = total_min % 60
+        m_int = int(m_float)
+        sec = int(round((m_float - m_int) * 60))
+        if sec == 0:
+            return f"{h:02d}:{m_int:02d}"
+        return f"{h:02d}:{m_int:02d}:{sec:02d}"
+
+    time_by_sign = {}
+    for cell_idx in range(12):
+        cell_sign = (start_sign + cell_idx) % 12
+        cell_start_min = start_minutes + cell_idx * 7.5
+        time_by_sign[cell_sign] = {
+            "start": _fmt_time(cell_start_min),
+            "end": _fmt_time(cell_start_min + 7.5),
+            "cell_idx": cell_idx,
+        }
+
+    for r in circle["rasis"]:
+        t = time_by_sign.get(r["index"])
+        if t:
+            tx, ty = _polar_to_xy(r["center_angle"], R_HORATHAYNU_TIME_LABEL)
+            r["time_label"] = t["start"]
+            r["time_end"] = t["end"]
+            r["time_cell_idx"] = t["cell_idx"]
+            r["time_x"] = tx
+            r["time_y"] = ty
+
+    # ขยายเส้นแบ่ง 12 เส้นออกถึงวงเวลา + เพิ่มข้อมูลวงนอก
+    new_dividers = []
+    for i in range(12):
+        angle = 75 + 30 * i
+        x1, y1 = _polar_to_xy(angle, R_INNER)
+        x2, y2 = _polar_to_xy(angle, R_HORATHAYNU_TIME_OUTER)
+        new_dividers.append({"x1": x1, "y1": y1, "x2": x2, "y2": y2})
+    circle["dividers"] = new_dividers
+    circle["r_time_inner"] = R_HORATHAYNU_TIME_INNER
+    circle["r_time_outer"] = R_HORATHAYNU_TIME_OUTER
+    # เพิ่ม size ของ SVG ให้พอกับวงเวลา
+    circle["size"] = 660  # SVG_SIZE
+    circle["pad"] = 25     # ระยะขอบในวง
+
+    time_precision = None
+    if asked_time:
+        from datetime import time as time_cls
+        h, m = [int(x) for x in asked_time.split(":")]
+        bhava_at_time, cell_offset = horathaynu_time_cell(
+            time_cls(h, m), chart.yam_index, lord_house
+        )
+        time_precision = {
+            "asked_time": asked_time,
+            "bhava_at_time": bhava_at_time,
+            "bhava_at_time_name": HORATHAYNU_BHAVA_NAMES[bhava_at_time - 1],
+            "cell_offset": cell_offset,
+        }
+
+    yam_start, yam_end = horathaynu_yam_range(chart.yam_index)
+    yam_local = chart.yam_index if chart.yam_index <= 8 else chart.yam_index - 8
+    yam_half = "กลางวัน" if chart.yam_index <= 8 else "กลางคืน"
+
+    return {
+        "date_th": date_th,
+        "time": asked_time,
+        "question": question,
+        "day_name": HORATHAYNU_WEEKDAYS[chart.day],
+        "yam_index_global": chart.yam_index,
+        "yam_index_local": yam_local,
+        "yam_half": yam_half,
+        "yam_range": f"{yam_start.strftime('%H:%M')}-{yam_end.strftime('%H:%M')}",
+        "counts": list(chart.counts),
+        "ascendant_rashi": HORATHAYNU_RASHI_TH[asc],
+        "lagna_lord_name": lagna_lord_th,
+        "lord_house": lord_house,
+        "lord_bhava": lord_bhava,
+        "placements": placements,
+        "rasis": rasis,
+        "circle": circle,
+        "time_precision": time_precision,
+    }
+
+
+@app.get("/horathaynu", response_class=HTMLResponse)
+async def horathaynu_form(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "horathaynu.html",
+        {
+            "request": request,
+            "form": _horathaynu_default_form(),
+            "result": None,
+            "error": None,
+        },
+    )
+
+
+def _compute_horathaynu_chart(date_th: str, time_str: str) -> dict:
+    """รับ date_th + time_str → คำนวณ chart_view"""
+    if not date_th.strip():
+        raise ValueError("กรุณากรอกวันที่ (พ.ศ.)")
+    if not time_str.strip():
+        raise ValueError("กรุณากรอกเวลา")
+    y, m, d = parse_thai_date(date_th)
+    h, mi = [int(x) for x in time_str.split(":")]
+    dt = datetime(y, m, d, h, mi)
+    from thai_astro.horathaynu.core.time_to_yam import datetime_to_day_yam
+    day, yam_index = datetime_to_day_yam(dt)
+    chart = horathaynu_cast(day, yam_index)
+    return _horathaynu_chart_view(chart, asked_time=time_str, date_th=date_th)
+
+
+@app.post("/horathaynu", response_class=HTMLResponse)
+async def horathaynu_calculate(
+    request: Request,
+    date_th: str = Form(""),
+    time: str = Form(""),
+) -> HTMLResponse:
+    """ตั้งดวงยาม (ใหม่ — รีเซ็ต history)"""
+    form = {"date_th": date_th, "time": time}
+    error: Optional[str] = None
+    result = None
+    try:
+        result = _compute_horathaynu_chart(date_th, time)
+    except (ValueError, IndexError) as e:
+        error = f"กรอกข้อมูลไม่ถูกต้อง: {e}"
+
+    return templates.TemplateResponse(
+        request,
+        "horathaynu.html",
+        {"request": request, "form": form, "result": result, "error": error},
+    )
+
+
+@app.post("/horathaynu/ask")
+async def horathaynu_ask(
+    date_th: str = Form(""),
+    time: str = Form(""),
+    question: str = Form(""),
+) -> JSONResponse:
+    """ถาม-ทำนาย → JSON (สำหรับ AJAX, ไม่ refresh หน้า)"""
+    q = question.strip()
+    if not q:
+        return JSONResponse({"error": "กรุณาพิมพ์คำถาม"}, status_code=400)
+    try:
+        if not date_th.strip() or not time.strip():
+            return JSONResponse(
+                {"error": "กรุณาตั้งดวงก่อน (กรอกวันที่และเวลา)"},
+                status_code=400,
+            )
+        y, m, d = parse_thai_date(date_th)
+        h, mi = [int(x) for x in time.split(":")]
+        dt = datetime(y, m, d, h, mi)
+        from thai_astro.horathaynu.core.time_to_yam import datetime_to_day_yam
+        day, yam_index = datetime_to_day_yam(dt)
+        chart = horathaynu_cast(day, yam_index)
+        prophecy = _horathaynu_prophesy(q, chart)
+    except (ValueError, IndexError) as e:
+        return JSONResponse({"error": f"กรอกข้อมูลไม่ถูกต้อง: {e}"}, status_code=400)
+
+    now = datetime.now(THAI_TZ)
+    return JSONResponse({
+        "question": q,
+        "answer": prophecy["text"],
+        "significator": prophecy["significator"],
+        "rashi": prophecy["rashi"],
+        "bhava": prophecy["bhava"],
+        "house": prophecy["house"],
+        "tone": prophecy["tone"],
+        "co_planets": prophecy["co_planets"],
+        "sign_lord": prophecy["sign_lord"],
+        "is_own_sign": prophecy["is_own_sign"],
+        "timestamp": now.strftime("%H:%M:%S"),
+    })
 
 
 def main() -> None:
