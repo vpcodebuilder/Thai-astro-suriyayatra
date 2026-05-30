@@ -420,3 +420,151 @@ JDN = Horakhun + 1954167
 6. **สูตรเดือนจันทรคติใหม่**: ใช้ surathin + 7 / 29.53 — ไม่ใช่ sun_rasi เก่า (มี off-by-1)
 7. **อย่าใช้ library ดาราศาสตร์ตะวันตก** (Swiss Ephemeris, Astropy ฯลฯ) — ต้อง port จาก Devtino ทุกอย่าง
 | ค่าคงที่ SVG วงกลม        | `webapp/server.py` (R_OUTER, R_TRANSIT ฯลฯ) |
+
+---
+
+# ===== Session 3 Updates =====
+# โมดูล "โหรทายหนู" (ดวงยามอัฐุกาล) ตามตำราอ.กานดา
+# Commit: 63db515
+
+## ภาพรวม
+ระบบดูดวงจากเวลา (prashna/horary astrology) — ผู้ถามตั้งคำถาม + ระบบ
+คำนวณตำแหน่งดาวจาก (วัน, ยาม) แล้วตีคำพยากรณ์โดยใช้ significator
++ bhava ตามแบบโหราศาสตร์ไทย
+
+**ต่างจากผูกดวงสุริยยาตร์ตรงไหน**:
+- ไม่ใช้ ephemeris จริง / ไม่คำนวณ astronomy
+- ใช้ "ตารางขับดาว" ตามวันและยาม (16 ยาม/วัน)
+- เหมาะกับคำถามเฉพาะหน้า (ของหาย, ความรัก, การงาน) ไม่ใช่ดูดวงตลอดชีวิต
+
+## โครงไฟล์ใหม่
+```
+thai_astro/horathaynu/
+├── __init__.py
+├── api.py                       # predict() + predict_from_datetime()
+├── data/
+│   ├── lordship.py              # ดาวเกษตร 12 ราศี (มาตรฐานไทย 7 ดาว)
+│   ├── houses.py                # ภพ 1-12 + QUESTION_TO_HOUSE
+│   ├── planet_meanings.py       # 11 ดาว (รวมเกตุ+มฤตยู)
+│   ├── templates.py             # เทมเพลตประโยค
+│   └── yam_table.py             # ★ ตาราง 14 ชุด + derive_counts() ping-pong
+└── core/
+    ├── time_to_yam.py           # datetime → yam_index 1-16
+    ├── caster.py                # ★ chain walking algorithm
+    ├── bhava.py                 # ภพ 1-12 จากลัคนา (วนซ้าย)
+    ├── time_precision.py        # 7.5 นาที/cell precision
+    ├── relations.py             # เรือนสัมพันธ์ 2 ชั้น (เผื่อใช้)
+    ├── interpreter.py           # เผื่อใช้
+    └── prophecy.py              # ★ significator + 6 category renderers
+```
+
+## หัวใจของ algorithm
+
+### 1. ตาราง 14 ชุด (yam_table.py)
+แต่ละวัน × กลางวัน/กลางคืน × 8 ยาม = 7×2×8 = 112 ค่า
+- หัวใจกลางวัน อาทิตย์ = `(1, 6, 4, 2, 7, 5, 3, 1)`  step +5 mod 7
+- หัวใจกลางคืน อาทิตย์ = `(1, 5, 2, 6, 3, 7, 4, 1)`  step +4 mod 7
+- วันถัดไปเลื่อน +1 mod 7
+- ตัวเลข 1-7 = หมายเลขดาว (1=อา 2=จ 3=อ 4=พ 5=พฤ 6=ศ 7=ส)
+
+### 2. Ping-pong walking (★หัวใจ★)
+อ่านค่า "นับ N ช่อง" สำหรับ 11 ดาว จาก row ของวัน+ครึ่งวันที่ asked:
+- ดาว 1: เริ่ม pos = asked_yam → อ่านค่า → เดิน +1 ทิศทาง
+- ถึงสุด (pos 8 หรือ 1) → **ย้ำค่าเดิม** + กลับทิศ
+- ทำจนได้ 11 ค่า
+
+### 3. Chain walking ลงจักร (caster.py)
+- ดาว 1 เริ่มที่ราศีพฤษภเสมอ
+- ดาว n (n≥2) เริ่มที่ราศีของดาว n-1
+- "นับ N" = นับโดยรวม start cell เป็น 1 → เดินไปข้างหน้าใน zodiac
+- ลำดับ: 1.อา 2.จ 3.อ 4.พ 5.พฤ 6.ศ 7.ส 8.ราหู 9.ลัคนา 10.เกตุ 11.มฤตยู
+
+### 4. ภพ 12 จากลัคนา (bhava.py)
+- ตนุ = ราศีลัคนา; กดุมภะ = ราศีถัดไป (zodiac forward = "วนซ้าย" ในผัง)
+- จนถึงวินาศ = ราศีก่อนลัคนา
+
+### 5. จุดลงเวลา (time_precision.py)
+- 7.5 นาที/cell × 12 cell = 90 นาที = 1 ยาม
+- cell แรก = ภพที่เจ้าเรือนลัคนาอยู่ (เช่น ลัคนาพฤษภ → เจ้าเรือน=ศุกร์ → ศุกร์ที่ภพไหนก็ cell แรก)
+
+### 6. ระบบพยากรณ์ (prophecy.py)
+- **15+ keyword categories** จับคำถาม → significator planet
+  - ของหาย → ศุกร์ (lost_item) — มี location map ทุกภพ 1-12
+  - รัก → ศุกร์ (love)
+  - ทรัพย์/โชค → พฤหัส (wealth)
+  - งาน → อาทิตย์ (career)
+  - บุตร → พฤหัส (person)
+  - สุขภาพ → อาทิตย์ (health)
+  - เดินทาง → พุธ (travel)
+  - คดี/พิพาท → อังคาร (enemy)
+  - เหตุการณ์/สงสัย → ลัคนา (current_event)
+- **6 renderer** เฉพาะ + 1 generic fallback
+- **ดูเงื่อนไขพิเศษ**: เกษตรของตน, ดาวครองร่วม, tone (good/warning/neutral)
+
+## ค่าคงที่สำคัญ
+- `START_SIGN = 1` (พฤษภ) ในเชน
+- ลำดับ placement 11 ดาวใน `PLACEMENT_ORDER`
+- เลขดาวเกษตรประจำราศี: `HORATHAYNU_LORD_NUMBERS = [3,6,4,2,1,4,6,3,5,7,8,5]`
+  (เมษ→มีน) — **กุมภ์=8 (ราหู) ไม่ใช่เสาร์** ตามตำราโหรทายหนู
+
+## Web app — หน้า /horathaynu
+
+### Routes
+- `GET /horathaynu` — render ฟอร์ม
+- `POST /horathaynu` — ตั้งดวง (re-render เต็มหน้า)
+- `POST /horathaynu/ask` — **JSON API** สำหรับ AJAX ถาม-ทำนาย
+
+### Layout 3-col 20/50/30
+- ซ้าย (20%): ฟอร์ม date/time
+- กลาง (50%): summary card + ผังจักรราศี SVG + ถาม-ทำนาย (AJAX)
+- ขวา (30%): ตารางดาวลอย 11 ตำแหน่ง
+
+### ผังจักรราศี SVG
+- **ใช้ class จาก styles.css เดิม** (rim-line, asc-sector, planet-chip-svg ฯลฯ)
+- **เพิ่ม 2 อย่างเฉพาะ horathaynu**:
+  - `lord-num-bg/text` — เลขดาวเกษตรในวงกลมเล็กทุกราศี (R=138)
+  - `time-ring` + `time-label-text` — วงนอก 2 วง (R=268, R=305) +
+    เวลา 12 cell เริ่มจากภพของเจ้าเรือนลัคนา (R_label=288)
+- เส้นแบ่ง 12 เส้นยาวออกไปถึง R_TIME_OUTER
+
+### ถาม-ทำนาย (AJAX)
+- `<form>` capture submit ด้วย JS → `fetch("/horathaynu/ask")` → render บนสุด
+- ผลล่าสุดอยู่บน, มี timestamp `HH:MM:SS`
+- ไม่เก็บประวัติ — refresh = clear
+- มี tone-good/warning/neutral border สี
+- **Suggestion chips 8 หัวข้อ** (auto-submit เมื่อคลิก):
+  ตามหาของหาย, เหตุการณ์ปัจจุบัน, การเดินทาง, คดีความ, สุขภาพ, โชคลาภ, ความรัก, การงาน
+
+### nav menu
+- เพิ่ม `.nav-links` ทั้งใน index.html + horathaynu.html
+- 2 ลิงค์: "ผูกดวงสุริยยาตร์" / "โหรทายหนู"
+
+## ตัวอย่างยืนยัน (ตำราอ.กานดา หน้า 8)
+- **วันพุธ ยาม 4 (10:32)**: ลัคนา=พฤษภ, ศุกร์ที่ตุล=ภพ 6 (อริ), จุดลงเวลา 10:30-10:37:30 ที่อริ
+- **คืนวันอังคาร ยาม 6**: ลัคนา=เมษ, ดาว 5=สิงห์, ดาว 0=ธนู
+- **คืนวันจันทร์ ยาม 8**: ลัคนา=เมษ, counts = [2, 2, 5, 1, 4, 7, 3, 6, 2, 2, 6]
+  (ตัวอย่าง ping-pong ที่เด้งทั้ง 2 ฝั่ง)
+
+## Tests สถานะ
+**81/81 ผ่าน** (เพิ่ม 17 tests ใหม่)
+- `test_horathaynu_time.py` (10) — yam range/time conversion
+- `test_horathaynu_caster.py` (15) — chain walking + ตำแหน่งครบทั้ง 11 ดาว Wed yam4
+- `test_horathaynu_derive_counts.py` (8) — ping-pong กับ 3 ตัวอย่าง
+- `test_horathaynu_relations.py` (8) — เรือนสัมพันธ์ + predict flow
+
+## ตำราอ้างอิงเพิ่ม
+- **อ.กานดา** (เอกสาร 8 หน้า): วิธีตั้งดวงยามอัฐุกาล + ตาราง 14 ชุด +
+  ping-pong walking + จุดลงภพ + จุดลงเวลา (★ตำราหลักของโมดูลนี้)
+- อ.ประทีป อัครา: หลักการเดียวกัน (อ้างในสเปก user)
+- บล็อก khojorn (2011), exguitarhora (2020) — reference อิเล็กทรอนิกส์
+
+## หมายเหตุสำคัญสำหรับการแก้ครั้งต่อไป
+1. **ตำแหน่งทุกดาวขึ้นกับ counts** — ถ้าแก้ ping-pong rule ผังจะเปลี่ยนหมด
+2. **lord_house ใช้ key 'lagna'** ใน `chart.placements` (ไม่ใช่ดาวเกษตร) — ระวังสับสน
+3. **กุมภ์ = ราหู (8) ไม่ใช่เสาร์** ใน `HORATHAYNU_LORD_NUMBERS`
+4. **วันใหม่ 06:00 น.** — ก่อนนั้นถือเป็นวันก่อนหน้า (ยาม 13-16 = night yam 5-8)
+5. **AJAX endpoint คืน JSON** — อย่าเปลี่ยนเป็น HTML (JS frontend depend on shape)
+6. **กฎพยากรณ์** (prophecy.py) เป็นแบบ template-based เบื้องต้น — ผู้ใช้สามารถ
+   ขยาย QUESTION_KEYWORDS, BHAVA_LOCATIONS, _make_text_* ได้
+7. **CSS class นาม `time-ring`, `lord-num-bg/text`, `qa-chip`** อยู่ inline ใน
+   horathaynu.html ไม่ใช่ styles.css — เพราะใช้เฉพาะหน้านี้
