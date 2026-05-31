@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260528e" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260531b" />
 </head>
 <body class="view-general">
   <header class="site-header">
@@ -200,7 +200,12 @@
 
       <div class="chart-wrapper">
         {% set c = result.circle %}
-        <div class="zodiac-stage" style="--svg-size: {{ c.size }}px;">
+        <div class="zodiac-stage triyangka-on" style="--svg-size: {{ c.size }}px;">
+          <label class="triyangka-toggle-cb" title="แสดง/ซ่อนชั้นตรียางค์ &amp; ธาตุ">
+            <input type="checkbox" id="toggle-triyangka" checked/>
+            <span class="cb-box"></span>
+            <span class="cb-text">ตรียางค์</span>
+          </label>
           <svg class="zodiac-svg" viewBox="0 0 {{ c.size }} {{ c.size }}"
                xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -227,12 +232,28 @@
                     class="divider-line"/>
             {% endfor %}
 
+            {# ===== Triyangka dividers (จาง, toggle ได้) ===== #}
+            <g class="triyangka-layer">
+              {% for d in c.triyangka_dividers %}
+                <line x1="{{ "%.2f"|format(d.x1) }}" y1="{{ "%.2f"|format(d.y1) }}"
+                      x2="{{ "%.2f"|format(d.x2) }}" y2="{{ "%.2f"|format(d.y2) }}"
+                      class="triyangka-divider"/>
+              {% endfor %}
+            </g>
+
             {% if c.has_transit %}
               <circle cx="{{ c.center }}" cy="{{ c.center }}" r="{{ c.r_outer_transit }}"
                       class="rim-line rim-transit"/>
             {% endif %}
             <circle cx="{{ c.center }}" cy="{{ c.center }}" r="{{ c.r_outer }}"
                     class="rim-line"/>
+            {# วงตรียางค์ — 2 รัศมีเป็นแถบกั้น #}
+            <g class="triyangka-layer">
+              <circle cx="{{ c.center }}" cy="{{ c.center }}" r="{{ c.r_triyangka_inner }}"
+                      class="rim-line rim-triyangka"/>
+              <circle cx="{{ c.center }}" cy="{{ c.center }}" r="{{ c.r_triyangka_outer }}"
+                      class="rim-line rim-triyangka"/>
+            </g>
             <circle cx="{{ c.center }}" cy="{{ c.center }}" r="{{ c.r_inner }}"
                     class="rim-line rim-inner"/>
 
@@ -249,42 +270,118 @@
               </g>
             {% endfor %}
 
+            {# ===== Element markers (ธาตุของราศี) — toggle ได้ ===== #}
+            <g class="element-layer triyangka-layer">
+              {% for r in c.rasis %}
+                {% set em = r.element_marker %}
+                <g class="element-marker element-{{ em.key }}"
+                   data-tip-element="{{ em.name_th }}">
+                  <circle cx="{{ "%.2f"|format(em.x) }}" cy="{{ "%.2f"|format(em.y) }}"
+                          r="9" class="element-bg"/>
+                  <text x="{{ "%.2f"|format(em.x) }}" y="{{ "%.2f"|format(em.y) }}"
+                        class="element-symbol"
+                        text-anchor="middle" dominant-baseline="central">{{ em.symbol }}</text>
+                </g>
+              {% endfor %}
+            </g>
+
+            {# ===== Triyangka lord markers (3 ดาว/ราศี = 36 ตัว) ===== #}
+            <g class="triyangka-lords-layer triyangka-layer">
+              {% for r in c.rasis %}
+                {% for m in r.triyangka_markers %}
+                  <g class="triyangka-marker-group {% if m.is_poison %}triyangka-poison triyangka-poison-{{ m.poison_type }}{% endif %}"
+                     data-tri-rasi="{{ r.name }}"
+                     data-tri-decanate="{{ m.decanate + 1 }}"
+                     data-tri-lord="{{ m.lord }}"
+                     data-tri-deg-from="{{ m.decanate * 10 }}"
+                     data-tri-deg-to="{{ (m.decanate + 1) * 10 }}"
+                     {% if m.is_poison %}
+                       data-tri-poison="{{ m.poison_icon }} {{ m.poison_type }}"
+                     {% endif %}>
+                    <circle cx="{{ "%.2f"|format(m.x) }}" cy="{{ "%.2f"|format(m.y) }}"
+                            r="10" class="triyangka-hit-area"/>
+                    {% if m.is_poison %}
+                      <circle cx="{{ "%.2f"|format(m.x) }}" cy="{{ "%.2f"|format(m.y) }}"
+                              r="9" class="triyangka-poison-bg"/>
+                    {% endif %}
+                    <text x="{{ "%.2f"|format(m.x) }}" y="{{ "%.2f"|format(m.y) }}"
+                          class="triyangka-lord-text"
+                          text-anchor="middle" dominant-baseline="central">{{ m.short }}</text>
+                    {% if m.is_poison %}
+                      <text x="{{ "%.2f"|format(m.x + 10) }}" y="{{ "%.2f"|format(m.y - 8) }}"
+                            class="triyangka-poison-icon"
+                            text-anchor="middle" dominant-baseline="central">{{ m.poison_icon }}</text>
+                    {% endif %}
+                  </g>
+                {% endfor %}
+              {% endfor %}
+            </g>
+
             {% if c.lagna_marker %}
               {% set lm = c.lagna_marker %}
-              <g class="lagna-group"
+              {% set lasc = result.ascendant %}
+              <g class="lagna-group {% if lasc.is_poison %}planet-poisoned planet-poisoned-{{ lasc.poison_type }} planet-poisoned-{{ lasc.poison_severity }}{% endif %}"
                  data-tip-planet="ลัคนา"
                  data-tip-source="กำเนิด"
-                 data-tip-rasi="{{ result.ascendant.rasi_name }}"
-                 data-tip-degree="{{ result.ascendant.degree }}"
-                 data-tip-arcmin="{{ result.ascendant.arcminute }}"
-                 data-tip-arcsec="0">
+                 data-tip-rasi="{{ lasc.rasi_name }}"
+                 data-tip-degree="{{ lasc.degree }}"
+                 data-tip-arcmin="{{ lasc.arcminute }}"
+                 data-tip-arcsec="0"
+                 {% if lasc.is_poison %}
+                   data-tip-poison-icon="{{ lasc.poison_icon }}"
+                   data-tip-poison-name="{{ lasc.poison_type }}"
+                   data-tip-poison-severity="{{ lasc.poison_severity }}"
+                 {% endif %}>
                 <line x1="{{ "%.2f"|format(lm.line_x1) }}" y1="{{ "%.2f"|format(lm.line_y1) }}"
                       x2="{{ "%.2f"|format(lm.line_x2) }}" y2="{{ "%.2f"|format(lm.line_y2) }}"
                       class="lagna-line"/>
+                {% if lasc.is_poison %}
+                  <circle cx="{{ "%.2f"|format(lm.x) }}" cy="{{ "%.2f"|format(lm.y) }}"
+                          r="23" class="poison-shadow poison-shadow-{{ lasc.poison_type }}"/>
+                {% endif %}
                 <circle cx="{{ "%.2f"|format(lm.x) }}" cy="{{ "%.2f"|format(lm.y) }}"
                         r="17" class="lagna-marker-circle planet-hoverable"/>
                 <text x="{{ "%.2f"|format(lm.x) }}" y="{{ "%.2f"|format(lm.y) }}"
                       class="lagna-marker-text"
                       text-anchor="middle" dominant-baseline="central">ลั</text>
+                {% if lasc.is_poison %}
+                  <text x="{{ "%.2f"|format(lm.x + 14) }}" y="{{ "%.2f"|format(lm.y - 13) }}"
+                        class="poison-badge-svg"
+                        text-anchor="middle" dominant-baseline="central">{{ lasc.poison_icon }}</text>
+                {% endif %}
               </g>
             {% endif %}
 
-            {# natal planet chips #}
+            {# natal planet chips (+ poison shadow ถ้าตรียางค์พิษ) #}
             {% for r in c.rasis %}
               {% for chip in r.chips %}
-                <g class="planet-svg-group"
+                <g class="planet-svg-group {% if chip.is_poison %}planet-poisoned planet-poisoned-{{ chip.poison_type }} planet-poisoned-{{ chip.poison_severity }}{% endif %}"
                    data-tip-planet="{{ chip.name }}"
                    data-tip-source="กำเนิด"
                    data-tip-rasi="{{ chip.rasi_name }}"
                    data-tip-degree="{{ chip.degree }}"
                    data-tip-arcmin="{{ chip.arcminute }}"
                    data-tip-arcsec="{{ chip.arcsecond }}"
-                   data-tip-retro="{{ '1' if chip.retrograde else '0' }}">
+                   data-tip-retro="{{ '1' if chip.retrograde else '0' }}"
+                   {% if chip.is_poison %}
+                     data-tip-poison-icon="{{ chip.poison_icon }}"
+                     data-tip-poison-name="{{ chip.poison_type }}"
+                     data-tip-poison-severity="{{ chip.poison_severity }}"
+                   {% endif %}>
+                  {% if chip.is_poison %}
+                    <circle cx="{{ "%.2f"|format(chip.x) }}" cy="{{ "%.2f"|format(chip.y) }}"
+                            r="20" class="poison-shadow poison-shadow-{{ chip.poison_type }}"/>
+                  {% endif %}
                   <circle cx="{{ "%.2f"|format(chip.x) }}" cy="{{ "%.2f"|format(chip.y) }}"
                           r="14" class="planet-chip-svg planet-hoverable {{ chip.color_class }}"/>
                   <text x="{{ "%.2f"|format(chip.x) }}" y="{{ "%.2f"|format(chip.y) }}"
                         class="planet-abbr-svg"
                         text-anchor="middle" dominant-baseline="central">{{ chip.abbr }}</text>
+                  {% if chip.is_poison %}
+                    <text x="{{ "%.2f"|format(chip.x + 13) }}" y="{{ "%.2f"|format(chip.y - 11) }}"
+                          class="poison-badge-svg"
+                          text-anchor="middle" dominant-baseline="central">{{ chip.poison_icon }}</text>
+                  {% endif %}
                 </g>
               {% endfor %}
             {% endfor %}
@@ -348,11 +445,21 @@
         <h2><span class="title-deco">✦</span> ดาวกำเนิด <span class="title-deco">✦</span></h2>
         <div class="planet-table">
           {% for p in result.planets %}
-            <div class="planet-row">
+            <div class="planet-row {% if p.is_poison %}row-poisoned row-poisoned-{{ p.poison_type }}{% endif %}">
               <span class="planet-chip {{ p.color_class }} chip-lg">{{ p.abbr }}</span>
               <span class="planet-name">{{ p.name }}{% if p.retrograde %} <em class="retro">(พักร์)</em>{% endif %}</span>
               <span class="planet-pos">{{ p.rasi_name }} {{ p.degree }}°{{ "%02d"|format(p.arcminute) }}′{{ "%02d"|format(p.arcsecond or 0) }}″</span>
               <span class="planet-house">ภพ{{ p.bhava }}</span>
+              <span class="planet-triyangka" title="ตรียางค์ที่ {{ p.triyangka_decanate }} ของ{{ p.rasi_name }} — ครองโดย{{ p.triyangka_lord }} · ธาตุ{{ p.element_name_th }}">
+                <span class="elem-tag elem-{{ p.element }}">{{ p.element_icon }}{{ p.element_name_th }}</span>
+                <span class="tri-tag">ตรียางค์ {{ p.triyangka_decanate }}/3 ({{ p.triyangka_lord }})</span>
+                {% if p.is_poison %}
+                  <span class="poison-tag poison-{{ p.poison_type }} poison-{{ p.poison_severity }}"
+                        title="{{ p.poison_name_th }} ({{ 'หนัก' if p.poison_severity == 'heavy' else 'เบา' }})">
+                    {{ p.poison_icon }} {{ p.poison_name_th }}{% if p.poison_severity == 'heavy' %} (หนัก){% endif %}
+                  </span>
+                {% endif %}
+              </span>
             </div>
           {% endfor %}
         </div>
@@ -932,6 +1039,6 @@
     <p>คำนวณตามคัมภีร์สุริยยาตร์ของไทย · port มาจาก Devtino.Astrology</p>
   </footer>
 
-  <script src="/static/script.js?v=20260528a"></script>
+  <script src="/static/script.js?v=20260531b"></script>
 </body>
 </html>

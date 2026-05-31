@@ -825,3 +825,91 @@ webapp/
 5. **uvicorn --reload ไม่ pickup data file ใหม่** — ต้อง kill process แล้วรันใหม่
 6. **Pre-existing `bhava_lord_prophecy.py`** ที่ port natal ใช้ได้กับ prashna ด้วย
    — ประหยัดเขียน 144 entries ใหม่
+
+---
+
+# ===== Feature 3 — ตรียางค์ (Drekkana) + ธาตุของราศี (เสร็จแล้ว) =====
+# วันที่: 2026-05-31
+
+## ภาพรวม
+แสดงตรียางค์และธาตุบนผังจักรราศีหน้าผูกดวงสุริยยาตร์ (`/`)
+- ราศี 30° แบ่ง 3 ช่อง × 10° แต่ละช่องมี "ดาวเจ้าตรียางค์" (Drekkana lord)
+- ตรียางค์พิษ 3 ชนิด: 🐍 พิษนาค / 🦅 พิษครุฑ / 🐕 พิษสุนัข
+- ระบุพิษหนัก/เบาตาม offset ในช่อง 10° (กลางช่อง = หนัก)
+- แสดงธาตุของแต่ละราศี (ไฟ/ดิน/ลม/น้ำ)
+
+## โมดูลใหม่: `thai_astro/triyangka.py`
+```python
+ELEMENT_INFO = { fire / earth / air / water }
+RASHI_ELEMENT[12]                  # ราศี → ธาตุ
+POISON_MAP[12]                     # ราศี → (poison_type, decanate)
+POISON_INFO                        # ชื่อ + icon + ความหมาย
+DECANATE_NAMES_TH = ["ปฐม", "ทุติย", "ตติย"]
+
+# Core functions
+triyangka_lord(rashi, decanate)            # คืนดาวเกษตร
+get_triyangka_info(rashi, deg, arcmin)     # คืน TriyangkaInfo เต็ม
+all_decanate_lords()                       # คืน list 36 ช่อง สำหรับ render
+poison_severity_at(offset)                 # heavy/light
+```
+
+## กฎตรียางค์ (ตำราโหรไทย/พระเวท)
+- ปฐมตรียางค์ (0°-10°): เจ้าราศีเดิม
+- ทุติยตรียางค์ (10°-20°): เจ้าราศีตรีโกณ 5 = (rashi+4) % 12
+- ตติยตรียางค์ (20°-30°): เจ้าราศีตรีโกณ 9 = (rashi+8) % 12
+
+## ตำแหน่งตรียางค์พิษ
+- 🐍 พิษนาค → ปฐมของ เมษ/กันย์/ธนู/มีน
+- 🦅 พิษครุฑ → ทุติยของ พฤษภ/สิงห์/ตุล/กุมภ์
+- 🐕 พิษสุนัข → ตติยของ เมถุน/กรกฎ/พิจิก/มกร
+- ระดับ: heavy (3.20-6.39°) / light (ส่วนที่เหลือ)
+
+## UI (index.html + styles.css + script.js)
+### บนผัง SVG (ทับ layer "triyangka-layer")
+- 24 เส้นแบ่งตรียางค์ (dashed บาง) ที่ 10° และ 20° ในแต่ละราศี
+- 36 markers ดาวตรียางค์ — เลขอารบิก 1-7 ในช่วง R=240-258
+  (1=อาทิตย์ 2=จันทร์ 3=อังคาร 4=พุธ 5=พฤหัสบดี 6=ศุกร์ 7=เสาร์)
+- 2 rim circles ที่ R=240/258 → ทำให้เห็นเป็น "วงตรียางค์"
+- 12 element markers (▲■〰▼) สีตามธาตุ ที่ R=110 ใกล้ขอบใน
+- Poison shadow + icon บน chip ดาวกำเนิด/ลัคนาที่ตกพิษ
+- ดาวกำเนิดวางตามตรียางค์ที่ตน (chip_layout_by_decanate)
+
+### Toggle checkbox
+- มุมขวาบนของ `.zodiac-stage` (absolute position, ขนาดเล็ก)
+- จำสถานะใน localStorage (`triyangka_visible`)
+- ซ่อน/แสดงทั้ง `triyangka-layer` พร้อมกัน
+
+### Hover tooltips
+- ตรียางค์ marker → tooltip "ตรียางค์ X/3 (ราศี)" + ดาวครอง + ช่วงองศา + พิษ
+- ดาวกำเนิด/ลัคนาที่ตกพิษ → tooltip เพิ่ม "⚠️ พิษ" + ชนิด + ระดับ + ความหมาย
+
+### ตารางดาวกำเนิด (โหมดศึกษา)
+- เพิ่มคอลัมน์: chip ธาตุ + ตรียางค์ + พิษ (ถ้ามี)
+- Row poisoned มี border-left สี (เขียว/ทอง/แดง)
+
+## R constants (server.py SVG layout)
+```
+R_INNER = 100
+R_ELEMENT_MARKER = 110      # ใหม่
+R_BHAVA = 118
+R_PLANET = 175
+R_LAGNA_MARKER = 215
+R_LABEL = 232
+R_TRIYANGKA_RING_INNER = 240   # ใหม่
+R_TRIYANGKA_LORD = 248         # ใหม่ (centerring)
+R_TRIYANGKA_RING_OUTER = 258   # ใหม่
+R_OUTER = 260
+R_TRANSIT = 286
+```
+
+## Bug fix สำคัญ
+**Lagna marker hover bounce** — `transform: scale(1.18)` ไม่มี `transform-origin`
+ทำให้ scale รอบจุด SVG origin (0,0) → วงกลมกระเด็น
+แก้ด้วย `transform-origin: center; transform-box: fill-box;`
+ใน `.lagna-marker-circle` — fix ใช้ได้ทั้ง 2 หน้า (สุริยยาตร์ + โหรทายหนู)
+
+## References
+- horapayakorn.com — Drekkana rule
+- mahaplee.blogspot.com — ตรียางค์พิษ 3 ชนิด
+- astroneemo.net — ตรียางค์ในโหราศาสตร์พระเวท
+- baankhunyai.com — ธาตุในโหราศาสตร์ไทย
