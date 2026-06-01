@@ -401,11 +401,14 @@ def build_circular_layout(
         for (x, y), planet in zip(chip_xy, r["planets"]):
             chip_data.append({**planet, "x": x, "y": y})
 
-        # transit chips (วงนอก)
+        # transit chips (วงนอก) — วางตามองศา/ตรียางค์ของดาวจรในราศีนั้น
         transit_chips = []
         if has_transit:
             tlist = transits_by_rasi.get(r["index"], [])
-            txys = _transit_chip_layout(len(tlist), center_angle)
+            rashi_start_angle = 75 + 30 * r["index"]
+            txys = _chip_layout_by_decanate(
+                tlist, rashi_start_angle, base_radius=R_TRANSIT
+            )
             for (x, y), tp in zip(txys, tlist):
                 transit_chips.append({**tp, "x": x, "y": y})
 
@@ -969,11 +972,21 @@ def _default_form() -> dict:
     }
 
 
+def _latest_version() -> str:
+    """อ่าน version ล่าสุดจาก changelog (สำหรับ badge ใน nav)"""
+    try:
+        from webapp.changelog import CHANGELOG
+        return CHANGELOG[0]["version"] if CHANGELOG else ""
+    except Exception:
+        return ""
+
+
 def _common_context(request: Request, **extra) -> dict:
     base = {
         "request": request,
         "provinces": PROVINCES,
         "bhava_meanings": BHAVA_MEANINGS,
+        "latest_version": _latest_version(),
     }
     base.update(extra)
     return base
@@ -1001,7 +1014,7 @@ async def about_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "about.html",
-        {"request": request, "changelog": CHANGELOG},
+        {"request": request, "changelog": CHANGELOG, "latest_version": _latest_version()},
     )
 
 
@@ -1304,6 +1317,7 @@ async def horathaynu_form(request: Request) -> HTMLResponse:
             "form": _horathaynu_default_form(),
             "result": None,
             "error": None,
+            "latest_version": _latest_version(),
         },
     )
 
@@ -1341,7 +1355,8 @@ async def horathaynu_calculate(
     return templates.TemplateResponse(
         request,
         "horathaynu.html",
-        {"request": request, "form": form, "result": result, "error": error},
+        {"request": request, "form": form, "result": result, "error": error,
+         "latest_version": _latest_version()},
     )
 
 

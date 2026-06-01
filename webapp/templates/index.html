@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260601e" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260601f" />
 </head>
 <body class="view-general" data-scroll-target="{% if scroll_target == '1' %}transit{% endif %}">
   <header class="site-header">
@@ -23,7 +23,7 @@
   <nav class="nav-links">
     <a href="/" class="active">ผูกดวงสุริยยาตร์</a>
     <a href="/horathaynu">โหรทายหนู</a>
-    <a href="/about">เกี่ยวกับ</a>
+    <a href="/about">เกี่ยวกับ{% if latest_version %} <span class="version-badge">v{{ latest_version }}</span>{% endif %}</a>
   </nav>
 
   <main class="container {% if result %}has-result{% endif %}">
@@ -109,6 +109,29 @@
           </button>
         </form>
       </div>
+
+      {% if not result %}
+      <div class="card howto-card">
+        <h2><span class="title-deco">✦</span> วิธีใช้ <span class="title-deco">✦</span></h2>
+        <p>กรอก <strong>วันเดือนปีเกิด · เวลาเกิด · จังหวัด</strong> ที่ฟอร์มด้านบน แล้วกด "ผูกดวง"</p>
+        <ul class="howto-list">
+          <li>ระบบจะคำนวณ <strong>ดวงกำเนิด</strong> ด้วยวิธี <strong>สุริยยาตร์</strong> ตามคัมภีร์ไทยโบราณ พร้อมแสดง <strong>ดาวจร</strong> ของวันปัจจุบันบนผังเดียวกัน</li>
+          <li><strong>Scrubber เลื่อนเวลา</strong> ใต้ผังจักรราศี — กดปุ่ม ±1/±7/±30 วัน หรือเลือกวันที่/เวลาเฉพาะเพื่อดูดวงจรในช่วงที่ต้องการ คำทำนาย/ภพ/oracle จะปรับตามทันที</li>
+          <li><strong>สลับโหมด</strong> ที่แถบกลาง:
+            <ul>
+              <li>📖 <em>ดูดวง</em> — เน้นคำทำนายอ่านง่าย (ภพสำคัญ + สรุปดาวจร + บทพยากรณ์)</li>
+              <li>🔬 <em>ศึกษาโหราศาสตร์</em> — แสดงตารางดาว ตรียางค์ ทักษา ภพครบ และข้อมูลคำนวณ</li>
+            </ul>
+          </li>
+          <li><strong>Hover/แตะดาว</strong> บนผัง → ดูราศี องศา ลิปดา ตรียางค์ พิษ (ถ้ามี)</li>
+          <li><strong>Toggle</strong> มุมขวาบนของผัง: เปิด-ปิดชั้น <em>ตรียางค์</em> หรือ <em>ธาตุ</em></li>
+        </ul>
+        <p class="howto-foot">
+          อิงตำราของ <strong>อ.เทพย์ สาริกบุตร · พล.ต.ประยูร พลอารีย์ · อ.จรัญ พิกุล</strong>
+          — ห้ามใช้เทียบฤกษ์งานสำคัญโดยไม่ปรึกษาโหราจารย์
+        </p>
+      </div>
+      {% endif %}
     </section>
 
     {% if result %}
@@ -437,6 +460,10 @@
     <section class="detail-section view-student">
       <div class="card">
         <h2><span class="title-deco">✦</span> ดาวกำเนิด <span class="title-deco">✦</span></h2>
+        <p class="transit-meta">
+          เกิด<b>{{ result.birth_weekday_name }}</b> ที่ <b>{{ result.birth_date_th }}</b><br/>
+          เวลา <b>{{ result.birth_time }} น.</b> · จังหวัด<b>{{ result.province }}</b>
+        </p>
         <div class="planet-table">
           {% for p in result.planets %}
             <div class="planet-row {% if p.is_poison %}row-poisoned row-poisoned-{{ p.poison_type }}{% endif %}">
@@ -1064,6 +1091,6 @@
     <p>คำนวณตามคัมภีร์สุริยยาตร์ของไทย · port มาจาก Devtino.Astrology</p>
   </footer>
 
-  <script src="/static/script.js?v=20260601e"></script>
+  <script src="/static/script.js?v=20260601f"></script>
 </body>
 </html>

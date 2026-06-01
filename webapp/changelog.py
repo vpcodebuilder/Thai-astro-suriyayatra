@@ -12,6 +12,43 @@
 
 CHANGELOG = [
     {
+        "version": "2026.06.01-d",
+        "date": "2026-06-01",
+        "title": "ดาวจรตามองศา + UI polish + กล่องวิธีใช้",
+        "highlights": [
+            "ดาวจรบนผังวางตามองศา/ตรียางค์ที่ถูกต้อง (เหมือนดาวกำเนิด)",
+            "การ์ดดาวกำเนิด (โหมดศึกษา) มี subtitle วันที่/เวลา/สถานที่ เหมือนการ์ดดาวจร",
+            "Overlay ภพทักษาซ้อน ขอบบนเสมอตารางทักษา 3×3 แล้ว",
+            "Version badge ติด \"เกี่ยวกับ\" ในเมนู — เห็นเวอร์ชั่นล่าสุดได้เลย",
+            "เพิ่มกล่องวิธีใช้ในหน้าผูกดวงสุริยยาตร์",
+        ],
+        "details": [
+            {
+                "category": "เพิ่ม",
+                "items": [
+                    "Transit chips position by degree — ใช้ `_chip_layout_by_decanate` ที่ R_TRANSIT (286)",
+                    "Subtitle ใต้ \"ดาวกำเนิด\" ในตาราง — เกิด/วันที่/เวลา/จังหวัด",
+                    "Version badge `.version-badge` ใน nav-link \"เกี่ยวกับ\" ทั้ง 3 หน้า — อ่านจาก CHANGELOG[0]",
+                    "กล่องวิธีใช้ `.howto-card` ในหน้า / (แสดงเฉพาะตอนยังไม่ผูกดวง) อธิบาย Scrubber/โหมด/Hover/Toggle",
+                ],
+            },
+            {
+                "category": "แก้",
+                "items": [
+                    "Overlay ภพทักษาซ้อนเริ่มต่ำกว่าตาราง 3×3 → `.taksa-overlay-side` ตั้ง `margin-top: 0 !important; align-self: stretch`",
+                    "Header โหรทายหนู: ตัด \"— ฉบับ อ.กานดา\" ออกจาก subtitle",
+                ],
+            },
+            {
+                "category": "ปรับ",
+                "items": [
+                    "`_common_context()` ส่ง `latest_version` อัตโนมัติทุกหน้า (อ่านจาก CHANGELOG[0])",
+                    "Cache version → v=20260601f",
+                ],
+            },
+        ],
+    },
+    {
         "version": "2026.06.01-c",
         "date": "2026-06-01",
         "title": "ดาวจรเลื่อนเวลาได้ + ตัดฟอร์มดาวจรออก",

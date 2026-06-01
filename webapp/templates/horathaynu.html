@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260601b" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260601f" />
   <style>
     /* ===== 3-col layout 20/50/30 ===== */
     .ht-grid {
@@ -314,14 +314,14 @@
   <header class="site-header">
     <div class="ornament">❀</div>
     <h1>โหรทายหนู</h1>
-    <p class="subtitle">ดวงยามอัฐุกาล — ฉบับ อ.กานดา</p>
+    <p class="subtitle">ดวงยามอัฐุกาล</p>
     <div class="ornament">❀</div>
   </header>
 
   <nav class="nav-links">
     <a href="/">ผูกดวงสุริยยาตร์</a>
     <a href="/horathaynu" class="active">โหรทายหนู</a>
-    <a href="/about">เกี่ยวกับ</a>
+    <a href="/about">เกี่ยวกับ{% if latest_version %} <span class="version-badge">v{{ latest_version }}</span>{% endif %}</a>
   </nav>
 
   <main class="ht-grid">
