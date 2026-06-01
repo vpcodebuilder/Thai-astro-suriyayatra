@@ -2442,3 +2442,64 @@ body.view-student .view-general { display: none !important; }
   border-radius: 6px;
   margin-top: 0.3rem;
 }
+
+/* ===================================================================
+   Nav Links — shared across all pages (ย้ายออกจาก inline style แต่ละหน้า)
+   =================================================================== */
+
+.nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 0 1rem;
+}
+
+.nav-links a {
+  display: inline-block;
+  padding: 8px 18px;
+  border: 2px solid var(--gold-deep);
+  border-radius: 22px;
+  color: var(--maroon-dark);
+  text-decoration: none;
+  font-weight: 600;
+  background: #fff8e6;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.nav-links a.active,
+.nav-links a:hover {
+  background: var(--maroon);
+  color: #fde9c8;
+}
+
+/* ===================================================================
+   Mobile responsive fixes (เพิ่มเติม)
+   =================================================================== */
+
+@media (max-width: 600px) {
+  /* ลด padding container → content มีพื้นที่มากขึ้น (~327→343px)
+     view-tabs margin ที่ (-1rem -1rem 0) จะตรงพอดีกับ padding ใหม่ */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* prophecy-list: minmax(420px) เกินจอมือถือ → force 1 column */
+  .prophecy-list {
+    grid-template-columns: 1fr;
+  }
+
+  /* result-header: จัดกลางเมื่อ badge wrap ลงแถวใหม่ */
+  .result-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .result-header h2,
+  .result-header .meta {
+    text-align: center;
+  }
+}
