@@ -94,6 +94,14 @@ body::before {
   z-index: 1;
 }
 
+/* ตอนยังไม่ผูกดวง: ฟอร์มมีขนาดเท่ากับตอนผูกดวงเสร็จ (ไม่เต็มจอ)
+   จัดให้อยู่กลาง */
+.container:not(.has-result) > .form-section {
+  max-width: 340px;
+  width: 100%;
+  margin: 0 auto;
+}
+
 /* 2 คอลัมน์เสมอเมื่อมีผลลัพธ์: ฟอร์ม | จักรราศี (แถวบนสุด)
    ส่วนอื่น ๆ (detail, bhava-card, prophecy) ลงไปแถวล่างเต็มความกว้าง */
 .container.has-result {
@@ -522,8 +530,9 @@ body::before {
 .element-water .element-bg     { fill: #1a5490; stroke: #1a5490; }
 .element-water .element-symbol { fill: #0d3160; }
 
-/* Toggle on/off: ซ่อน triyangka layer เมื่อปิด */
+/* Toggle on/off: ซ่อน triyangka / element layer เมื่อปิด */
 .zodiac-stage.triyangka-off .triyangka-layer { display: none; }
+.zodiac-stage.element-off   .element-layer   { display: none; }
 
 /* ===== Poison shadow บน natal planet chips + ลัคนา ===== */
 .poison-shadow {
@@ -541,11 +550,15 @@ body::before {
   pointer-events: none;
 }
 
-/* Triyangka toggle — checkbox มุมขวาบนผัง */
-.triyangka-toggle-cb {
+/* Toggle checkbox stack — มุมขวาบน */
+.chart-cb-stack {
   position: absolute;
   top: 6px; right: 6px;
   z-index: 5;
+  display: flex; flex-direction: column;
+  gap: 4px;
+}
+.triyangka-toggle-cb {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -612,19 +625,27 @@ body::before {
   fill-opacity: 0.35;
 }
 
-/* tooltip — แสดงพิษ */
-.tip-poison {
-  margin-top: 4px;
-  padding-top: 4px;
-  border-top: 1px dashed rgba(217,164,84,0.4);
-  color: var(--maroon-deep);
-  font-weight: 600;
+/* tooltip — แสดงพิษ (สีอ่อน บนพื้น tooltip มืด) */
+.planet-tooltip .tip-poison {
+  margin-top: 5px;
+  padding: 4px 6px;
+  border-top: 1px dashed rgba(232,197,112,0.5);
+  background: rgba(247, 168, 88, 0.18);
+  border-radius: 4px;
+  color: #ffd9a8;
+  font-weight: 700;
 }
-.tip-poison-meaning {
-  font-size: 0.85em;
-  color: var(--ink-soft);
+.planet-tooltip .tip-poison .tip-label {
+  color: #ffd9a8;
+  opacity: 1;
+  font-weight: 700;
+}
+.planet-tooltip .tip-poison-meaning {
+  font-size: 0.82rem;
+  color: var(--cream-soft, #f5e8c8);
   font-style: italic;
-  margin-left: 0;
+  margin-top: 2px;
+  opacity: 0.95;
 }
 
 /* highlight ราศีลัคนา */
@@ -962,6 +983,11 @@ body::before {
   color: var(--ink-soft);
   position: relative;
   z-index: 1;
+}
+/* รุ่น single-column: ยาวลงเป็นแถวเดียว */
+.calc-info-single {
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
 }
 
 .calc-info b {
@@ -1311,14 +1337,31 @@ body::before {
 
 .bhava-row {
   display: grid;
-  grid-template-columns: 32px 90px 100px 1fr;
+  grid-template-columns: 32px 90px 100px 1fr 110px;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.6rem;
   padding: 0.5rem 0.8rem;
   background: rgba(255, 249, 237, 0.7);
   border: 1px solid rgba(138, 106, 31, 0.3);
   border-radius: 8px;
 }
+.bhava-row.bhava-row-occupied {
+  background: rgba(255, 244, 217, 0.85);
+  border-color: var(--gold-deep);
+}
+.bhava-planets {
+  display: flex; flex-wrap: wrap; gap: 3px;
+  justify-content: flex-end; align-items: center;
+}
+.bhava-planet-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  font-size: 0.78rem; font-weight: 700;
+  color: #fff;
+  font-family: "Mali", serif;
+}
+.bhava-empty { color: var(--ink-soft); opacity: 0.4; }
 
 .bhava-num {
   font-family: "Kanit", sans-serif;
@@ -1355,13 +1398,14 @@ body::before {
 @media (max-width: 700px) {
   .bhava-row {
     grid-template-columns: 32px 1fr;
-    grid-template-rows: auto auto;
+    grid-template-rows: auto auto auto;
     gap: 0.3rem 0.7rem;
   }
-  .bhava-num { grid-row: 1 / 3; align-self: center; }
+  .bhava-num { grid-row: 1 / 4; align-self: center; }
   .bhava-name { grid-column: 2; }
   .bhava-short { display: none; }
   .bhava-full { grid-column: 2; font-size: 0.85rem; }
+  .bhava-planets { grid-column: 2; justify-content: flex-start; }
 }
 
 /* ---------- Planet hover tooltip (floating) ---------- */
@@ -1743,11 +1787,40 @@ footer {
   font-weight: 500;
 }
 
-/* === 3x3 grid === */
+/* === 3x3 grid + overlay ข้างขวา (50/50 เฉพาะเมื่อมี overlay) === */
+.taksa-grid-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  align-items: start;
+  margin: 1.5rem 0;
+}
+.taksa-grid-row.has-overlay {
+  grid-template-columns: 1fr 1fr;
+}
 .taksa-grid-wrap {
-  margin: 1.5rem auto;
+  margin: 0;
   display: flex;
   justify-content: center;
+  align-items: flex-start;
+  min-width: 0;
+}
+.taksa-grid-wrap > .taksa-grid {
+  margin-top: 0;     /* ให้ขอบบนตรงกับหัว overlay */
+}
+.taksa-overlay-side {
+  margin: 0;
+  min-width: 0;
+}
+/* หัว overlay ตรงแนวกับ row บนสุดของตาราง */
+.taksa-overlay-side > h3:first-child {
+  margin-top: 0;
+  padding-top: 0;
+}
+@media (max-width: 900px) {
+  .taksa-grid-row {
+    grid-template-columns: 1fr;
+  }
 }
 .taksa-grid {
   border-collapse: separate;
@@ -1968,6 +2041,7 @@ footer {
   background: rgba(220, 100, 60, 0.1);
   border-left-color: #d97a4f;
 }
+.taksa-transit-row { flex-wrap: wrap; }
 .taksa-transit-tag {
   font-family: "Kanit", sans-serif;
   font-weight: 700;
@@ -1975,6 +2049,26 @@ footer {
   min-width: 80px;
   font-size: 0.9rem;
 }
+.taksa-transit-pair {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(184, 132, 58, 0.3);
+  border-radius: 14px;
+  font-size: 0.85rem;
+}
+.taksa-transit-pair .aspect-arrow {
+  font-size: 0.95rem;
+  color: var(--maroon);
+  margin: 0 1px;
+}
+.taksa-transit-pair .aspect-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--maroon-dark);
+  margin-left: 2px;
+}
+.taksa-transit-note { flex: 1 1 200px; min-width: 200px; }
 
 /* Mobile */
 @media (max-width: 768px) {

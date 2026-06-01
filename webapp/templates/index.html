@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260531b" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260531d" />
 </head>
 <body class="view-general">
   <header class="site-header">
@@ -32,6 +32,7 @@
     </style>
     <a href="/" class="active">ผูกดวงสุริยยาตร์</a>
     <a href="/horathaynu">โหรทายหนู</a>
+    <a href="/about">เกี่ยวกับ</a>
   </nav>
 
   <main class="container {% if result %}has-result{% endif %}">
@@ -200,12 +201,17 @@
 
       <div class="chart-wrapper">
         {% set c = result.circle %}
-        <div class="zodiac-stage triyangka-on" style="--svg-size: {{ c.size }}px;">
-          <label class="triyangka-toggle-cb" title="แสดง/ซ่อนชั้นตรียางค์ &amp; ธาตุ">
-            <input type="checkbox" id="toggle-triyangka" checked/>
-            <span class="cb-box"></span>
-            <span class="cb-text">ตรียางค์</span>
-          </label>
+        <div class="zodiac-stage triyangka-on element-on" style="--svg-size: {{ c.size }}px;">
+          <div class="chart-cb-stack">
+            <label class="triyangka-toggle-cb" title="แสดง/ซ่อนชั้นตรียางค์">
+              <input type="checkbox" id="toggle-triyangka" checked/>
+              <span class="cb-text">ตรียางค์</span>
+            </label>
+            <label class="triyangka-toggle-cb" title="แสดง/ซ่อนสัญลักษณ์ธาตุ">
+              <input type="checkbox" id="toggle-element" checked/>
+              <span class="cb-text">ธาตุ</span>
+            </label>
+          </div>
           <svg class="zodiac-svg" viewBox="0 0 {{ c.size }} {{ c.size }}"
                xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -270,8 +276,8 @@
               </g>
             {% endfor %}
 
-            {# ===== Element markers (ธาตุของราศี) — toggle ได้ ===== #}
-            <g class="element-layer triyangka-layer">
+            {# ===== Element markers (ธาตุของราศี) — toggle แยกอิสระ ===== #}
+            <g class="element-layer">
               {% for r in c.rasis %}
                 {% set em = r.element_marker %}
                 <g class="element-marker element-{{ em.key }}"
@@ -474,20 +480,29 @@
         </p>
         <div class="planet-table">
           {% for p in result.transit.planets %}
-            <div class="planet-row">
+            <div class="planet-row {% if p.is_poison %}row-poisoned row-poisoned-{{ p.poison_type }}{% endif %}">
               <span class="planet-chip {{ p.color_class }} chip-lg chip-arabic">{{ p.abbr }}</span>
               <span class="planet-name">{{ p.name }}{% if p.retrograde %} <em class="retro">(พักร์)</em>{% endif %}</span>
               <span class="planet-pos">{{ p.rasi_name }} {{ p.degree }}°{{ "%02d"|format(p.arcminute) }}′{{ "%02d"|format(p.arcsecond or 0) }}″</span>
               <span class="planet-house"></span>
+              <span class="planet-triyangka">
+                <span class="elem-tag elem-{{ p.element }}">{{ p.element_icon }}{{ p.element_name_th }}</span>
+                <span class="tri-tag">ตรียางค์ {{ p.triyangka_decanate }}/3 ({{ p.triyangka_lord }})</span>
+                {% if p.is_poison %}
+                  <span class="poison-tag poison-{{ p.poison_type }} poison-{{ p.poison_severity }}">
+                    {{ p.poison_icon }} {{ p.poison_name_th }}{% if p.poison_severity == 'heavy' %} (หนัก){% endif %}
+                  </span>
+                {% endif %}
+              </span>
             </div>
           {% endfor %}
         </div>
       </div>
       {% endif %}
 
-      <details class="card collapsible">
-        <summary>ข้อมูลการคำนวณ (สำหรับผู้ศึกษา)</summary>
-        <div class="calc-info">
+      <div class="card calc-card">
+        <h2><span class="title-deco">✦</span> ข้อมูลการคำนวณ (สำหรับผู้ศึกษา) <span class="title-deco">✦</span></h2>
+        <div class="calc-info calc-info-single">
           <div><b>จุลศักราช (จ.ศ.):</b> {{ result.info.cs_year }}</div>
           <div><b>เถลิงศก:</b> {{ result.info.thaloengsok }}</div>
           <div><b>สุรทิน:</b> {{ result.info.surathin }} วัน</div>
@@ -505,7 +520,7 @@
             <div class="calc-lunar"><b>จันทรคติ:</b> {{ result.lunar.pretty }}</div>
           {% endif %}
         </div>
-      </details>
+      </div>
     </section>
 
     {# ===== ความหมายของภพ 12 — เต็มความกว้าง โหมดศึกษาเท่านั้น ===== #}
@@ -518,11 +533,22 @@
         </p>
         <div class="bhava-table">
           {% for b in bhava_meanings %}
-            <div class="bhava-row">
+            {% set ps = result.planets_by_bhava[loop.index] if result.planets_by_bhava else [] %}
+            <div class="bhava-row {% if ps %}bhava-row-occupied{% endif %}">
               <span class="bhava-num">{{ loop.index }}</span>
               <span class="bhava-name">{{ b.name }}</span>
               <span class="bhava-short">{{ b.short }}</span>
               <span class="bhava-full">{{ b.full }}</span>
+              <span class="bhava-planets">
+                {% if ps %}
+                  {% for p in ps %}
+                    <span class="bhava-planet-chip planet-chip {{ p.color_class }}"
+                          title="{{ p.name }}">{{ p.abbr }}</span>
+                  {% endfor %}
+                {% else %}
+                  <span class="bhava-empty">—</span>
+                {% endif %}
+              </span>
             </div>
           {% endfor %}
         </div>
@@ -775,7 +801,8 @@
 
         <div class="view-student">
 
-        {# === 3x3 แผนภูมิทักษา === #}
+        {# === 3x3 แผนภูมิทักษา + overlay ข้างขวา === #}
+        <div class="taksa-grid-row {% if tk.transit_taksa and tk.transit_taksa.overlay_chart %}has-overlay{% endif %}">
         <div class="taksa-grid-wrap">
           <table class="taksa-grid">
             {% for row in tk.grid %}
@@ -825,6 +852,31 @@
           </table>
         </div>
 
+        {# overlay (ย้ายมาข้างขวาของ grid) #}
+        {% if tk.transit_taksa and tk.transit_taksa.overlay_chart %}
+          <div class="taksa-overlay taksa-overlay-side">
+            <h3>🪷 ภพทักษาซ้อน (Overlay)</h3>
+            <p class="overlay-note">{{ tk.transit_taksa.overlay_note }}</p>
+            <div class="overlay-list">
+              {% for o in tk.transit_taksa.overlay_chart %}
+                <div class="overlay-row bhava-{{ o.tone }}">
+                  <span class="overlay-num">{{ o.position }}</span>
+                  <div class="overlay-titles">
+                    <b>{{ o.name }}</b>
+                    <small>{{ o.theme }}</small>
+                  </div>
+                  <div class="overlay-planet">
+                    <span class="planet-chip {{ o.color_class }} chip-sm">{{ o.abbr }}</span>
+                    <b>{{ o.planet }}</b>
+                    <small>({{ o.direction }})</small>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+        </div>  {# /.taksa-grid-row #}
+
         {% if tk.transit_taksa %}
           <div class="transit-taksa-explain">
             <p>{{ tk.transit_taksa.summary }}</p>
@@ -834,29 +886,6 @@
               · เมื่อนับถึงอาทิตย์จะแวะตากลาง (พฤหัสบดี) ก่อนแล้วต่อจันทร์
             </small>
           </div>
-
-          {% if tk.transit_taksa.overlay_chart %}
-            <div class="taksa-overlay">
-              <h3>🪷 ภพทักษาซ้อน (Overlay)</h3>
-              <p class="overlay-note">{{ tk.transit_taksa.overlay_note }}</p>
-              <div class="overlay-list">
-                {% for o in tk.transit_taksa.overlay_chart %}
-                  <div class="overlay-row bhava-{{ o.tone }}">
-                    <span class="overlay-num">{{ o.position }}</span>
-                    <div class="overlay-titles">
-                      <b>{{ o.name }}</b>
-                      <small>{{ o.theme }}</small>
-                    </div>
-                    <div class="overlay-planet">
-                      <span class="planet-chip {{ o.color_class }} chip-sm">{{ o.abbr }}</span>
-                      <b>{{ o.planet }}</b>
-                      <small>({{ o.direction }})</small>
-                    </div>
-                  </div>
-                {% endfor %}
-              </div>
-            </div>
-          {% endif %}
 
           {% if tk.transit_taksa.overlay_combos %}
             <div class="taksa-combos">
@@ -925,6 +954,14 @@
             {% for a in tk.transit_aspects %}
               <div class="taksa-transit-row tone-{{ a.tone }}">
                 <div class="taksa-transit-tag">{{ a.bhava }}</div>
+                <div class="taksa-transit-pair">
+                  <span class="planet-chip {{ a.transit_color }} chip-sm chip-arabic"
+                        title="ดาวจร {{ a.transit_planet }}">{{ a.transit_abbr }}</span>
+                  <span class="aspect-arrow">{{ '⚔' if a.aspect == 'เล็ง' else '⊕' }}</span>
+                  <span class="planet-chip {{ a.natal_color }} chip-sm"
+                        title="ดาวทักษา {{ a.natal_planet }}">{{ a.natal_abbr }}</span>
+                  <span class="aspect-label">{{ a.aspect }}</span>
+                </div>
                 <div class="taksa-transit-note">{{ a.note }}</div>
               </div>
             {% endfor %}
@@ -1039,6 +1076,6 @@
     <p>คำนวณตามคัมภีร์สุริยยาตร์ของไทย · port มาจาก Devtino.Astrology</p>
   </footer>
 
-  <script src="/static/script.js?v=20260531b"></script>
+  <script src="/static/script.js?v=20260531c"></script>
 </body>
 </html>

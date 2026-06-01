@@ -913,3 +913,40 @@ R_TRANSIT = 286
 - mahaplee.blogspot.com — ตรียางค์พิษ 3 ชนิด
 - astroneemo.net — ตรียางค์ในโหราศาสตร์พระเวท
 - baankhunyai.com — ธาตุในโหราศาสตร์ไทย
+
+---
+
+# ===== Feature 4 — UX overhaul + About page (เสร็จแล้ว) =====
+# วันที่: 2026-05-31
+
+## ภาพรวม
+ปรับ UX หลายจุด + เพิ่มหน้า `/about` พร้อม version history
+
+## หน้า /about (ใหม่)
+- ไฟล์: `webapp/changelog.py` (รายการเวอร์ชั่น) + `webapp/templates/about.html`
+- Route: `GET /about`
+- Layout: hero card + changelog accordion (`<details>`)
+- เวอร์ชั่นใหม่อยู่บนสุด + เปิด default
+- Categories ใน details: เพิ่ม (เขียว) / แก้ (ส้ม) / ปรับ (ม่วง)
+- Nav link "เกี่ยวกับ" ใส่ทั้งหน้าหลัก + โหรทายหนู
+- มี `<header class="site-header">` + ❀ เหมือนหน้าอื่น
+
+## UX revisions ที่ทำเสร็จ
+1. **Toggle ตรียางค์ + ธาตุ แยก checkbox** (มุมขวาบนของผัง, stacked)
+2. **ตาราง dasso จร**: เพิ่มคอลัมน์ธาตุ/ตรียางค์/พิษ
+3. **ภพ 12**: แสดง chip ดาวกำเนิดที่ตกในแต่ละภพ (ใช้ `result.planets_by_bhava`)
+4. **ข้อมูลการคำนวณ**: เปิดตลอด + `calc-info-single` 1 column
+5. **Overlay (ภพทักษาซ้อน)**: ย้ายไปข้างขวา grid 50/50 (เมื่อมี overlay)
+6. **ดาวจรกระทบดาวทักษา**: เพิ่ม chip + ลูกศร ⊕ (กุม) / ⚔ (เล็ง) + label
+7. **Tooltip** สีพิษ contrast: bg ทอง + cream text บน maroon
+8. **Mobile tap**: click ติด stuck mode + tap นอก/ESC ปิด
+9. **ฟอร์มข้อมูลผู้ขอดวง**: ตอนยังไม่ผูกดวง max-width 340px (เท่ากับตอนผูกดวงเสร็จ) + จัดกลาง
+
+## Horathaynu fix
+- ดาวกองที่เส้นเริ่มราศี (เพราะ `_chip_layout_by_decanate` ใช้ degree=0 สำหรับโหรทายหนู)
+- แก้ด้วยพารามิเตอร์ `position_by_degree=True/False` ใน `build_circular_layout`
+- Horathaynu ใช้ `False` → กลับไปใช้ legacy `_chip_layout` (กระจายในเซกเตอร์)
+
+## Tip
+เพิ่ม entry ใหม่ใน `webapp/changelog.py` ที่ index 0 (บนสุด) — ใส่ version, date,
+title, highlights (4-5 จุด), details (categories with items)

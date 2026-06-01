@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <title>เกี่ยวกับ — โหรไทยสุริยยาตร์</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&family=Kanit:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/static/styles.css?v=20260531d" />
+  <style>
+    .nav-links { text-align: center; margin: 0 0 18px 0; }
+    .nav-links a {
+      display: inline-block;
+      padding: 8px 18px;
+      margin: 0 4px;
+      background: #fff8e7;
+      border: 1.5px solid #b8843a;
+      border-radius: 18px;
+      color: #5a1e0e;
+      text-decoration: none;
+      font-family: "Sarabun", sans-serif;
+      font-weight: 600;
+      font-size: 0.95em;
+    }
+    .nav-links a.active, .nav-links a:hover {
+      background: #7a2d12; color: #fde9c8;
+    }
+
+    .about-page {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+    .about-intro {
+      background: linear-gradient(180deg, #fff9ed 0%, #f1e2bb 100%);
+      border: 1.5px solid #d9a454;
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 16px rgba(122, 45, 18, 0.1);
+    }
+    .about-intro h1 {
+      font-family: "Mali", "Sarabun", serif;
+      color: #5a1e0e;
+      margin: 0 0 0.6rem 0;
+      font-size: 1.6rem;
+    }
+    .about-intro p {
+      color: #6a4a20;
+      line-height: 1.6;
+      margin: 0.5rem 0;
+    }
+    .about-intro .meta {
+      font-size: 0.85rem;
+      color: #8a6a3a;
+      font-style: italic;
+    }
+
+    .changelog-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+    details.changelog-card {
+      background: #fff;
+      border: 1.5px solid #d9a454;
+      border-left: 5px solid #7a2d12;
+      border-radius: 10px;
+      padding: 0;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(122, 45, 18, 0.08);
+      transition: box-shadow 0.15s;
+    }
+    details.changelog-card:hover {
+      box-shadow: 0 4px 14px rgba(122, 45, 18, 0.15);
+    }
+    details.changelog-card[open] {
+      box-shadow: 0 4px 14px rgba(122, 45, 18, 0.18);
+    }
+    details.changelog-card > summary {
+      cursor: pointer;
+      padding: 1rem 1.2rem;
+      list-style: none;
+      user-select: none;
+    }
+    details.changelog-card > summary::-webkit-details-marker { display: none; }
+    .cl-summary-row {
+      display: flex; align-items: center; gap: 0.8rem;
+      flex-wrap: wrap;
+    }
+    .cl-version-badge {
+      background: linear-gradient(180deg, #e8c570, #c79c4e);
+      color: #5a1e0e;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-family: "Sarabun", monospace;
+      font-weight: 700;
+      font-size: 0.82rem;
+      border: 1px solid #b8843a;
+    }
+    .cl-date {
+      font-size: 0.85rem;
+      color: #8a6a3a;
+      font-family: "Sarabun", sans-serif;
+    }
+    .cl-title {
+      font-family: "Kanit", sans-serif;
+      font-weight: 700;
+      color: #5a1e0e;
+      font-size: 1.05rem;
+      flex: 1 1 200px;
+    }
+    .cl-toggle-arrow {
+      color: #b8843a;
+      font-size: 1rem;
+      transition: transform 0.2s;
+    }
+    details[open] .cl-toggle-arrow { transform: rotate(180deg); }
+
+    .cl-highlights {
+      margin-top: 0.6rem;
+      padding: 0.6rem 0.8rem;
+      background: rgba(255, 244, 220, 0.5);
+      border-radius: 6px;
+      font-size: 0.92rem;
+      color: #5a3a18;
+    }
+    .cl-highlights ul {
+      margin: 0; padding-left: 1.4rem;
+      list-style: "✦ ";
+    }
+    .cl-highlights li {
+      padding-left: 0.3rem;
+      margin: 3px 0;
+    }
+
+    .cl-body {
+      padding: 1rem 1.2rem 1.2rem 1.2rem;
+      border-top: 1px dashed #d9a454;
+      background: #fffcf2;
+    }
+    .cl-category {
+      margin-bottom: 0.9rem;
+    }
+    .cl-cat-label {
+      display: inline-block;
+      font-family: "Kanit", sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 2px 10px;
+      border-radius: 10px;
+      margin-bottom: 0.4rem;
+    }
+    .cat-add  { background: #d8f0d4; color: #2e6e2a; border: 1px solid #6aa83e; }
+    .cat-fix  { background: #f5e1d4; color: #7a3a12; border: 1px solid #c4793a; }
+    .cat-tune { background: #e6dff5; color: #4a2980; border: 1px solid #8765c4; }
+    .cl-items {
+      margin: 0; padding-left: 1.5rem;
+      color: #4a3010;
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+    .cl-items li { margin: 3px 0; }
+
+    .about-footer {
+      text-align: center;
+      padding: 1.5rem 0;
+      color: #8a6a3a;
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="ornament">❀</div>
+    <h1>เกี่ยวกับโหรไทยสุริยยาตร์</h1>
+    <p class="subtitle">ประวัติเวอร์ชั่น &amp; ฟีเจอร์ที่อัพเดต</p>
+    <div class="ornament">❀</div>
+  </header>
+
+  <nav class="nav-links">
+    <a href="/">ผูกดวงสุริยยาตร์</a>
+    <a href="/horathaynu">โหรทายหนู</a>
+    <a href="/about" class="active">เกี่ยวกับ</a>
+  </nav>
+
+  <div class="about-page">
+    <div class="about-intro">
+      <h1>🔮 เกี่ยวกับโหรไทยสุริยยาตร์</h1>
+      <p>
+        ระบบคำนวณและผูกดวงโหราศาสตร์ไทยตามวิธี <b>สุริยยาตร์</b>
+        ทั้ง CLI และ Web App พร้อมระบบคำทำนายดาวจรกระทบดาวเดิม
+        ทักษา 8 ดาว 8 ทิศ ตรียางค์ ธาตุ และโหรทายหนู
+      </p>
+      <p>
+        สูตรทั้งหมด <b>port จาก Devtino.Astrology (C#)</b>
+        ที่ใช้คัมภีร์สุริยสิทธานต์/สุริยยาตร์ไทยดั้งเดิม —
+        <b>ไม่ใช้ library โหราศาสตร์/ดาราศาสตร์ตะวันตก</b>
+      </p>
+      <p class="meta">
+        ดูประวัติการ deploy และฟีเจอร์ใหม่ — เลขเวอร์ชั่นล่าสุดอยู่บนสุด
+        คลิกที่กล่องเพื่อดูรายละเอียด
+      </p>
+    </div>
+
+    <div class="changelog-list">
+      {% for entry in changelog %}
+        <details class="changelog-card" {% if loop.first %}open{% endif %}>
+          <summary>
+            <div class="cl-summary-row">
+              <span class="cl-version-badge">v{{ entry.version }}</span>
+              <span class="cl-date">{{ entry.date }}</span>
+              <span class="cl-title">{{ entry.title }}</span>
+              <span class="cl-toggle-arrow">▾</span>
+            </div>
+            {% if entry.highlights %}
+              <div class="cl-highlights">
+                <ul>
+                  {% for h in entry.highlights %}
+                    <li>{{ h }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+          </summary>
+          {% if entry.details %}
+            <div class="cl-body">
+              {% for d in entry.details %}
+                <div class="cl-category">
+                  {% set cat_class = 'cat-add' if d.category == 'เพิ่ม'
+                                    else ('cat-fix' if d.category == 'แก้'
+                                          else 'cat-tune') %}
+                  <span class="cl-cat-label {{ cat_class }}">{{ d.category }}</span>
+                  <ul class="cl-items">
+                    {% for item in d['items'] %}
+                      <li>{{ item }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </details>
+      {% endfor %}
+    </div>
+
+    <div class="about-footer">
+      โหรไทยสุริยยาตร์ · พัฒนาด้วย FastAPI + Jinja2 · ตำราอ้างอิง:
+      อ.เทพย์ สาริกบุตร / อ.ประยูร / อ.กานดา / Devtino
+    </div>
+  </div>
+</body>
+</html>

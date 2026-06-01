@@ -93,15 +93,46 @@ function setupPlanetTooltip() {
     ".planet-svg-group[data-tip-planet], .lagna-group[data-tip-planet], .triyangka-marker-group[data-tri-rasi]"
   );
 
+  // มือถือ: ติดสติกเกอร์ไว้จนกว่าจะ tap นอก / tap target เดิม
+  let stuck = null;   // element ที่ "ติด" tooltip ค้างไว้ (จาก tap)
+
   groups.forEach((g) => {
-    g.addEventListener("mouseenter", (e) => showTip(e, g));
-    g.addEventListener("mousemove", (e) => moveTip(e));
-    g.addEventListener("mouseleave", () => hideTip());
-    // touch
-    g.addEventListener("click", (e) => {
-      showTip(e, g);
-      setTimeout(hideTip, 3500);
+    g.addEventListener("mouseenter", (e) => {
+      if (stuck === null) showTip(e, g);
     });
+    g.addEventListener("mousemove", (e) => {
+      if (stuck === null) moveTip(e);
+    });
+    g.addEventListener("mouseleave", () => {
+      if (stuck === null) hideTip();
+    });
+    // tap/click — ติดค้าง สำหรับมือถือ
+    g.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (stuck === g) {
+        // tap target เดิม → ปิด
+        stuck = null;
+        hideTip();
+      } else {
+        stuck = g;
+        showTip(e, g);
+      }
+    });
+  });
+
+  // tap นอก target ใดๆ → ปิด tooltip ที่ติด (ยกเว้นใน tooltip เอง)
+  document.addEventListener("click", (e) => {
+    if (stuck && !stuck.contains(e.target) && !tip.contains(e.target)) {
+      stuck = null;
+      hideTip();
+    }
+  });
+  // ESC ก็ปิด
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && stuck) {
+      stuck = null;
+      hideTip();
+    }
   });
 
   // poison key → ไทย
@@ -232,32 +263,35 @@ function setupViewTabs() {
   applyView(saved);
 }
 
-// Toggle ตรียางค์ & ธาตุ layer บนผัง — จำสถานะใน localStorage
+// Toggle ตรียางค์ + ธาตุ (แยกอิสระ) — จำสถานะใน localStorage
 function setupTriyangkaToggle() {
-  const cb = document.getElementById("toggle-triyangka");
   const stage = document.querySelector(".zodiac-stage");
-  if (!cb || !stage) return;
+  if (!stage) return;
 
-  function apply(on) {
-    if (on) {
-      stage.classList.add("triyangka-on");
-      stage.classList.remove("triyangka-off");
-    } else {
-      stage.classList.remove("triyangka-on");
-      stage.classList.add("triyangka-off");
+  function bindToggle(cbId, layerClass, storageKey) {
+    const cb = document.getElementById(cbId);
+    if (!cb) return;
+    const onCls = layerClass + "-on";
+    const offCls = layerClass + "-off";
+
+    function apply(on) {
+      stage.classList.toggle(onCls, on);
+      stage.classList.toggle(offCls, !on);
+      cb.checked = on;
     }
-    cb.checked = on;
+    let saved = "1";
+    try { saved = localStorage.getItem(storageKey) || "1"; } catch (e) {}
+    apply(saved === "1");
+
+    cb.addEventListener("change", () => {
+      const next = cb.checked;
+      apply(next);
+      try { localStorage.setItem(storageKey, next ? "1" : "0"); } catch (e) {}
+    });
   }
 
-  let saved = "1";
-  try { saved = localStorage.getItem("triyangka_visible") || "1"; } catch (e) {}
-  apply(saved === "1");
-
-  cb.addEventListener("change", () => {
-    const next = cb.checked;
-    apply(next);
-    try { localStorage.setItem("triyangka_visible", next ? "1" : "0"); } catch (e) {}
-  });
+  bindToggle("toggle-triyangka", "triyangka", "triyangka_visible");
+  bindToggle("toggle-element",   "element",   "element_visible");
 }
 
 document.addEventListener("DOMContentLoaded", () => {

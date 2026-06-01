@@ -287,6 +287,7 @@ def build_circular_layout(
     rasis: list[dict],
     transits_by_rasi: Optional[dict[int, list[dict]]] = None,
     ascendant: Optional[dict] = None,
+    position_by_degree: bool = True,
 ) -> dict:
     """สร้างข้อมูลพิกัด SVG สำหรับวงกลมจักรราศี
 
@@ -388,9 +389,14 @@ def build_circular_layout(
             "x": ex, "y": ey,
         }
 
-        # natal chips — วางตามตรียางค์ที่ดาวกำเนิดตก
-        rashi_start_angle = 75 + 30 * r["index"]
-        chip_xy = _chip_layout_by_decanate(r["planets"], rashi_start_angle)
+        # natal chips
+        if position_by_degree:
+            # วางตามตรียางค์ที่ดาวกำเนิดตก (สุริยยาตร์ — ดาวมีองศา)
+            rashi_start_angle = 75 + 30 * r["index"]
+            chip_xy = _chip_layout_by_decanate(r["planets"], rashi_start_angle)
+        else:
+            # วางกระจายในเซกเตอร์ราศี (โหรทายหนู — ดาวไม่มีองศา)
+            chip_xy = _chip_layout(len(r["planets"]), center_angle)
         chip_data = []
         for (x, y), planet in zip(chip_xy, r["planets"]):
             chip_data.append({**planet, "x": x, "y": y})
@@ -532,6 +538,7 @@ def chart_to_view(
                 continue
             p = transit_chart.planets[name]
             info = PLANET_INFO_MAP[name]
+            _tti = get_triyangka_info(p.zodiac.rasi, p.zodiac.degree, p.zodiac.arcminute)
             transit_planet = {
                 "name": name,
                 "abbr": info["abbr_arabic"],     # ใช้เลขอารบิก
@@ -542,6 +549,10 @@ def chart_to_view(
                 "arcsecond": p.zodiac.arcsecond,
                 "retrograde": p.retrograde,
                 "source": "จร",
+                "is_poison": _tti.is_poison,
+                "poison_type": _tti.poison_type,
+                "poison_icon": _tti.poison_icon,
+                "poison_severity": _tti.poison_severity,
             }
             transits_by_rasi[p.zodiac.rasi].append(transit_planet)
             transit_positions.append({
@@ -553,6 +564,18 @@ def chart_to_view(
                 "arcminute": p.zodiac.arcminute,
                 "arcsecond": p.zodiac.arcsecond,
                 "retrograde": p.retrograde,
+                # triyangka data (สำหรับตาราง)
+                "triyangka_decanate": _tti.decanate + 1,
+                "triyangka_name": _tti.decanate_name_th,
+                "triyangka_lord": _tti.lord_planet,
+                "is_poison": _tti.is_poison,
+                "poison_type": _tti.poison_type,
+                "poison_name_th": _tti.poison_name_th,
+                "poison_icon": _tti.poison_icon,
+                "poison_severity": _tti.poison_severity,
+                "element": _tti.element,
+                "element_name_th": _tti.element_name_th,
+                "element_icon": _tti.element_icon,
             })
 
         # คำทำนายดาวจรกระทบดาวเดิม
@@ -697,6 +720,14 @@ def chart_to_view(
             },
         ),
         "planets": planet_positions,
+        # planets grouped by bhava (house 1-12) สำหรับแสดงในตารางความหมายภพ
+        "planets_by_bhava": {
+            h: [
+                {"name": p["name"], "abbr": p["abbr"], "color_class": p["color_class"]}
+                for p in planet_positions if p["house"] == h
+            ]
+            for h in range(1, 13)
+        },
         "transit": ({
             "date_th": transit_meta.get("date_th") if transit_meta else None,
             "time": transit_meta.get("time") if transit_meta else None,
@@ -822,7 +853,16 @@ def _taksa_to_view(taksa, transit_aspects, transit_taksa=None):
             }
             for b in taksa.bhavas
         ],
-        "transit_aspects": transit_aspects,
+        "transit_aspects": [
+            {
+                **a,
+                "transit_abbr": PLANET_INFO_MAP.get(a["transit_planet"], {}).get("abbr_arabic", ""),
+                "transit_color": PLANET_INFO_MAP.get(a["transit_planet"], {}).get("color_class", ""),
+                "natal_abbr": PLANET_INFO_MAP.get(a["natal_planet"], {}).get("abbr", ""),
+                "natal_color": PLANET_INFO_MAP.get(a["natal_planet"], {}).get("color_class", ""),
+            }
+            for a in (transit_aspects or [])
+        ],
         "transit_taksa": (
             {
                 "current_planet": transit_taksa.current_planet,
@@ -948,6 +988,17 @@ async def index(request: Request) -> HTMLResponse:
             form=_default_form(),
             error=None,
         ),
+    )
+
+
+@app.get("/about", response_class=HTMLResponse)
+async def about_page(request: Request) -> HTMLResponse:
+    """หน้าเกี่ยวกับ + version history"""
+    from webapp.changelog import CHANGELOG
+    return templates.TemplateResponse(
+        request,
+        "about.html",
+        {"request": request, "changelog": CHANGELOG},
     )
 
 
@@ -1128,6 +1179,7 @@ def _horathaynu_chart_view(chart, asked_time: Optional[str] = None,
         rasis,
         transits_by_rasi=None,
         ascendant={"rasi": asc, "degree": 15, "arcminute": 0},
+        position_by_degree=False,   # โหรทายหนูไม่ track องศา → กระจายในเซกเตอร์
     )
 
     # เพิ่มเลขดาวเกษตรในแต่ละช่องราศี (เฉพาะ horathaynu)
