@@ -1818,7 +1818,9 @@ footer {
   padding-top: 0;
 }
 @media (max-width: 900px) {
-  .taksa-grid-row {
+  /* has-overlay ต้องระบุเฉพาะเพื่อ override specificity ของ .taksa-grid-row.has-overlay */
+  .taksa-grid-row,
+  .taksa-grid-row.has-overlay {
     grid-template-columns: 1fr;
   }
 }
@@ -2004,6 +2006,7 @@ footer {
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 /* === Transit aspects on Taksa === */
