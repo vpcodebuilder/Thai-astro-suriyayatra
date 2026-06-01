@@ -950,3 +950,50 @@ R_TRANSIT = 286
 ## Tip
 เพิ่ม entry ใหม่ใน `webapp/changelog.py` ที่ index 0 (บนสุด) — ใส่ version, date,
 title, highlights (4-5 จุด), details (categories with items)
+
+---
+
+# ===== Session 5 Updates =====
+# Mobile layout fixes — 2026-06-01
+
+## ปัญหาที่แก้ (2 commits)
+
+### Commit a557962 — Mobile layout balance (v=20260601a)
+แก้ 4 จุดหลักที่ทำให้ layout มือถือเบี้ยว/ล้น:
+
+1. **`.nav-links` → flex system**: รวม nav-links CSS เข้า `styles.css` ใช้
+   `display: flex; flex-wrap: wrap; justify-content: center; gap: 8px`
+   ลบ duplicate inline `<style>` block จาก index.html, horathaynu.html, about.html
+   — ก่อนหน้าใช้ `display: inline-block` ซึ่งตัดบรรทัดแบบเบี้ยวบนจอแคบ
+
+2. **`.prophecy-list` overflow**: `minmax(420px, 1fr)` เกินความกว้าง content
+   ของมือถือ (~327px) → เพิ่ม `@media (max-width: 600px) { grid-template-columns: 1fr }`
+
+3. **`.container` mobile padding**: ลด padding LR จาก 1.5rem → 1rem ที่ ≤600px
+   ทำให้ `.view-tabs` negative margin (`-1rem -1rem 0`) ตรงกับ container padding พอดี
+
+4. **`.result-header` mobile**: เพิ่ม `flex-direction: column; align-items: center`
+   ที่ ≤600px เพื่อให้ lakkana-badge wrap ลงมาแบบจัดกลาง ไม่ชิดซ้าย
+
+### Commit 6157171 — Taksa mobile fixes (v=20260601b)
+
+1. **`.taksa-grid-row.has-overlay` specificity bug**:
+   media query `@media (max-width: 900px)` override แค่ `.taksa-grid-row` แต่
+   `.taksa-grid-row.has-overlay` มี specificity สูงกว่า → overlay ไม่ยอมลงแถวล่าง
+   **แก้**: เพิ่ม `.taksa-grid-row.has-overlay` เข้า media query selector ด้วย
+
+2. **`.dasa-tag` word-wrap**: "🌟 เสวยอยู่" แตกบรรทัดระหว่าง "เสวย" กับ "อยู่"
+   **แก้**: เพิ่ม `white-space: nowrap` ใน `.dasa-tag`
+
+## CSS version history
+| version | เนื้อหา |
+|---------|---------|
+| `v=20260531d` | ก่อน session นี้ (session 4) |
+| `v=20260601a` | mobile layout balance (nav-links, prophecy-list, container padding, result-header) |
+| `v=20260601b` | taksa overlay stacking + dasa-tag nowrap |
+
+## Gotchas ที่ค้นพบ
+- **CSS specificity + media query**: `.class.modifier { ... }` ใน non-media context
+  จะ override `.class` ใน media query — ต้องระบุ `.class.modifier` ใน media query ด้วย
+- **`.nav-links` styles เดิมกระจายอยู่ใน inline `<style>` แต่ละหน้า** — ตอนนี้ consolidate
+  เข้า `styles.css` หมดแล้ว ถ้าเพิ่มหน้าใหม่ไม่ต้องเพิ่ม nav-links style อีก
