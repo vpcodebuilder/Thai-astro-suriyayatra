@@ -10,9 +10,9 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260601b" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260601e" />
 </head>
-<body class="view-general">
+<body class="view-general" data-scroll-target="{% if scroll_target == '1' %}transit{% endif %}">
   <header class="site-header">
     <div class="ornament">❀</div>
     <h1>ผูกดวงโหราศาสตร์ไทย</h1>
@@ -35,7 +35,11 @@
         {% if error %}
           <div class="error">{{ error }}</div>
         {% endif %}
-        <form method="post" action="/" class="birth-form">
+        <form method="post" action="/" class="birth-form" id="birth-form">
+          {# hidden — ใช้โดย scrubber เพื่อ override ดาวจร (ถ้าว่าง = วันนี้/ตอนนี้) #}
+          <input type="hidden" name="transit_date_iso" id="hidden_transit_date" value="" />
+          <input type="hidden" name="transit_time_24"  id="hidden_transit_time" value="" />
+          <input type="hidden" name="scroll_to_transit" id="hidden_scroll_target" value="" />
           <label>
             <span>ชื่อ-นามสกุล</span>
             <input
@@ -100,58 +104,6 @@
             <small class="hint">ใช้ปรับเวลาท้องถิ่นตามลองจิจูดจังหวัด</small>
           </label>
 
-          <fieldset class="transit-fieldset">
-            <legend>ดาวจร (วันที่ดูดวง)</legend>
-            <p class="fieldset-hint">
-              วันเวลาและสถานที่ที่ต้องการดูดาวจร (default = วันนี้/ตอนนี้/กรุงเทพฯ)
-              จะแสดงเป็น<b>เลขอารบิก</b>ในวงนอกของผังดวง
-            </p>
-
-            <label>
-              <span>วันที่ดาวจร (พ.ศ.)</span>
-              <div class="date-input-group">
-                <input
-                  type="text"
-                  name="transit_date_th"
-                  id="transit_date_th"
-                  value="{{ form.transit_date_th }}"
-                  required
-                  autocomplete="off"
-                  spellcheck="false"
-                  placeholder="วว/ดด/ปปปป"
-                  maxlength="10"
-                />
-                <button
-                  type="button"
-                  class="date-picker-btn"
-                  data-picker-for="transit_date_picker"
-                  aria-label="เปิดปฏิทิน"
-                >📅</button>
-                <input
-                  type="date"
-                  id="transit_date_picker"
-                  class="date-picker-hidden"
-                  tabindex="-1"
-                  aria-hidden="true"
-                />
-              </div>
-            </label>
-
-            <label>
-              <span>เวลาดาวจร (24 ชั่วโมง)</span>
-              <input type="time" name="transit_time" value="{{ form.transit_time }}" required step="60" />
-            </label>
-
-            <label>
-              <span>สถานที่ดาวจร</span>
-              <select name="transit_province">
-                {% for p in provinces %}
-                  <option value="{{ p }}" {% if p == form.transit_province %}selected{% endif %}>{{ p }}</option>
-                {% endfor %}
-              </select>
-            </label>
-          </fieldset>
-
           <button type="submit" class="btn-primary">
             ผูกดวง <span class="btn-arrow">›</span>
           </button>
@@ -160,32 +112,40 @@
     </section>
 
     {% if result %}
+    <!-- ข้อมูลดวงปัจจุบันสำหรับ JS scrubber (ซ่อน) -->
+    <div id="chart-meta" style="display:none"
+         data-transit-date="{{ result.transit.date_iso }}"
+         data-transit-time="{{ result.transit.time_24 }}">
+    </div>
+
     <!-- ===== กลาง: ผังจักรราศี (อยู่บนสุดเสมอ ทั้งสอง view) ===== -->
     <section class="chart-section view-both">
-      <div class="card result-header-card">
-        <div class="result-header">
-          <div>
-            {% if result.person_name %}
-              <h2>ดวงชะตาของ {{ result.person_name }}</h2>
-            {% else %}
-              <h2>ดวงชะตา</h2>
-            {% endif %}
-            <p class="meta">
-              เกิด{{ result.birth_weekday_name }}ที่ {{ result.birth_date_th }}
-              เวลา {{ result.birth_time }} น.
-              <br/>ณ จังหวัด{{ result.province }}
-              {% if result.lunar %}
-                <br/><span class="lunar-meta">🌙 {{ result.lunar.pretty_short }}</span>
-              {% endif %}
-            </p>
-          </div>
-          <div class="lakkana-badge">
-            <div class="badge-label">ลัคนา</div>
-            <div class="badge-value">
-              {{ result.ascendant.rasi_name }}
-              {{ result.ascendant.degree }}°{{ "%02d"|format(result.ascendant.arcminute) }}′{{ "%02d"|format(result.ascendant.arcsecond or 0) }}″
-            </div>
-            <div class="badge-sub">เจ้าชะตา: {{ result.chart_lord }}</div>
+      {# === การ์ดดาวกำเนิด — บนผัง === #}
+      <div class="card info-card natal-info-card">
+        <div class="info-card-head">
+          <span class="info-icon">☼</span>
+          {% if result.person_name %}
+            <h2>ดวงชะตาของ {{ result.person_name }} (ดาวกำเนิด)</h2>
+          {% else %}
+            <h2>ดวงชะตา (ดาวกำเนิด)</h2>
+          {% endif %}
+        </div>
+        <div class="info-card-body info-card-body-grid">
+          <div class="info-row"><span class="info-label">วันเกิด</span>
+            <b>{{ result.birth_weekday_name }} {{ result.birth_date_th }}</b></div>
+          <div class="info-row"><span class="info-label">เวลาเกิด</span>
+            <b>{{ result.birth_time }} น.</b></div>
+          <div class="info-row"><span class="info-label">สถานที่เกิด</span>
+            <b>จังหวัด{{ result.province }}</b></div>
+          {% if result.lunar %}
+            <div class="info-row"><span class="info-label">จันทรคติ</span>
+              🌙 {{ result.lunar.pretty_short }}</div>
+          {% endif %}
+          <div class="info-row info-row-lakkana">
+            <span class="info-label">ลัคนา</span>
+            <b>{{ result.ascendant.rasi_name }}
+            {{ result.ascendant.degree }}°{{ "%02d"|format(result.ascendant.arcminute) }}′{{ "%02d"|format(result.ascendant.arcsecond or 0) }}″</b>
+            <span class="info-sub">· เจ้าชะตา {{ result.chart_lord }}</span>
           </div>
         </div>
       </div>
@@ -421,6 +381,43 @@
               {{ result.ascendant.degree }}°{{ "%02d"|format(result.ascendant.arcminute) }}′{{ "%02d"|format(result.ascendant.arcsecond or 0) }}″
             </div>
           </div>
+        </div>
+      </div>
+
+      {# === การ์ดดาวจร — ใต้ผังจักรราศี (มี scrubber) === #}
+      <div class="card info-card transit-info-card" id="transit-info-card">
+        <div class="info-card-head">
+          <span class="info-icon">🔭</span>
+          <h2>ดาวจร (ปัจจุบัน)</h2>
+        </div>
+        <div class="info-card-body info-card-body-grid">
+          <div class="info-row"><span class="info-label">วันที่</span>
+            <b id="transit-date-label">{{ result.transit.date_th }}</b></div>
+          <div class="info-row"><span class="info-label">เวลา</span>
+            <b id="transit-time-label">{{ result.transit.time }} น.</b></div>
+          <div class="info-row"><span class="info-label">สถานที่</span>
+            <b>จังหวัด{{ result.transit.province }}</b></div>
+        </div>
+        <div class="scrubber-block">
+          <div class="scrubber-controls">
+            <button type="button" class="scrub-btn" data-delta="-30" title="ย้อนหลัง 30 วัน">◀◀ -30วัน</button>
+            <button type="button" class="scrub-btn" data-delta="-7"  title="ย้อนหลัง 7 วัน">◀ -7วัน</button>
+            <button type="button" class="scrub-btn" data-delta="-1"  title="ย้อนหลัง 1 วัน">◀ -1วัน</button>
+            <button type="button" class="scrub-btn scrub-today" data-delta="0" title="กลับสู่วันปัจจุบัน">วันนี้</button>
+            <button type="button" class="scrub-btn" data-delta="1"  title="ไปข้างหน้า 1 วัน">+1วัน ▶</button>
+            <button type="button" class="scrub-btn" data-delta="7"  title="ไปข้างหน้า 7 วัน">+7วัน ▶</button>
+            <button type="button" class="scrub-btn" data-delta="30" title="ไปข้างหน้า 30 วัน">+30วัน ▶▶</button>
+          </div>
+          <div class="scrubber-picker-row">
+            <label>เลือกวันที่
+              <input type="date" id="scrubber-date-picker" value="{{ result.transit.date_iso }}">
+            </label>
+            <label>เวลา
+              <input type="time" id="scrubber-time-picker" value="{{ result.transit.time_24 }}" step="3600">
+            </label>
+          </div>
+          <div class="scrubber-status" id="scrubber-status"></div>
+          <small class="scrubber-hint">💡 เลื่อนเวลาดาวจรเพื่อดูคำทำนาย ณ วันเวลาที่ต้องการ — คำทำนาย/ดาวบนผัง/สรุปทุกส่วนจะปรับตาม</small>
         </div>
       </div>
 
@@ -1067,6 +1064,6 @@
     <p>คำนวณตามคัมภีร์สุริยยาตร์ของไทย · port มาจาก Devtino.Astrology</p>
   </footer>
 
-  <script src="/static/script.js?v=20260531c"></script>
+  <script src="/static/script.js?v=20260601e"></script>
 </body>
 </html>

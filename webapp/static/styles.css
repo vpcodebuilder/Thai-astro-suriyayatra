@@ -2506,3 +2506,197 @@ body.view-student .view-general { display: none !important; }
     text-align: center;
   }
 }
+
+/* ===================================================================
+   Info Cards — ดวงชะตา (บนผัง) + ดาวจร (ใต้ผัง)
+   =================================================================== */
+
+.info-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1rem 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.natal-info-card { margin-bottom: 1rem; }
+.transit-info-card { margin-top: 1rem; margin-bottom: 1rem; }
+
+.info-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1.5px dashed var(--gold);
+  padding-bottom: 0.4rem;
+}
+
+.info-card-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--maroon-dark);
+  font-family: "Kanit", "Sarabun", sans-serif;
+  font-weight: 600;
+}
+
+.info-icon {
+  font-size: 1.2rem;
+}
+
+.info-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+
+/* แสดงเป็น grid 2 column (วันที่ | เวลา | สถานที่ | จันทรคติ) ที่จอกว้าง */
+.info-card-body-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 1.2rem;
+}
+
+.info-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  line-height: 1.4;
+  flex-wrap: wrap;
+}
+
+.info-row-lakkana {
+  grid-column: 1 / -1;
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed rgba(201, 162, 74, 0.4);
+}
+
+.info-label {
+  color: var(--ink-soft);
+  font-size: 0.83rem;
+  min-width: 78px;
+  display: inline-block;
+}
+
+.info-sub {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+/* ===================================================================
+   Transit Scrubber — อยู่ในการ์ดดาวจร
+   =================================================================== */
+
+.scrubber-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1.5px dashed var(--gold);
+}
+
+.scrubber-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.scrub-btn {
+  background: var(--cream);
+  border: 1.5px solid var(--gold);
+  color: var(--maroon-dark);
+  border-radius: 6px;
+  padding: 0.32rem 0.55rem;
+  font-family: "Sarabun", sans-serif;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.scrub-btn:hover {
+  background: var(--gold);
+  color: var(--maroon-deep);
+}
+
+.scrub-today {
+  background: var(--maroon);
+  color: #fde9c8;
+  border-color: var(--maroon-dark);
+  font-weight: 600;
+}
+
+.scrub-today:hover {
+  background: var(--maroon-dark);
+  color: #ffe8c0;
+}
+
+.scrubber-picker-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.scrubber-picker-row label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.scrubber-picker-row input[type="date"],
+.scrubber-picker-row input[type="time"] {
+  border: 1.5px solid var(--gold);
+  border-radius: 6px;
+  padding: 0.28rem 0.45rem;
+  background: #fff;
+  font-size: 0.88rem;
+  font-family: "Sarabun", sans-serif;
+  color: var(--ink);
+}
+
+.scrubber-status {
+  font-size: 0.86rem;
+  min-height: 1em;
+}
+
+.scrubber-status.loading { color: var(--gold-deep); }
+.scrubber-status.error   { color: #b91c1c; }
+
+.scrubber-hint {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-style: italic;
+}
+
+.scrubber-busy {
+  opacity: 0.6;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.transit-meta {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  margin: 0.2rem 0 0.5rem;
+}
+
+@media (max-width: 700px) {
+  .info-card-body-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .info-card {
+    padding: 0.8rem 0.9rem;
+  }
+  .scrub-btn {
+    padding: 0.35rem 0.45rem;
+    font-size: 0.8rem;
+  }
+}

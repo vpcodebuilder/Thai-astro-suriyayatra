@@ -12,6 +12,46 @@
 
 CHANGELOG = [
     {
+        "version": "2026.06.01-c",
+        "date": "2026-06-01",
+        "title": "ดาวจรเลื่อนเวลาได้ + ตัดฟอร์มดาวจรออก",
+        "highlights": [
+            "ตัดช่องกรอกวันเวลา/จังหวัดดาวจรออกจากฟอร์ม — ใช้ \"วันนี้/ปัจจุบัน/กรุงเทพฯ\" auto",
+            "เพิ่มแถบ Scrubber ใต้ผังจักรราศี — เลื่อนวัน ±1/±7/±30 หรือเลือกวันที่/เวลาเฉพาะ",
+            "เลื่อนเวลาแล้วทุกส่วน (ผังดวง + คำทำนาย + สรุป + ภพ + oracle) อัพเดทพร้อมกัน",
+            "ปุ่ม Scrubber ไม่กระโดด scroll กลับบน — อยู่ที่เดิม",
+            "การ์ดดวงชะตา + ดาวจร ใช้ layout เดียวกัน (วันที่/เวลา/สถานที่ grid)",
+        ],
+        "details": [
+            {
+                "category": "เพิ่ม",
+                "items": [
+                    "Transit Scrubber: ปุ่ม -30/-7/-1/วันนี้/+1/+7/+30 + date+time picker",
+                    "การ์ดดวงชะตา (natal-info-card) — แสดงวันเกิด/เวลา/สถานที่/จันทรคติ/ลัคนา แบบ grid 2 column",
+                    "การ์ดดาวจร (transit-info-card) — โครงสร้างเดียวกับการ์ดดวงชะตา + scrubber ใต้",
+                    "Scroll position restore ผ่าน sessionStorage — กดปุ่มเลื่อนเวลาแล้วอยู่จุดเดิม",
+                    "history.scrollRestoration = manual — กันเบราว์เซอร์เด้ง scroll เอง",
+                ],
+            },
+            {
+                "category": "แก้",
+                "items": [
+                    "ฟอร์มเดิมต้องกรอก 3 field สำหรับดาวจร (วันที่/เวลา/จังหวัด) → ตัดออกหมด ใช้ default",
+                    "Transit chart calc ทำทุกครั้งหลังกดผูกดวง (ไม่ optional แล้ว)",
+                    "การ์ด result-header-card → เปลี่ยนเป็น natal-info-card layout เดียวกับ transit",
+                ],
+            },
+            {
+                "category": "ปรับ",
+                "items": [
+                    "ย้าย transit card จากบนผังลงไปใต้ผังจักรราศี — อ่าน flow ดูดาว → เลื่อนเวลาง่าย",
+                    "เพิ่ม API endpoint POST / รับ transit_date_iso + transit_time_24 (hidden form)",
+                    "scrubber-busy state — disable button ชั่วคราวระหว่างคำนวณ",
+                ],
+            },
+        ],
+    },
+    {
         "version": "2026.05.31-d",
         "date": "2026-05-31",
         "title": "ปรับหน้าเกี่ยวกับ + ขนาดฟอร์มหน้าแรก",

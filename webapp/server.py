@@ -688,6 +688,10 @@ def chart_to_view(
         "province": chart.province,
         "ce_year": chart.ce_year,
         "be_year": chart.be_year,
+        "birth_month_num": chart.month,
+        "birth_day_num": chart.day,
+        "birth_hour": chart.hour,
+        "birth_minute": chart.minute,
         "ascendant": ((lambda _asc: {
             "rasi_name": _asc.zodiac.rasi_name,
             "degree": _asc.zodiac.degree,
@@ -731,6 +735,8 @@ def chart_to_view(
         "transit": ({
             "date_th": transit_meta.get("date_th") if transit_meta else None,
             "time": transit_meta.get("time") if transit_meta else None,
+            "time_24": transit_meta.get("time_24") if transit_meta else None,
+            "date_iso": transit_meta.get("date_iso") if transit_meta else None,
             "province": transit_meta.get("province") if transit_meta else None,
             "planets": transit_positions,
             "aspects": transit_aspects,
@@ -954,16 +960,12 @@ def _pick_lord_highlights(predictions) -> list:
 
 
 def _default_form() -> dict:
-    """ค่าเริ่มต้นของฟอร์ม — ดาวจร pre-fill เป็น 'วันนี้/เวลานี้/กรุงเทพฯ'"""
-    now = datetime.now(THAI_TZ)
+    """ค่าเริ่มต้นของฟอร์ม"""
     return {
         "name": "",
         "birth_date_th": "",
         "birth_time": "",
         "province": "กรุงเทพมหานคร",
-        "transit_date_th": f"{now.day:02d}/{now.month:02d}/{now.year + 543}",
-        "transit_time": f"{now.hour:02d}:{now.minute:02d}",
-        "transit_province": "กรุงเทพมหานคร",
     }
 
 
@@ -987,6 +989,7 @@ async def index(request: Request) -> HTMLResponse:
             result=None,
             form=_default_form(),
             error=None,
+            scroll_target="",
         ),
     )
 
@@ -1013,21 +1016,19 @@ async def calculate(
     birth_date_th: str = Form(""),
     birth_time: str = Form(""),
     province: str = Form("กรุงเทพมหานคร"),
-    transit_date_th: str = Form(""),
-    transit_time: str = Form(""),
-    transit_province: str = Form("กรุงเทพมหานคร"),
+    transit_date_iso: str = Form(""),   # YYYY-MM-DD; ว่าง = ใช้ now
+    transit_time_24: str = Form(""),    # HH:MM;       ว่าง = ใช้ now
+    scroll_to_transit: str = Form(""),  # "1" → scroll ไปที่ scrubber หลัง load
 ) -> HTMLResponse:
     form = {
         "name": name,
         "birth_date_th": birth_date_th,
         "birth_time": birth_time,
         "province": province,
-        "transit_date_th": transit_date_th,
-        "transit_time": transit_time,
-        "transit_province": transit_province,
     }
     error: Optional[str] = None
     result = None
+    scroll_target = scroll_to_transit.strip()
 
     try:
         if not birth_date_th.strip():
@@ -1040,23 +1041,29 @@ async def calculate(
             province = "กรุงเทพมหานคร"
         chart = Chart.calculate(y, m, d, h, mi, province=province)
 
-        # ดาวจร — กรอกหรือไม่ก็ได้
-        transit_chart = None
-        transit_meta = None
-        if transit_date_th and transit_time:
-            ty, tm, td = parse_thai_date(transit_date_th)
-            th, tmin = [int(x) for x in transit_time.split(":")]
-            tprov = (
-                transit_province
-                if transit_province in LOCALITY_ADJUST_SECONDS
-                else "กรุงเทพมหานคร"
-            )
-            transit_chart = Chart.calculate(ty, tm, td, th, tmin, province=tprov)
-            transit_meta = {
-                "date_th": _format_thai_date_ce(ty, tm, td),
-                "time": transit_time,
-                "province": tprov,
-            }
+        # ดาวจร — ใช้ override ถ้ามี ไม่งั้นเป็น now()
+        if transit_date_iso.strip() and transit_time_24.strip():
+            try:
+                ty, tm_t, tday = [int(x) for x in transit_date_iso.split("-")]
+                th_h, tmin = [int(x) for x in transit_time_24.split(":")]
+            except (ValueError, IndexError):
+                raise ValueError("รูปแบบวันที่/เวลาดาวจรไม่ถูกต้อง")
+        else:
+            now = datetime.now(THAI_TZ)
+            ty, tm_t, tday = now.year, now.month, now.day
+            th_h, tmin = now.hour, now.minute
+
+        transit_chart = Chart.calculate(
+            ty, tm_t, tday, th_h, tmin,
+            province="กรุงเทพมหานคร",
+        )
+        transit_meta = {
+            "date_th": _format_thai_date_ce(ty, tm_t, tday),
+            "time": f"{th_h:02d}:{tmin:02d}",
+            "time_24": f"{th_h:02d}:{tmin:02d}",
+            "date_iso": f"{ty:04d}-{tm_t:02d}-{tday:02d}",
+            "province": "กรุงเทพมหานคร",
+        }
 
         result = chart_to_view(
             chart,
@@ -1075,6 +1082,7 @@ async def calculate(
             result=result,
             form=form,
             error=error,
+            scroll_target=scroll_target,
         ),
     )
 

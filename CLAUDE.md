@@ -997,3 +997,69 @@ title, highlights (4-5 จุด), details (categories with items)
   จะ override `.class` ใน media query — ต้องระบุ `.class.modifier` ใน media query ด้วย
 - **`.nav-links` styles เดิมกระจายอยู่ใน inline `<style>` แต่ละหน้า** — ตอนนี้ consolidate
   เข้า `styles.css` หมดแล้ว ถ้าเพิ่มหน้าใหม่ไม่ต้องเพิ่ม nav-links style อีก
+
+---
+
+# ===== Session 6 Updates =====
+# Transit Scrubber + ตัดฟอร์มดาวจร — 2026-06-01
+
+## ภาพรวม
+ลด friction ของการดูดวง: ตัดช่อง "ดาวจร" 3 field ออกจากฟอร์ม
++ เพิ่ม Scrubber เลื่อนเวลาดาวจรแบบ inline ใต้ผังจักรราศี
+
+## Workflow ใหม่
+1. ผู้ใช้กรอก **แค่ชื่อ/วันเกิด/เวลาเกิด/จังหวัด** (3 field เดียว)
+2. กด "ผูกดวง" → ดาวจร auto = วันนี้/เวลานี้/กรุงเทพฯ
+3. ที่การ์ดดาวจรใต้ผัง → กดปุ่ม ±1/±7/±30 วัน หรือเลือก date/time
+4. ฟอร์มหลัก re-submit ด้วย hidden field → ทุก section (ผัง+คำทำนาย+ภพ+oracle+ฯลฯ) update พร้อมกัน
+5. Scroll position คงเดิม (sessionStorage)
+
+## Architecture
+- **Strategy**: Full-page form submit (ไม่ใช่ AJAX) — เพราะคำทำนายมีหลาย section ที่ depend transit
+- **State**: hidden inputs `transit_date_iso` + `transit_time_24` ใน birth-form
+- **Default**: ถ้า hidden ว่าง → server ใช้ `datetime.now(THAI_TZ)`
+- **Scroll restore**: `sessionStorage["transit_scroll_y"]` + `history.scrollRestoration = manual`
+
+## Layout การ์ด
+ทั้ง 2 cards ใช้ structure เดียวกัน (`.info-card`):
+```
+[info-card-head]    ← icon + h2 + dashed border bottom
+[info-card-body-grid] ← grid 2-col: วันที่/เวลา/สถานที่/จันทรคติ
+[lakkana row หรือ scrubber-block]
+```
+
+- **การ์ดดาวกำเนิด** (`.natal-info-card`) — อยู่บนผัง: วันเกิด/เวลาเกิด/สถานที่เกิด/จันทรคติ/ลัคนา
+- **การ์ดดาวจร** (`.transit-info-card`) — อยู่ใต้ผัง: วันที่/เวลา/สถานที่ + scrubber-block
+
+## ไฟล์ที่แก้
+| ไฟล์ | การแก้ |
+|------|--------|
+| `webapp/server.py` | ลบ 3 transit form fields, รับ `transit_date_iso`+`transit_time_24` hidden, `scroll_to_transit` flag, ส่ง `birth_month_num/birth_day_num/birth_hour/birth_minute` ไป template (สำหรับ JS), `transit_meta` มี `date_iso`+`time_24` |
+| `webapp/templates/index.html` | ลบ `<fieldset class="transit-fieldset">`, เพิ่ม `natal-info-card` (บนผัง) + `transit-info-card` (ใต้ผัง), hidden inputs ในฟอร์มหลัก, `body data-scroll-target` |
+| `webapp/static/script.js` | `setupTransitScrubber()` — ปุ่ม±delta+date+time → set hidden+submit, `setupScrollRestore()` — restore `window.scrollY` จาก sessionStorage หลัง load |
+| `webapp/static/styles.css` | `.info-card` + `.info-card-body-grid` (grid 2-col, responsive 1-col ที่ ≤700px), `.scrubber-block`+`.scrub-btn`+`.scrubber-busy` |
+| `webapp/changelog.py` | entry `2026.06.01-c` |
+
+## CSS version
+- `v=20260601c/d/e` — bump ทุกครั้งที่แก้ HTML/CSS/JS
+
+## Gotchas สำคัญ
+1. **`generate_summary()` คืน dict ไม่ใช่ object** — ถ้าจะ serialize ต้องใช้ `.get()` ไม่ใช่ `getattr()` (เคยมีบั๊ก headline ว่าง)
+2. **`history.scrollRestoration = "manual"`** — ต้องตั้งก่อน restore เอง ไม่งั้น browser เด้ง scroll ตามตำแหน่งที่จำไว้
+3. **`requestAnimationFrame` + `setTimeout` double restore** — กัน SVG/font ที่ delay layout ทำให้ scroll ที่ตั้งครั้งแรกผิดตำแหน่ง
+4. **uvicorn --reload ไม่ pickup logic change ใน function body บางครั้ง** — restart manual ถ้า test แล้วยังเห็นพฤติกรรมเก่า
+5. **กดปุ่ม scrub แล้วต้อง `e.preventDefault()`** — ไม่งั้น button type=button ใน form อาจถูกเข้าใจเป็น submit ตามค่า default
+6. **ฟอร์มหลักต้อง `id="birth-form"`** — JS scrubber ใช้ id หา form เพื่อ submit
+7. **Layout cards** — ไม่ใช้ grid 2-col แล้ว, การ์ด natal บน + การ์ด transit ล่าง (vertical stack เต็มความกว้าง) เพราะดูง่ายกว่าและ flow การอ่านเป็นบนลงล่าง
+
+## Routes & params
+- `POST /` รับเพิ่ม:
+  - `transit_date_iso` (YYYY-MM-DD, optional) — ถ้าว่าง = now
+  - `transit_time_24` (HH:MM, optional) — ถ้าว่าง = now
+  - `scroll_to_transit` ("1" = restore scroll, อื่นๆ = ปกติ)
+
+## ไอเดียพัฒนาต่อ (transit scrubber)
+- Animation transition ของ chip ดาวจร (smooth slide ไประหว่างราศี)
+- Auto-play timeline mode (กด ▶ แล้วเล่นเดินทีละวัน)
+- Bookmark วันสำคัญ (ดาวเปลี่ยนราศี, ราหู-เกตุ retrograde)
+- Compare 2 transit dates side-by-side

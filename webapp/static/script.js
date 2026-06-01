@@ -60,16 +60,12 @@ function setupDatePickerButtons() {
       const id = btn.dataset.pickerFor;
       const pick = document.getElementById(id);
       if (!pick) return;
-      // วิธีมาตรฐาน (Chrome, Edge, Firefox ใหม่)
       if (typeof pick.showPicker === "function") {
         try {
           pick.showPicker();
           return;
-        } catch (err) {
-          // some browsers throw if not triggered by user gesture
-        }
+        } catch (err) {}
       }
-      // fallback: focus + click (iOS Safari)
       pick.focus();
       pick.click();
     });
@@ -77,78 +73,36 @@ function setupDatePickerButtons() {
 }
 
 /* ======================================================================
-   2) Planet hover tooltip
+   2) Planet hover tooltip — event delegation รองรับ dynamic chips
    ====================================================================== */
 
-const RASI_DEG_OF_30 = {
-  // not used here; conversion done server-side
+const POISON_TH = {
+  naga:  { icon: "🐍", name: "พิษนาค",
+           meaning: "ยาพิษ/สมอง/ความดัน/ส่วนบนของศีรษะ" },
+  krut:  { icon: "🦅", name: "พิษครุฑ",
+           meaning: "อุบัติเหตุฉับพลัน/อวัยวะส่วนกลาง" },
+  sunak: { icon: "🐕", name: "พิษสุนัข",
+           meaning: "ศัตรู/ใส่ความ/อุบัติเหตุรถ/ของมีคม" },
 };
+const SEV_TH = { heavy: "หนัก", light: "เบา" };
 
 function setupPlanetTooltip() {
   const tip = document.getElementById("planet-tooltip");
   if (!tip) return;
 
-  // ดาว/ลัคนา (มี data-tip-planet) + triyangka markers (มี data-tri-rasi)
-  const groups = document.querySelectorAll(
-    ".planet-svg-group[data-tip-planet], .lagna-group[data-tip-planet], .triyangka-marker-group[data-tri-rasi]"
-  );
+  const svg = document.querySelector(".zodiac-svg");
+  if (!svg) return;
 
-  // มือถือ: ติดสติกเกอร์ไว้จนกว่าจะ tap นอก / tap target เดิม
-  let stuck = null;   // element ที่ "ติด" tooltip ค้างไว้ (จาก tap)
+  let stuck = null;
 
-  groups.forEach((g) => {
-    g.addEventListener("mouseenter", (e) => {
-      if (stuck === null) showTip(e, g);
-    });
-    g.addEventListener("mousemove", (e) => {
-      if (stuck === null) moveTip(e);
-    });
-    g.addEventListener("mouseleave", () => {
-      if (stuck === null) hideTip();
-    });
-    // tap/click — ติดค้าง สำหรับมือถือ
-    g.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (stuck === g) {
-        // tap target เดิม → ปิด
-        stuck = null;
-        hideTip();
-      } else {
-        stuck = g;
-        showTip(e, g);
-      }
-    });
-  });
+  function getGroup(el) {
+    return el.closest(
+      ".planet-svg-group[data-tip-planet], .lagna-group[data-tip-planet], .triyangka-marker-group[data-tri-rasi]"
+    );
+  }
 
-  // tap นอก target ใดๆ → ปิด tooltip ที่ติด (ยกเว้นใน tooltip เอง)
-  document.addEventListener("click", (e) => {
-    if (stuck && !stuck.contains(e.target) && !tip.contains(e.target)) {
-      stuck = null;
-      hideTip();
-    }
-  });
-  // ESC ก็ปิด
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && stuck) {
-      stuck = null;
-      hideTip();
-    }
-  });
-
-  // poison key → ไทย
-  const POISON_TH = {
-    naga:  { icon: "🐍", name: "พิษนาค",
-             meaning: "ยาพิษ/สมอง/ความดัน/ส่วนบนของศีรษะ" },
-    krut:  { icon: "🦅", name: "พิษครุฑ",
-             meaning: "อุบัติเหตุฉับพลัน/อวัยวะส่วนกลาง" },
-    sunak: { icon: "🐕", name: "พิษสุนัข",
-             meaning: "ศัตรู/ใส่ความ/อุบัติเหตุรถ/ของมีคม" },
-  };
-  const SEV_TH = { heavy: "หนัก", light: "เบา" };
-
-  function showTip(e, g) {
+  function buildTipContent(g) {
     const d = g.dataset;
-    // triyangka marker (ไม่มี tip-planet)
     if (!d.tipPlanet && d.triRasi) {
       let poisonHtml = "";
       if (d.triPoison) {
@@ -160,49 +114,47 @@ function setupPlanetTooltip() {
               <span class="tip-label">⚠️ พิษ</span>
               ${icon} ${pinfo.name}
             </div>
-            <div class="tip-row tip-poison-meaning">${pinfo.meaning}</div>
-          `;
+            <div class="tip-row tip-poison-meaning">${pinfo.meaning}</div>`;
         }
       }
-      tip.innerHTML = `
+      return `
         <div class="tip-title">
           <span class="tip-planet">ตรียางค์ ${d.triDecanate}/3</span>
           <span class="tip-source">(${d.triRasi})</span>
         </div>
         <div class="tip-row"><span class="tip-label">ดาวครอง</span>${d.triLord}</div>
         <div class="tip-row"><span class="tip-label">ช่วง</span>${d.triDegFrom}°-${d.triDegTo}°</div>
-        ${poisonHtml}
-      `;
-    } else {
-      // ดาว/ลัคนา
-      const retro = d.tipRetro === "1" ? '<span class="retro">(พักร์)</span>' : "";
-      let poisonHtml = "";
-      if (d.tipPoisonName) {
-        const pinfo = POISON_TH[d.tipPoisonName];
-        if (pinfo) {
-          const sev = SEV_TH[d.tipPoisonSeverity] || "";
-          poisonHtml = `
-            <div class="tip-row tip-poison">
-              <span class="tip-label">⚠️ พิษ</span>
-              ${pinfo.icon} ${pinfo.name} (${sev})
-            </div>
-            <div class="tip-row tip-poison-meaning">${pinfo.meaning}</div>
-          `;
-        }
-      }
-      tip.innerHTML = `
-        <div class="tip-title">
-          <span class="tip-planet">${d.tipPlanet}</span>
-          <span class="tip-source">(${d.tipSource})</span>
-          ${retro}
-        </div>
-        <div class="tip-row"><span class="tip-label">ราศี</span>${d.tipRasi}</div>
-        <div class="tip-row"><span class="tip-label">องศา</span>${d.tipDegree}°</div>
-        <div class="tip-row"><span class="tip-label">ลิปดา</span>${d.tipArcmin}′</div>
-        <div class="tip-row"><span class="tip-label">ฟิลิปดา</span>${d.tipArcsec}″</div>
-        ${poisonHtml}
-      `;
+        ${poisonHtml}`;
     }
+    const retro = d.tipRetro === "1" ? '<span class="retro">(พักร์)</span>' : "";
+    let poisonHtml = "";
+    if (d.tipPoisonName) {
+      const pinfo = POISON_TH[d.tipPoisonName];
+      if (pinfo) {
+        const sev = SEV_TH[d.tipPoisonSeverity] || "";
+        poisonHtml = `
+          <div class="tip-row tip-poison">
+            <span class="tip-label">⚠️ พิษ</span>
+            ${pinfo.icon} ${pinfo.name} (${sev})
+          </div>
+          <div class="tip-row tip-poison-meaning">${pinfo.meaning}</div>`;
+      }
+    }
+    return `
+      <div class="tip-title">
+        <span class="tip-planet">${d.tipPlanet}</span>
+        <span class="tip-source">(${d.tipSource || ""})</span>
+        ${retro}
+      </div>
+      <div class="tip-row"><span class="tip-label">ราศี</span>${d.tipRasi}</div>
+      <div class="tip-row"><span class="tip-label">องศา</span>${d.tipDegree}°</div>
+      <div class="tip-row"><span class="tip-label">ลิปดา</span>${d.tipArcmin}′</div>
+      <div class="tip-row"><span class="tip-label">ฟิลิปดา</span>${d.tipArcsec}″</div>
+      ${poisonHtml}`;
+  }
+
+  function showTip(e, g) {
+    tip.innerHTML = buildTipContent(g);
     tip.classList.add("visible");
     tip.setAttribute("aria-hidden", "false");
     moveTip(e);
@@ -214,7 +166,6 @@ function setupPlanetTooltip() {
     const th = tip.offsetHeight;
     let x = e.clientX + padding;
     let y = e.clientY + padding;
-    // ไม่ให้หลุดจอด้านขวา/ล่าง
     if (x + tw > window.innerWidth - 10) x = e.clientX - tw - padding;
     if (y + th > window.innerHeight - 10) y = e.clientY - th - padding;
     tip.style.left = x + "px";
@@ -225,9 +176,45 @@ function setupPlanetTooltip() {
     tip.classList.remove("visible");
     tip.setAttribute("aria-hidden", "true");
   }
-}
 
-/* ====================================================================== */
+  // ใช้ event delegation บน SVG ทำงานได้กับ dynamic chips ด้วย
+  svg.addEventListener("mouseover", (e) => {
+    const g = getGroup(e.target);
+    if (g && stuck === null) showTip(e, g);
+  });
+  svg.addEventListener("mousemove", (e) => {
+    if (stuck === null && tip.classList.contains("visible")) moveTip(e);
+  });
+  svg.addEventListener("mouseout", (e) => {
+    const g = getGroup(e.target);
+    if (g && stuck === null) hideTip();
+  });
+  svg.addEventListener("click", (e) => {
+    const g = getGroup(e.target);
+    if (!g) return;
+    e.stopPropagation();
+    if (stuck === g) {
+      stuck = null;
+      hideTip();
+    } else {
+      stuck = g;
+      showTip(e, g);
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (stuck && !stuck.contains(e.target) && !tip.contains(e.target)) {
+      stuck = null;
+      hideTip();
+    }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && stuck) {
+      stuck = null;
+      hideTip();
+    }
+  });
+}
 
 /* ======================================================================
    3) View tabs (ดูดวง / ศึกษาโหราศาสตร์)
@@ -243,16 +230,13 @@ function setupViewTabs() {
     tabs.forEach((t) => t.classList.toggle("active", t.dataset.view === view));
     try {
       localStorage.setItem("preferred_view", view);
-    } catch (e) {
-      /* localStorage may be blocked — ignore */
-    }
+    } catch (e) {}
   }
 
   tabs.forEach((btn) => {
     btn.addEventListener("click", () => applyView(btn.dataset.view));
   });
 
-  // Restore preferred view, default to "general"
   let saved = "general";
   try {
     saved = localStorage.getItem("preferred_view") || "general";
@@ -263,7 +247,10 @@ function setupViewTabs() {
   applyView(saved);
 }
 
-// Toggle ตรียางค์ + ธาตุ (แยกอิสระ) — จำสถานะใน localStorage
+/* ======================================================================
+   4) Toggle ตรียางค์ + ธาตุ
+   ====================================================================== */
+
 function setupTriyangkaToggle() {
   const stage = document.querySelector(".zodiac-stage");
   if (!stage) return;
@@ -294,11 +281,137 @@ function setupTriyangkaToggle() {
   bindToggle("toggle-element",   "element",   "element_visible");
 }
 
+/* ======================================================================
+   5) Transit Scrubber — เลื่อนวันดาวจร → re-submit form เพื่อให้ทุก section
+   อัพเดทพร้อมกัน (คำทำนาย, ภพ, สรุป, oracle ฯลฯ)
+   ====================================================================== */
+
+function _isoAddDays(iso, delta) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + delta);
+  return (
+    dt.getFullYear() + "-" +
+    String(dt.getMonth() + 1).padStart(2, "0") + "-" +
+    String(dt.getDate()).padStart(2, "0")
+  );
+}
+
+function _todayISO() {
+  const now = new Date();
+  return (
+    now.getFullYear() + "-" +
+    String(now.getMonth() + 1).padStart(2, "0") + "-" +
+    String(now.getDate()).padStart(2, "0")
+  );
+}
+
+function _nowTime() {
+  const now = new Date();
+  return (
+    String(now.getHours()).padStart(2, "0") + ":" +
+    String(now.getMinutes()).padStart(2, "0")
+  );
+}
+
+function setupTransitScrubber() {
+  const card = document.getElementById("transit-info-card");
+  if (!card) return;
+
+  const form = document.getElementById("birth-form");
+  const hiddenDate   = document.getElementById("hidden_transit_date");
+  const hiddenTime   = document.getElementById("hidden_transit_time");
+  const hiddenScroll = document.getElementById("hidden_scroll_target");
+  if (!form || !hiddenDate || !hiddenTime) return;
+
+  const meta = document.getElementById("chart-meta");
+  const initialDate = meta ? meta.dataset.transitDate : _todayISO();
+  const initialTime = meta ? meta.dataset.transitTime : _nowTime();
+
+  let currentDate = initialDate;
+  let currentTime = initialTime;
+
+  const datePicker = document.getElementById("scrubber-date-picker");
+  const timePicker = document.getElementById("scrubber-time-picker");
+  const statusEl   = document.getElementById("scrubber-status");
+
+  function submitWith(newDate, newTime) {
+    hiddenDate.value = newDate;
+    hiddenTime.value = newTime;
+    if (hiddenScroll) hiddenScroll.value = "1";
+    if (statusEl) {
+      statusEl.textContent = "กำลังคำนวณ…";
+      statusEl.className = "scrubber-status loading";
+    }
+    card.classList.add("scrubber-busy");
+    // เก็บ scroll position ปัจจุบัน → restore หลัง reload
+    try {
+      sessionStorage.setItem("transit_scroll_y", String(window.scrollY));
+    } catch (e) {}
+    form.submit();
+  }
+
+  card.querySelectorAll(".scrub-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const delta = parseInt(btn.dataset.delta, 10);
+      let newDate, newTime;
+      if (delta === 0) {
+        newDate = _todayISO();
+        newTime = _nowTime();
+      } else {
+        newDate = _isoAddDays(currentDate, delta);
+        newTime = currentTime;
+      }
+      submitWith(newDate, newTime);
+    });
+  });
+
+  if (datePicker) {
+    datePicker.addEventListener("change", () => {
+      if (datePicker.value) submitWith(datePicker.value, currentTime);
+    });
+  }
+
+  if (timePicker) {
+    timePicker.addEventListener("change", () => {
+      if (timePicker.value) submitWith(currentDate, timePicker.value);
+    });
+  }
+}
+
+// คง scroll position เดิมหลัง submit จาก scrubber (ไม่กระโดดบนสุด)
+function setupScrollRestore() {
+  const flag = document.body.dataset.scrollTarget;
+  if (flag !== "transit") return;
+  let y = 0;
+  try {
+    const stored = sessionStorage.getItem("transit_scroll_y");
+    if (stored !== null) {
+      y = parseInt(stored, 10) || 0;
+      sessionStorage.removeItem("transit_scroll_y");
+    }
+  } catch (e) {}
+  // disable browser scroll restoration ที่อาจรบกวน
+  if ("scrollRestoration" in history) {
+    history.scrollRestoration = "manual";
+  }
+  // ทำหลัง layout settle (รอ font/SVG พร้อม)
+  requestAnimationFrame(() => {
+    window.scrollTo(0, y);
+    // ทำซ้ำหลัง layout จริงๆ เสร็จ — กัน images/SVG ที่ delay
+    setTimeout(() => window.scrollTo(0, y), 50);
+  });
+}
+
+/* ====================================================================== */
+
 document.addEventListener("DOMContentLoaded", () => {
   setupDateSync("birth_date_th", "birth_date_picker");
-  setupDateSync("transit_date_th", "transit_date_picker");
   setupDatePickerButtons();
   setupPlanetTooltip();
   setupViewTabs();
   setupTriyangkaToggle();
+  setupTransitScrubber();
+  setupScrollRestore();
 });
