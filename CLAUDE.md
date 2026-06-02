@@ -1063,3 +1063,164 @@ title, highlights (4-5 จุด), details (categories with items)
 - Auto-play timeline mode (กด ▶ แล้วเล่นเดินทีละวัน)
 - Bookmark วันสำคัญ (ดาวเปลี่ยนราศี, ราหู-เกตุ retrograde)
 - Compare 2 transit dates side-by-side
+
+---
+
+# ===== Session 7 Updates =====
+# Transit chips by degree + Version badge + กล่องวิธีใช้ — 2026-06-01
+
+## ภาพรวม
+หลัง session 6 (scrubber) มีการปรับ UX เพิ่ม 6 จุด:
+
+| # | งาน | ที่แก้ |
+|---|------|--------|
+| 1 | Transit chips position by degree (เหมือน natal) | `_chip_layout_by_decanate(R_TRANSIT)` |
+| 2 | การ์ดดาวกำเนิด (โหมดศึกษา) มี subtitle วันที่/เวลา/สถานที่ | `index.html` `transit-meta` |
+| 3 | Overlay ภพทักษาซ้อน ขอบบนเสมอตารางทักษา | `.taksa-overlay-side { align-self: stretch; margin-top: 0 !important }` |
+| 4 | Version badge ติด "เกี่ยวกับ" ใน nav ทุกหน้า | `_common_context()` ส่ง `latest_version` |
+| 5 | ลบ "ฉบับ อ.กานดา" จาก header โหรทายหนู | `horathaynu.html` |
+| 6 | กล่องวิธีใช้ในหน้าผูกดวง (แสดงเฉพาะตอนยังไม่ผูกดวง) | `.howto-card` ใน `.howto-section` |
+
+## Bug ที่เคยติด
+- **R_LABEL ใกล้ R_TRIYANGKA_LORD เกินไป** → ขยับ R_LABEL 232→222, R_BHAVA 118→110, R_ELEMENT 110→130 — ลดการบังกัน
+- **R_LAGNA_MARKER=215 ทับ R_LABEL=222** → ย้ายเป็น R_LAGNA_MARKER=200
+
+---
+
+# ===== Session 8 Updates =====
+# Orbit View + Checkbox ราศี/ภพ + Bug fixes — 2026-06-01
+
+## ภาพรวม
+เพิ่ม **โหมด Orbit** (geocentric solar-system view) สลับกับจักรราศีเดิม
++ checkbox toggle ใหม่ 2 อัน (ราศี, ภพ)
+
+User request เดิม = "2.5D bird-eye view" → ลอง CSS perspective rotateX แต่ user
+ไม่ชอบ → เปลี่ยนเป็น **proper orbit view** (วงรี geocentric, ดาวบน orbit
+ของตัวเอง — เหมือนภาพ solar system จาก top-down)
+
+## โมดูล/ฟังก์ชันใหม่
+
+### `webapp/server.py`
+```python
+ORBIT_PARAMS = {                            # 9 ดวง: ry/rx ratio ≈ 0.78 (เอียง eccentric)
+    "จันทร์":   {"rx": 45,  "ry": 36,  "rot": 8,   "level": 0},
+    "อาทิตย์":  {"rx": 72,  "ry": 56,  "rot": 22,  "level": 1},
+    ...
+    "ราหู":    {"rx": 250, "ry": 195, "rot": -32, "level": 8},
+    "เกตุ":    {"rx": 250, "ry": 195, "rot": -32, "level": 8},  # ใช้ ring เดียวกับราหู
+}
+ORBIT_RASI_RING = 295           # outer compass radius
+ORBIT_DIVIDER_INNER = 28
+ORBIT_DIVIDER_OUTER = 278
+
+def _orbit_point(rx, ry, rot_deg, angle_deg):                    # parametric (เก็บไว้)
+def _orbit_point_at_ray_angle(rx, ry, rot_deg, angle_deg):       # ★ ใช้สำหรับ chip
+def build_orbit_layout(natal_planets, transit_planets, ascendant) -> dict
+```
+
+### CSS class structure (`.zodiac-stage`)
+- เพิ่ม `.orbit-on` / `.orbit-off`
+- `.orbit-on .zodiac-svg > *:not(defs):not(.orbit-mode-layer) { display: none }`
+- `.orbit-on .zodiac-center { display: none }`
+- `.orbit-on { background: radial-gradient dark space }`
+
+## ★ Bug สำคัญที่ user catch ได้
+
+### Bug 1: chip position ใช้ parametric angle แทน geometric
+**อาการ**: ดาวมฤตยูจรอยู่ราศีพฤษภ (longitude ~35°) แต่บนผัง orbit
+แสดงในเซกเตอร์ราศีกรกฎ (เลื่อนไป ~28° ตาม rotation ของ ring มฤตยู)
+
+**สาเหตุ**: ใช้ `_orbit_point()` ที่คำนวณ:
+```
+x_local = rx * cos(t)      # t = parametric angle (ตามการเคลื่อนรอบ ellipse)
+y_local = ry * sin(t)
+# rotate (x_local, y_local) ด้วย rot_deg → chip rotate ตามทั้ง ring
+```
+ผลคือ chip ที่ longitude 135° บน ring rotation 28° → ถูกย้ายไป angular 135-28 = 107°
+บนหน้าจอ → เลื่อนไปอีกราศี
+
+**แก้**: เพิ่ม `_orbit_point_at_ray_angle()`:
+```
+# หาจุดตัดของ ray จาก center ที่มุม θ_screen กับ rotated ellipse
+# สูตร: t² · (cos²(θ−rot)/rx² + sin²(θ−rot)/ry²) = 1
+# → จุดบน ring จริง + angular position บนหน้าจอตรงตาม longitude
+```
+ผลลัพธ์: dropdown 20/20 chips ตรง screen rasi = natal rasi ✓
+
+### Bug 2: `_angle_from_zodiac` offset ผิด
+**อาการ**: ทุก chip เลื่อนไป 15° จาก sector ที่ถูกต้อง
+
+**สาเหตุ**: ใช้สูตร `90 + 30*rasi + deg` — แต่ degree 0 ของราศีคือ
+**ขอบเริ่ม** ไม่ใช่ **กลาง sector**
+
+**แก้**: `75 + 30*rasi + deg`
+- เมษ deg 0 → angle 75° (ขอบ มีน/เมษ)
+- เมษ deg 15 → angle 90° (กลาง = บนสุด)
+- เมษ deg 30 → angle 105° (ขอบ เมษ/พฤษภ)
+
+## Checkbox layers (เรียงตามลำดับ)
+```
+ราศี (rasi-label)       — default ON
+ธาตุ (element-layer)    — default ON
+ภพ (bhava-label)        — default ON
+ตรียางค์ (triyangka)    — default ON
+🌌 Orbit                — default OFF
+```
+
+`bindToggle(cbId, layerClass, storageKey, defaultOn)` — เพิ่ม param `defaultOn`
+ที่ใช้กับ localStorage check (`v === null ? def : v`)
+
+## Orbit layout template (HTML)
+```html
+<g class="orbit-mode-layer">
+  <circle class="orbit-bg-disk"/>           <!-- dark space bg -->
+  <line class="orbit-rasi-divider"/> x12    <!-- เส้นแบ่งราศี radial -->
+  <circle class="orbit-zodiac-rim"/>        <!-- ขอบจักรราศี dashed -->
+  <ellipse class="orbit-ring orbit-ring-N"/> x9   <!-- 9 วงรี -->
+  <text class="orbit-rasi-label"/> x12      <!-- ชื่อราศี รอบนอก -->
+  <circle class="orbit-earth-marker"/>      <!-- Earth ⊕ center -->
+  <g class="orbit-chip-group"/> x10         <!-- natal chips -->
+  <g class="orbit-chip-group orbit-transit-chip"/> x10  <!-- transit chips -->
+</g>
+```
+
+## Color scheme ของ orbit rings (ตามภาพอ้างอิง solar system)
+| Level | Planet | Color |
+|-------|--------|-------|
+| 0 | จันทร์ | ฟ้าอ่อน (#a8d8ea) |
+| 1 | อาทิตย์ | ทอง (#ffd166) |
+| 2 | พุธ | ฟ้า (#87ceeb) |
+| 3 | ศุกร์ | เขียวอ่อน (#aef0c5) |
+| 4 | อังคาร | แดง (#ff6b6b) |
+| 5 | พฤหัสบดี | ส้ม (#ffa94d) |
+| 6 | เสาร์ | ม่วงอ่อน (#d9b7e8) |
+| 7 | มฤตยู | ฟ้าเข้ม (#6ec5ff) |
+| 8 | ราหู/เกตุ | ม่วง (#c39bd3) + dashed 5-5 |
+
+## ดาวจรพิษ
+ตอนนี้ transit chip แสดง poison shadow + icon เหมือน natal chip:
+- `.poison-shadow` วงเงา (r=16)
+- `.poison-badge-svg.poison-badge-transit` icon เล็ก (font-size 10px แทน 13px)
+
+## กล่องวิธีใช้
+- `.howto-card` ใน `.howto-section` (grid-column: 2)
+- แสดงเฉพาะตอน `not result` (ก่อนผูกดวง)
+- Container `.container` เป็น 2-col เสมอ (form 340 | content 1fr)
+- ที่ <900px → stack vertical (form บน, howto/chart ล่าง)
+
+## CSS version
+- `v=20260601f/g/h` — bump เมื่อแก้ HTML/CSS/JS
+
+## Gotchas สำคัญ
+1. **ray-intersection กับ rotated ellipse** — สูตร `t² · (cos²(θ−rot)/rx² + sin²(θ−rot)/ry²) = 1` ต้องใช้ทุกครั้งที่วาง chip บน rotated ring (ห้ามใช้ parametric)
+2. **degree 0 ของราศี = ขอบเริ่ม** ไม่ใช่ center → ใช้ `75 + 30i` ไม่ใช่ `90 + 30i`
+3. **`bindToggle` default หาย localStorage check** — ถ้า `localStorage.getItem(key) === null` ต้องใช้ default ไม่ใช่ `"1"` (กัน toggle-orbit default ON ผิด)
+4. **ดาว 10 ดวงแต่ orbit 9 ring** — เพราะ ราหู/เกตุ ใช้ ring เดียวกัน (เป็น lunar nodes)
+5. **chip ดาวต้องอยู่ใน group `.orbit-mode-layer`** — ถ้าวางนอก group จะแสดงตลอด ทั้งใน zodiac mode
+
+## ไอเดียพัฒนาต่อ (orbit view)
+- Animation: chip ดาว slide ตาม orbit เมื่อกด Scrubber
+- Speed indicator: ดาวเร็ว (จันทร์) เคลื่อน chip เร็วกว่า ดาวช้า (เสาร์)
+- Tooltip ใน orbit mode แสดง longitude + retrograde icon
+- Constellation lines: ลากเส้นจาก chip ของดาวที่เป็น aspect คู่กัน
+- Toggle "Show natal+transit aspects" — เส้นเชื่อม chip กุม/เล็ง
