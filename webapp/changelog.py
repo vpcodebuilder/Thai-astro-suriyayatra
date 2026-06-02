@@ -12,6 +12,49 @@
 
 CHANGELOG = [
     {
+        "version": "2026.06.01-e",
+        "date": "2026-06-01",
+        "title": "Orbit View + Checkbox ราศี/ภพ + UI polish",
+        "highlights": [
+            "เพิ่มโหมด 🌌 Orbit view (geocentric, วงรีเอียงต่างมุม) สลับกับผังจักรราศี",
+            "ดาวทุกดวงอยู่ถูก sector ราศีบน orbit (ray-intersection algorithm)",
+            "เพิ่ม checkbox ราศี + ภพ แสดง/ซ่อน (เรียง: ราศี/ธาตุ/ภพ/ตรียางค์/Orbit)",
+            "ดาวจรพิษมีสัญลักษณ์ 🐍🦅🐕 เหมือนดาวกำเนิด",
+            "เส้นแบ่งราศี + zodiac rim ใน Orbit mode",
+        ],
+        "details": [
+            {
+                "category": "เพิ่ม",
+                "items": [
+                    "Orbit view: 9 วงรี geocentric (จันทร์→อาทิตย์→…→ราหู/เกตุ), Earth ⊕ center",
+                    "build_orbit_layout() + _orbit_point_at_ray_angle() ใน server.py",
+                    "12 เส้นแบ่งราศี (radial dashed) + zodiac rim ใน orbit mode",
+                    "Checkbox toggle-rasi (ราศี) + toggle-bhava (ภพ) พร้อม localStorage persist",
+                    "Transit chips ใน orbit mode — ring ขยาย +8 จาก natal ring",
+                    "ดาวจรที่ตกตรียางค์พิษแสดง shadow + icon เหมือน natal chips",
+                ],
+            },
+            {
+                "category": "แก้",
+                "items": [
+                    "Bug: orbit chip position — เปลี่ยนจาก parametric angle เป็น ray-intersection บน rotated ellipse",
+                    "Bug: _angle_from_zodiac 90+30i+deg → 75+30i+deg (degree 0 = ขอบราศี ไม่ใช่กลาง)",
+                    "2.5D toggle เปลี่ยนเป็น Orbit toggle (ลบ CSS tilt ออก)",
+                    "R_LABEL=222, R_BHAVA=110, R_ELEMENT=130 — ลดการบังกัน",
+                    "R_LAGNA_MARKER=200 — ขยับลัคนา marker ให้ไม่ชนดาว",
+                ],
+            },
+            {
+                "category": "ปรับ",
+                "items": [
+                    "Orbit ring rotation: เอียงเด่นขึ้น (ราหู -32°, มฤตยู +28°, อังคาร -18°)",
+                    "Orbit eccentricity เพิ่ม (ry/rx ratio ~0.78) — ดูเหมือน orbit จริงมากขึ้น",
+                    "Cache version → v=20260601g",
+                ],
+            },
+        ],
+    },
+    {
         "version": "2026.06.01-d",
         "date": "2026-06-01",
         "title": "ดาวจรตามองศา + UI polish + กล่องวิธีใช้",

@@ -125,17 +125,17 @@ SVG_CENTER = SVG_SIZE / 2
 R_OUTER = 260                     # ขอบนอกของวงราศี
 R_OUTER_TRANSIT = 312             # ขอบนอกสุด (รวมวงดาวจร)
 R_INNER = 100                     # ขอบในของวงราศี
-R_LABEL = 232                     # ชื่อราศี
-R_BHAVA = 118                     # ชื่อภพ (ติดวงใน)
+R_LABEL = 222                     # ชื่อราศี (ขยับเข้าใน — กันบังตรียางค์ ที่อยู่ R=248)
+R_BHAVA = 110                     # ชื่อภพ (เข้าใกล้ขอบใน)
 R_PLANET = 175                    # natal planet chips
 R_PLANET_OUTER = 200              # แถวนอกเมื่อมีดาวเยอะ
 R_PLANET_INNER = 150              # แถวในเมื่อมีดาวเยอะ
 R_TRANSIT = 286                   # transit planet chips (ระหว่างขอบนอกของวงราศี กับขอบสุด)
-R_LAGNA_MARKER = 215              # ตำแหน่ง "ลั" - ระหว่าง planet chips กับ rasi label
+R_LAGNA_MARKER = 200              # ตำแหน่ง "ลั" - ระหว่าง planet chips กับ rasi label
 R_TRIYANGKA_LORD = 248            # ดาวตรียางค์ — ระหว่างชื่อราศี กับขอบนอกของวงราศี
 R_TRIYANGKA_RING_INNER = 240      # ขอบในของวงตรียางค์ (rim line)
 R_TRIYANGKA_RING_OUTER = 258      # ขอบนอกของวงตรียางค์ (rim line)
-R_ELEMENT_MARKER = 110            # ไอคอนธาตุ — ติดวงในใกล้ขอบใน
+R_ELEMENT_MARKER = 130            # ไอคอนธาตุ — ออกข้างนอกขึ้น (กันบังภพที่ R=110)
 R_TRIYANGKA_LABEL_INNER = R_TRIYANGKA_RING_INNER
 
 
@@ -281,6 +281,173 @@ def _transit_chip_layout(n: int, center_angle: float) -> list[tuple[float, float
         _polar_to_xy(center_angle - spread / 2 + i * step, R_TRANSIT)
         for i in range(n)
     ]
+
+
+# ===== Orbit view (geocentric solar-system style) =====
+# rx/ry/rot ของวงรีแต่ละดวง (เรียงจากใน → นอกตามความเร็วโคจร)
+# Earth/ลัคนา อยู่ center; ทุก orbit รอบ center
+ORBIT_PARAMS = {
+    # rotation values: เอียงเด่นขึ้น + กระจายต่าง ๆ กัน เลียนรูปอ้างอิง solar system
+    "จันทร์":    {"rx":  45, "ry":  36, "rot":   8, "level": 0},
+    "อาทิตย์":   {"rx":  72, "ry":  56, "rot":  22, "level": 1},
+    "พุธ":       {"rx":  95, "ry":  74, "rot":  -5, "level": 2},
+    "ศุกร์":     {"rx": 118, "ry":  92, "rot":  14, "level": 3},
+    "อังคาร":    {"rx": 142, "ry": 110, "rot": -18, "level": 4},
+    "พฤหัสบดี":  {"rx": 168, "ry": 132, "rot":  18, "level": 5},
+    "เสาร์":     {"rx": 195, "ry": 152, "rot":  -8, "level": 6},
+    "มฤตยู":     {"rx": 222, "ry": 175, "rot":  28, "level": 7},
+    "ราหู":      {"rx": 250, "ry": 195, "rot": -32, "level": 8},
+    "เกตุ":      {"rx": 250, "ry": 195, "rot": -32, "level": 8},
+}
+ORBIT_RASI_RING = 295  # รัศมีของป้ายราศี 12 ทิศรอบนอกสุด (พอดี SVG 660/2 = 330)
+ORBIT_DIVIDER_INNER = 28   # เส้นแบ่งราศีเริ่มที่รัศมีนี้ (จาก center)
+ORBIT_DIVIDER_OUTER = 278  # เส้นแบ่งราศีจบที่รัศมีนี้
+
+
+def _orbit_point(rx: float, ry: float, rot_deg: float, angle_deg: float) -> tuple[float, float]:
+    """คำนวณตำแหน่ง (x, y) ของจุดบนวงรีที่หมุน rot_deg — parametric angle
+
+    angle_deg: parametric t (ไม่ตรงกับ geometric angle ของ ray จาก center ถ้า ellipse rotated)
+    """
+    rot = math.radians(rot_deg)
+    ang = math.radians(angle_deg)
+    x_local = rx * math.cos(ang)
+    y_local = ry * math.sin(ang)
+    x = x_local * math.cos(rot) - y_local * math.sin(rot)
+    y = x_local * math.sin(rot) + y_local * math.cos(rot)
+    return (SVG_CENTER + x, SVG_CENTER - y)
+
+
+def _orbit_point_at_ray_angle(
+    rx: float, ry: float, rot_deg: float, angle_deg: float
+) -> tuple[float, float]:
+    """หาจุด (x, y) บน ellipse ที่ ray จาก center ออกไปที่มุม angle_deg (geometric)
+
+    ใช้สำหรับวาง chip ดาวบน orbit ring โดยให้ตำแหน่ง angular **ตรงกับ longitude
+    ของดาวในจักรราศี** (ไม่หมุนตาม ring rotation) — ทำให้ราศีบนผังตรงกับราศีจริง
+
+    Solve ray ∩ rotated_ellipse:
+        t² · (cos²(θ−rot)/rx² + sin²(θ−rot)/ry²) = 1
+    """
+    th = math.radians(angle_deg)
+    rot = math.radians(rot_deg)
+    diff = th - rot
+    denom_sq = (math.cos(diff) / rx) ** 2 + (math.sin(diff) / ry) ** 2
+    t = 1.0 / math.sqrt(denom_sq)
+    x = t * math.cos(th)
+    y = t * math.sin(th)
+    return (SVG_CENTER + x, SVG_CENTER - y)
+
+
+def _build_ellipse_path(cx: float, cy: float, rx: float, ry: float, rot_deg: float) -> str:
+    """สร้าง SVG path สำหรับวงรีที่หมุนรอบ center"""
+    # ใช้ <ellipse> + transform แทน — ง่ายกว่า return path
+    return f"M {cx - rx} {cy} a {rx} {ry} 0 1 0 {2*rx} 0 a {rx} {ry} 0 1 0 {-2*rx} 0"
+
+
+def build_orbit_layout(
+    natal_planets: list[dict],
+    transit_planets: Optional[list[dict]] = None,
+    ascendant: Optional[dict] = None,
+) -> dict:
+    """สร้าง orbit-style layout: รอบ center มีวงรี 8-9 วง ดาวอยู่บน ring ของมัน
+
+    natal_planets, transit_planets: list ของ dict ที่มี name, rasi (0-11), degree, arcminute
+                                     และ chip metadata (abbr, color_class, etc.)
+    """
+    rings = []
+    chips = []
+    transit_chips = []
+
+    def _angle_from_zodiac(rasi_idx: int, deg_in_rasi: float) -> float:
+        """zodiac longitude → SVG polar angle
+
+        degree 0° ของราศี = ขอบเริ่ม (ใกล้ราศีก่อนหน้า)
+        degree 30° = ขอบจบ (ใกล้ราศีถัดไป)
+        Sector ของราศี i บน screen = [75 + 30i, 105 + 30i]
+        เมษ 0° = ขอบ มีน/เมษ = angle 75°, เมษ 15° = กลาง = 90° (บน), เมษ 30° = ขอบ เมษ/พฤษภ = 105°
+        """
+        return 75 + 30 * rasi_idx + deg_in_rasi
+
+    # rings
+    for planet_name, params in ORBIT_PARAMS.items():
+        # ราหู/เกตุ ใช้ ring เดียวกัน → render ครั้งเดียว (ใช้ planet = "ราหู")
+        if planet_name == "เกตุ":
+            continue
+        rings.append({
+            "name": planet_name,
+            "rx": params["rx"],
+            "ry": params["ry"],
+            "rot": params["rot"],
+            "level": params["level"],
+        })
+
+    # natal chips — ใช้ ray-intersection เพื่อให้ตำแหน่งบนผังตรงกับราศีจริง
+    for p in natal_planets:
+        params = ORBIT_PARAMS.get(p["name"])
+        if not params:
+            continue
+        deg = p.get("degree", 0) + p.get("arcminute", 0) / 60.0
+        ang = _angle_from_zodiac(p.get("rasi", 0), deg)
+        x, y = _orbit_point_at_ray_angle(
+            params["rx"], params["ry"], params["rot"], ang
+        )
+        chips.append({**p, "x": x, "y": y, "level": params["level"]})
+
+    # transit chips (วาง offset เล็กน้อยจาก natal — ring ใหญ่ขึ้น 8 หน่วย)
+    if transit_planets:
+        for p in transit_planets:
+            params = ORBIT_PARAMS.get(p["name"])
+            if not params:
+                continue
+            deg = p.get("degree", 0) + p.get("arcminute", 0) / 60.0
+            ang = _angle_from_zodiac(p.get("rasi", 0), deg)
+            x, y = _orbit_point_at_ray_angle(
+                params["rx"] + 8, params["ry"] + 8, params["rot"], ang
+            )
+            transit_chips.append({**p, "x": x, "y": y, "level": params["level"]})
+
+    # เส้นแบ่งราศี 12 เส้น (radial) — ลากจาก inner ไป outer ที่มุมแบ่ง 75°, 105°, ...
+    rasi_dividers = []
+    for i in range(12):
+        ang = 75 + 30 * i        # เส้นแบ่ง (= ขอบของแต่ละราศี)
+        rad = math.radians(ang)
+        x1 = SVG_CENTER + ORBIT_DIVIDER_INNER * math.cos(rad)
+        y1 = SVG_CENTER - ORBIT_DIVIDER_INNER * math.sin(rad)
+        x2 = SVG_CENTER + ORBIT_DIVIDER_OUTER * math.cos(rad)
+        y2 = SVG_CENTER - ORBIT_DIVIDER_OUTER * math.sin(rad)
+        rasi_dividers.append({"x1": x1, "y1": y1, "x2": x2, "y2": y2})
+
+    # ป้าย 12 ราศี รอบนอกสุด (เมษอยู่บนสุด, ทวนเข็มไปเรื่อยๆ — เหมือนผังเดิม)
+    rasi_labels = []
+    for i in range(12):
+        ang = 90 + 30 * i        # center ของราศี
+        x = SVG_CENTER + ORBIT_RASI_RING * math.cos(math.radians(ang))
+        y = SVG_CENTER - ORBIT_RASI_RING * math.sin(math.radians(ang))
+        rasi_labels.append({
+            "name": RASI_NAMES_TH[i],
+            "x": x, "y": y,
+            "is_ascendant": (ascendant is not None and ascendant.get("rasi") == i),
+        })
+
+    # marker ลัคนา ที่ center
+    asc_marker = None
+    if ascendant is not None:
+        asc_marker = {
+            "rasi_name": RASI_NAMES_TH[ascendant["rasi"]],
+            "degree": ascendant["degree"],
+            "arcminute": ascendant.get("arcminute", 0),
+        }
+
+    return {
+        "rings": rings,
+        "chips": chips,
+        "transit_chips": transit_chips,
+        "rasi_labels": rasi_labels,
+        "rasi_dividers": rasi_dividers,
+        "asc_marker": asc_marker,
+        "rasi_ring_radius": ORBIT_RASI_RING,
+    }
 
 
 def build_circular_layout(
@@ -720,6 +887,43 @@ def chart_to_view(
         "circle": build_circular_layout(
             rasis,
             transits_by_rasi,
+            ascendant={
+                "rasi": chart.ascendant.zodiac.rasi,
+                "degree": chart.ascendant.zodiac.degree,
+                "arcminute": chart.ascendant.zodiac.arcminute,
+            },
+        ),
+        "orbit": build_orbit_layout(
+            natal_planets=[
+                {
+                    "name": name,
+                    "abbr": PLANET_INFO_MAP[name]["abbr"],
+                    "color_class": PLANET_INFO_MAP[name]["color_class"],
+                    "rasi": chart.planets[name].zodiac.rasi,
+                    "rasi_name": RASI_NAMES_TH[chart.planets[name].zodiac.rasi],
+                    "degree": chart.planets[name].zodiac.degree,
+                    "arcminute": chart.planets[name].zodiac.arcminute,
+                    "arcsecond": chart.planets[name].zodiac.arcsecond,
+                    "retrograde": chart.planets[name].retrograde,
+                }
+                for name in PLANET_ORDER if name in chart.planets
+            ],
+            transit_planets=(
+                [
+                    {
+                        "name": name,
+                        "abbr": PLANET_INFO_MAP[name]["abbr_arabic"],
+                        "color_class": PLANET_INFO_MAP[name]["color_class"],
+                        "rasi": transit_chart.planets[name].zodiac.rasi,
+                        "rasi_name": RASI_NAMES_TH[transit_chart.planets[name].zodiac.rasi],
+                        "degree": transit_chart.planets[name].zodiac.degree,
+                        "arcminute": transit_chart.planets[name].zodiac.arcminute,
+                        "arcsecond": transit_chart.planets[name].zodiac.arcsecond,
+                        "retrograde": transit_chart.planets[name].retrograde,
+                    }
+                    for name in PLANET_ORDER if name in transit_chart.planets
+                ] if transit_chart is not None else None
+            ),
             ascendant={
                 "rasi": chart.ascendant.zodiac.rasi,
                 "degree": chart.ascendant.zodiac.degree,

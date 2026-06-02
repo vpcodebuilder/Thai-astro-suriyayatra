@@ -255,19 +255,23 @@ function setupTriyangkaToggle() {
   const stage = document.querySelector(".zodiac-stage");
   if (!stage) return;
 
-  function bindToggle(cbId, layerClass, storageKey) {
+  function bindToggle(cbId, layerClass, storageKey, defaultOn) {
     const cb = document.getElementById(cbId);
     if (!cb) return;
     const onCls = layerClass + "-on";
     const offCls = layerClass + "-off";
+    const def = defaultOn === false ? "0" : "1";
 
     function apply(on) {
       stage.classList.toggle(onCls, on);
       stage.classList.toggle(offCls, !on);
       cb.checked = on;
     }
-    let saved = "1";
-    try { saved = localStorage.getItem(storageKey) || "1"; } catch (e) {}
+    let saved = def;
+    try {
+      const v = localStorage.getItem(storageKey);
+      if (v !== null) saved = v;
+    } catch (e) {}
     apply(saved === "1");
 
     cb.addEventListener("change", () => {
@@ -277,8 +281,11 @@ function setupTriyangkaToggle() {
     });
   }
 
-  bindToggle("toggle-triyangka", "triyangka", "triyangka_visible");
-  bindToggle("toggle-element",   "element",   "element_visible");
+  bindToggle("toggle-rasi",      "rasi",      "rasi_visible",      true);
+  bindToggle("toggle-element",   "element",   "element_visible",   true);
+  bindToggle("toggle-bhava",     "bhava",     "bhava_visible",     true);
+  bindToggle("toggle-triyangka", "triyangka", "triyangka_visible", true);
+  bindToggle("toggle-orbit",     "orbit",     "orbit_view",        false);
 }
 
 /* ======================================================================
