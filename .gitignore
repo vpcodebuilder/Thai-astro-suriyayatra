@@ -42,3 +42,4 @@ local.db-journal
 # env files
 .env
 .env.local
+local.db.bak
