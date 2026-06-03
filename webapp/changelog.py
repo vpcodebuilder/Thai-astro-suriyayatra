@@ -12,6 +12,28 @@
 
 CHANGELOG = [
     {
+        "version": "2026.06.03-c",
+        "date": "2026-06-03",
+        "title": "แก้สูตรเดือนจันทรคติ — ใช้ Devtino mas counter (เลิกใช้ floor approximation)",
+        "highlights": [
+            "User report: 7 ก.พ. 2556 → ระบบแสดง เดือน 3 แต่ที่ถูกคือ เดือน 2",
+            "เปลี่ยนสูตรเดือนจันทรคติจาก floor(surathin/29.53) → desire.mas (Devtino) − mas_at_thaloengsok",
+            "ผลข้างเคียง: แก้ off-by-1 month ใน adhikamasa year ทั้งหมด",
+        ],
+        "details": [
+            {
+                "category": "แก้",
+                "items": [
+                    "lunar.py: เพิ่ม _mas_at_thaloengsok() พร้อม cache ต่อ cs_year",
+                    "lunar.py: compute_lunar_date() ใช้ mas_diff แทน floor(surathin/29.53)",
+                    "ปีปกติ: mas_diff 0..11 → เดือน 5,6,7,...,4 (12 เดือน)",
+                    "ปีอธิกมาส: mas_diff 0..12 → เดือน 5,6,7,8(ต้น),8(หลัง),9,10,...,4 (13 เดือน)",
+                    "ทดสอบผ่าน: 7 ก.พ. 2556 = แรม 12 ค่ำ เดือน 2, Visakha 2569 = เดือน 7, Asalha 2569 = เดือน 8 หลัง",
+                ],
+            },
+        ],
+    },
+    {
         "version": "2026.06.03-b",
         "date": "2026-06-03",
         "title": "Timeline ใหม่ — 13 cinematic scenes + ภาพประกอบเฉพาะ",

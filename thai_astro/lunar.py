@@ -94,11 +94,27 @@ def tithi_to_phase_day(tithi: int) -> Tuple[bool, str, int]:
 SYNODIC_MONTH = 29.530588  # ค่าเฉลี่ยของเดือนทางจันทรคติ (วัน)
 
 
+# cache mas at thaloengsok per cs_year — รัน build_desire เพียงครั้งแรกแล้วเก็บไว้
+_MAS_THALOENGSOK_CACHE: dict[int, int] = {}
+
+
+def _mas_at_thaloengsok(thaloengsok) -> int:
+    """หา mas (synodic month count) ณ วันเถลิงศก
+    Cache ตาม cs_year — กัน recursion / double-compute
+    """
+    cs = thaloengsok.cs_year
+    if cs in _MAS_THALOENGSOK_CACHE:
+        return _MAS_THALOENGSOK_CACHE[cs]
+    from .boonnak import build_desire
+    d = build_desire(thaloengsok.be_year, thaloengsok.month, thaloengsok.day)
+    _MAS_THALOENGSOK_CACHE[cs] = d.mas
+    return d.mas
+
+
 def lunar_month_from_surathin(surathin_days: int) -> int:
-    """เดือนจันทรคติ (1-12) จากจำนวนวันสุรทิน (วันจากเถลิงศก)
-    เดือน 5 = เริ่มที่เถลิงศก (กลางเมษายน)
-    สูตร: floor((surathin + offset) / synodic_month) + base_month_index
-    offset 7 = ช่วยปรับให้ตรงกับวันสำคัญทางพุทธศาสนา (วิสาขะ มาฆะ ฯลฯ)
+    """[DEPRECATED] approximate formula — keep for backward compat
+    ใช้ floor(surathin/29.53) — มี off-by-1 day ในบางจุด
+    สูตรใหม่ใน compute_lunar_date() ใช้ desire.mas - mas_at_thaloengsok แทน
     """
     months = int((surathin_days + 7) / SYNODIC_MONTH)
     return ((months + 4) % 12) + 1
@@ -169,9 +185,6 @@ def compute_lunar_date(
     tithi = desire.dithi
     waxing, phase_name, day_in_phase = tithi_to_phase_day(tithi)
 
-    # ใช้สูตรใหม่: count synodic months ตั้งแต่เถลิงศก
-    base_month = lunar_month_from_surathin(desire.surathin.total_days)
-
     # ปี: ใช้ จ.ศ. ของเถลิงศกที่ใช้ (ปีจันทรคติเริ่มที่เถลิงศก)
     cs_year = desire.surathin.thaloengsok_cs_year
     ce_year_lunar = cs_year + 638  # CE ของเถลิงศก
@@ -179,24 +192,42 @@ def compute_lunar_date(
 
     leap = is_leap_month_year(cs_year)
 
-    # Adhikamasa shift (Phase 2 — แก้ off-by-1 ของปีอธิกมาส)
-    # ปีอธิกมาสมีเดือน 13 เดือน — แทรก "เดือน 8 หลัง" (8/8) ระหว่าง 8 และ 9
-    # ปฏิทินทางการของกรมการศาสนาใช้กฎ:
-    #   - base_month 5,6,7 ในช่วงครึ่งปีต้นของอธิกมาส → shift +1 (กลายเป็น 6,7,8)
-    #   - base_month 8 → เป็น "เดือน 8 หลัง" (เลขยังเป็น 8 แต่ flag intercalary)
-    #   - base_month 9-12, 1-4 → ไม่ shift
-    # ตัวอย่าง: วิสาขบูชา = ขึ้น 15 ค่ำ เดือน 7 (base 6+1) / อาสาฬหบูชา = ขึ้น 15 ค่ำ เดือน 8 หลัง (base 8)
+    # ============================================================
+    # สูตรเดือนจันทรคติ v2 (2026-06-03)
+    # ใช้ desire.mas (synodic month count from Devtino formula) แทน
+    # floor(surathin/29.53) approximation
+    #
+    # mas_diff = mas ของวันที่ - mas ณ วันเถลิงศก (ใช้ helper cache)
+    # mas เพิ่มที่ "ขึ้น 1 ค่ำ" ของแต่ละเดือน
+    #
+    # ปีปกติ (12 เดือน): map mas_diff 0..11 → เดือน 5,6,7,8,9,10,11,12,1,2,3,4
+    # ปีอธิกมาส (13 เดือน, แทรกเดือน 8 หลัง):
+    #   mas_diff 0..12 → เดือน 5,6,7,8(ต้น),8(หลัง intercalary),9,10,11,12,1,2,3,4
+    # ============================================================
+    mas_thal = _mas_at_thaloengsok(desire.surathin.thaloengsok)
+    mas_diff = desire.mas - mas_thal
+
     is_intercalary = False
-    if leap:
-        if base_month in (5, 6, 7):
-            lunar_month = base_month + 1
-        elif base_month == 8:
-            lunar_month = 8
+    if not leap:
+        # ปีปกติ: ((mas_diff + 4) % 12) + 1
+        # mas_diff 0 → 5, 1 → 6, ..., 7 → 12, 8 → 1, 9 → 2, 10 → 3, 11 → 4
+        idx = mas_diff % 12
+        lunar_month = ((idx + 4) % 12) + 1
+    else:
+        # ปีอธิกมาส
+        if mas_diff <= 0:
+            lunar_month = 5  # ต้นปี
+        elif mas_diff < 4:
+            lunar_month = 5 + mas_diff   # 6, 7, 8 (first)
+        elif mas_diff == 4:
+            lunar_month = 8              # second 8 (หลัง / intercalary)
             is_intercalary = True
         else:
-            lunar_month = base_month
-    else:
-        lunar_month = base_month
+            # mas_diff 5+ : shift back by 1 จากตำแหน่งปกติ
+            # (เพราะแทรกเดือน 8 หลังเข้ามาแล้ว)
+            idx = (mas_diff - 1) % 12
+            lunar_month = ((idx + 4) % 12) + 1
+
     lunar_month_name = LUNAR_MONTH_NAMES[lunar_month]
     intercalary_suffix = " หลัง" if is_intercalary else ""
 
