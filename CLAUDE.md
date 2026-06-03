@@ -1224,3 +1224,298 @@ y_local = ry * sin(t)
 - Tooltip ใน orbit mode แสดง longitude + retrograde icon
 - Constellation lines: ลากเส้นจาก chip ของดาวที่เป็น aspect คู่กัน
 - Toggle "Show natal+transit aspects" — เส้นเชื่อม chip กุม/เล็ง
+
+---
+
+# ===== Session 9 Updates =====
+# เมนูใหม่ "เทียบปฏิทิน" + Timeline ประวัติศาสตร์ — 2026-06-02
+
+## ภาพรวม
+เพิ่มเมนูที่ 3 (`/calendar`) — เทียบจันทรคติ ⇄ สุริยคติ + แสดง Timeline ประวัติศาสตร์
+ปฏิทินไทย 8 ยุค พร้อมภาพประวัติศาสตร์ Public Domain จาก Wikimedia Commons
+
+## ไฟล์ใหม่
+| ไฟล์ | บทบาท |
+|------|--------|
+| `thai_astro/calendar_convert.py` | `solar_to_lunar()` + `lunar_to_solar()` (search-based) + `round_trip_check()` |
+| `webapp/calendar_data.py` | `CALENDAR_EPOCHS` (8 entries) + `HOLY_DAYS` (6 entries) + `find_holy_day()` |
+| `webapp/templates/calendar.html` | หน้าเทียบปฏิทิน — 2 tabs + result + timeline + holy days |
+| `webapp/static/timeline-images/{rama1,rama5,rama6,phibun}.jpg` | 4 ภาพ PD จาก Wikimedia (250×~320px, ~30KB ต่อภาพ) |
+
+## ไฟล์ที่แก้
+- `webapp/server.py` — เพิ่ม `GET /calendar` + `POST /calendar/convert` + `_pair_to_dict()`
+- `webapp/static/styles.css` — เพิ่ม +600 บรรทัด (calendar UI + 2-col timeline + photo frames)
+- `webapp/templates/{index,horathaynu,about}.html` — เพิ่ม nav link "เทียบปฏิทิน"
+- `webapp/changelog.py` — entry `2026.06.02-a`
+
+## Algorithm: Reverse Lookup (จันทรคติ → สุริยคติ)
+
+```python
+def lunar_to_solar(be_year, lunar_month, waxing, day_in_phase):
+    # Window 2 ปี รอบปีที่ระบุ (ครอบคลุม edge case อธิกมาส + ขึ้นปีใหม่)
+    start = date(ce_year - 1, 1, 1)
+    end = date(ce_year + 1, 12, 31)
+    matches = []
+    for d in iter_days(start, end):
+        desire = build_desire(d.year + 543, d.month, d.day)
+        lunar = compute_lunar_date(desire, sun_rasi=0)
+        if all match:
+            matches.append(SolarLunarPair(d, lunar))
+    return matches
+```
+
+**Complexity**: O(730) ต่อ query — เร็วพอ ไม่ต้อง pre-compute
+**Range**: พ.ศ. 1181-3000 (CE 638-2457) ที่สูตรสุริยยาตร์ valid
+
+## ขอบเขต / Known Limitations (Phase 1)
+- **Off-by-1 จากปฏิทินทางการ**: สูตร approximation อวมาน/ดิถี ทำให้วันสำคัญ
+  (วิสาขบูชา, ลอยกระทง) คลาดเคลื่อน ±1 วันบ้างครั้ง — note ใน UI
+- **ปีอธิกมาส**: formula ปัจจุบันคืน 1 match + flag `is_leap_month_year` แสดง chip ⚠
+  Phase 2 จะใส่ตารางอธิกมาส (เดือน 8/8) แยก
+- **ไม่รองรับพุทธกาล** (พ.ศ. 1-1180): ก่อน จ.ศ. 0 สูตรไม่ valid
+- **ไม่รองรับ ม.ศ. / ร.ศ.**: รับเฉพาะ พ.ศ./ค.ศ.
+
+## Timeline 2-Column Alternating Layout
+
+```
+[Era 1 — left]──●──
+                │
+                ──●──[Era 2 — right]
+                │
+[Era 3 — left]──●──
+```
+
+- `.timeline-item:nth-child(odd)` → margin-right: auto (ฝั่งซ้าย)
+- `.timeline-item:nth-child(even)` → margin-left: auto (ฝั่งขวา)
+- Tile width 46%, gap each side 4% → dot offset `calc(-4% - 9px)`
+- `::after` = dot (18px) สีตามยุค
+- Mobile (<700px): collapse เป็น 1-col, เส้นซ้าย, tile ขวา
+
+## Era-themed Backgrounds (5 types)
+| Type | Gradient | SVG pattern (data URI inline) |
+|------|---------|-------------------------------|
+| `astronomical` | dark cosmos #1a0530→#0a0218 | stars (random circles) |
+| `buddhist` | gold-cream #fff4d2→#ffe4a3 | lotus 6-petals rotation |
+| `era` | gold #f6ecd2→#c9a24a | mandala 4-ring circles |
+| `historical` | gold→deep #fff8e6→#d4b556 | temple/spire silhouette |
+| `reform` | rose-gold #fde9c8→#b8336a | gear/clock with ticks |
+
+## Photo Frames (ภาพประวัติศาสตร์ PD)
+
+**4 ภาพ Public Domain**:
+| Year | Person | Source URL pattern |
+|------|--------|---------------------|
+| 1782 | ร.1 | `commons.wikimedia.org/.../King_Rama_I_of_Siam_Portrait.jpg` |
+| 1889 | ร.5 | `.../Chulalongkorn_LoC.jpg` (Library of Congress, c.1880) |
+| 1912 | ร.6 | `.../Vajiravudh_of_Siam_cropped.jpg` (c.1920) |
+| 1941 | จอมพล ป. | `.../Plaek_Phibunsongkhram_cropped.jpg` (c.1940s) |
+
+**Photo frame design**:
+- กรอบทอง 3px + shadow แดง ขนาด 100×130px
+- Corner ornaments (gold-bright) ที่มุม top-left + bottom-right
+- Caption ใต้กรอบ: ชื่อ + license credit
+- Layout: flex 2-col (content | photo) บน desktop, stack vertical บน mobile
+
+**License compliance**:
+- ทุกภาพ public domain ตาม Wikimedia Commons
+- ระบุ credit ใน `image_credit` field ของ `calendar_data.py`
+- มี attribution footer ใต้ timeline:
+  `"ภาพประวัติศาสตร์จาก Wikimedia Commons เป็น Public Domain
+   (ลิขสิทธิ์หมดอายุตามกฎหมายไทย พ.ร.บ.ลิขสิทธิ์ 2537)"`
+
+## Holy Days (6 entries)
+- มาฆบูชา (ขึ้น 15 ค่ำ เดือน 3)
+- วิสาขบูชา (ขึ้น 15 ค่ำ เดือน 6)
+- อาสาฬหบูชา (ขึ้น 15 ค่ำ เดือน 8)
+- เข้าพรรษา (แรม 1 ค่ำ เดือน 8)
+- ออกพรรษา (ขึ้น 15 ค่ำ เดือน 11)
+- ลอยกระทง (ขึ้น 15 ค่ำ เดือน 12)
+
+`find_holy_day(lunar_month, waxing, day_in_phase)` — match → return dict, ไม่ match → None
+UI: แสดง 🪷 badge + คำอธิบายเมื่อตรงวันสำคัญ
+วันพระ (ขึ้น/แรม 8, 15) — แสดง 🙏 badge รอง (ถ้าไม่ใช่วันสำคัญ)
+
+## Routes
+| Method | Path | Action |
+|--------|------|--------|
+| GET | `/calendar` | render หน้าฟอร์ม + timeline + holy days |
+| POST | `/calendar/convert` | JSON API — รับ direction + values → คืน matches |
+
+## Gotchas สำคัญ
+1. **`overflow: hidden` บน `.timeline-item`** จะ clip pseudo `::after` (dot) ที่อยู่นอกขอบ —
+   ย้าย overflow hidden ไปที่ `.timeline-bg-pattern` (child) แทน
+2. **Dot position** ใช้ `calc(-4% - 9px)` แทน `-46px` — รับ responsive width
+3. **`compute_lunar_date(desire, sun_rasi=0)`** — `sun_rasi` ไม่ใช้ในสูตรใหม่ ส่ง 0 ได้
+4. **Round-trip ผ่าน** (solar→lunar→solar = วันเดิม) — internal consistency
+5. **JDN reference** = `1954167` (จ.ศ. 0 = 21 มี.ค. 638 Julian) — port จาก Devtino
+6. **ภาพ Wikimedia ใช้ thumb URL** (`/250px-`) — เหมาะกับ photo frame ขนาด 100×130, ไม่ต้อง resize
+7. **`<img loading="lazy">`** — กัน initial load lag (4 ภาพ ~125KB)
+
+## ไอเดียพัฒนาต่อ (Phase 2-3) — ส่วนใหญ่ทำเสร็จใน Session 10 แล้ว
+- ~~SQLite DB → DB-driven~~ ✓ (PostgreSQL/SQLite via SQLAlchemy)
+- ~~ม.ศ. + ร.ศ. input/output~~ ✓
+- ~~พุทธกาล (Meeus)~~ ✓
+- ~~ตารางอธิกมาสจริง~~ ✓ (BE 2300-2700 จาก myhora.com)
+- ~~Search by date วันสำคัญทางราชการ~~ ✓ (20 entries)
+- ~~Auto-detect today widget~~ ✓
+- ~~Round-trip warning~~ ✓
+- **ภาพยุคโบราณ paintings** — ยังเหลือ (รอ user download Wikimedia paintings ตาม `data/timeline_image_urls.md`)
+- Adhikamasa BE 1181-2299 + 2701-3000 — fallback formula (ขยายข้อมูลทีหลังถ้าหาตำราได้)
+
+---
+
+# ===== Session 10 Updates =====
+# DB migration + ปีอธิกมาสจริง + ยุคพุทธกาล + Usage counter — 2026-06-03
+
+## ภาพรวม
+ยก calendar feature เข้า DB เต็มรูป + แก้ off-by-1 month ของปีอธิกมาส (สาเหตุที่
+วันสำคัญในปี 2569 เคยแสดงเดือน 6 แทนที่จะเป็น 7) + รองรับยุคพุทธกาล (พ.ศ. 544-1180)
+ผ่าน Meeus algorithm + เพิ่มวันสำคัญทางราชการ 20 entries + counter จำนวนผู้ใช้งาน
+
+## ไฟล์ใหม่
+| ไฟล์ | บทบาท |
+|------|--------|
+| `webapp/db.py` | SQLAlchemy engine + DATABASE_URL pattern (SQLite dev / PostgreSQL prod) |
+| `webapp/models.py` | 5 models: CalendarEpoch, HolyDay, NationalHoliday, AdhikamasaYear, UsageStat |
+| `webapp/seed.py` | idempotent seed script (Group A data) |
+| `webapp/usage.py` | counter helpers — increment(feature), get_counts() — best-effort, ไม่เก็บ PII |
+| `webapp/calendar_data.py` | **rewrite** — query functions แทน hardcoded lists + _LazyList compat |
+| `thai_astro/ancient_lunar.py` | Meeus new-moon algorithm + compute_ancient_lunar_date() |
+| `alembic/` + `alembic.ini` | migrations folder — initial + add_usage_stats |
+| `scripts/scrape_adhikamasa.py` | ดึงปีอธิกมาส/อธิกวารจาก myhora.com (มี title-check) |
+| `scripts/import_adhikamasa.py` | upsert JSON → adhikamasa_years table (source='myhora') |
+| `data/adhikamasa_scraped.json` | 401 entries BE 2300-2700 (~37% อธิกมาส, ~19% อธิกวาร, ~44% ปกติ) |
+| `data/timeline_image_urls.md` | curated Wikimedia paintings list (ยังไม่ download) |
+
+## DB Schema (5 tables)
+```
+calendar_epochs       — 11 entries (timeline events; sort_order, image fields)
+holy_days             — 6 entries (lunar; เก็บเลขเดือนสำหรับปีปกติ)
+national_holidays     — 20 entries (solar; 6 categories)
+adhikamasa_years      — pk=cs_year, type ∈ {adhikamasa, adhikavara, both, normal}
+                        source ∈ {algorithm, myhora, official, user}
+usage_stats           — pk=feature; counter + updated_at (no PII)
+```
+
+## DATABASE_URL pattern
+```
+# Dev (default ถ้าไม่ตั้ง)
+sqlite:///./local.db
+
+# Prod (Railway inject auto จาก PostgreSQL service)
+postgresql://user:pass@host:5432/dbname
+```
+- `db.py` จัดการ `postgres://` legacy → `postgresql://` แล้ว
+- `connect_args={"check_same_thread": False}` เฉพาะ SQLite
+
+## Procfile (Railway deploy)
+```
+release: alembic upgrade head && python -m webapp.seed
+web: uvicorn webapp.server:app --host 0.0.0.0 --port $PORT
+```
+ทุก deploy: migration + seed (idempotent — seed skip ถ้ามี data แล้ว)
+
+## Adhikamasa fix (ที่สำคัญที่สุด)
+
+### Shift rule ในปีอธิกมาส (lunar.py)
+```python
+if leap:
+    if base_month in (5, 6, 7):
+        lunar_month = base_month + 1
+        is_intercalary = False
+    elif base_month == 8:
+        lunar_month = 8
+        is_intercalary = True       # "เดือน 8 หลัง" (8/8)
+    else:  # 1-4, 9-12
+        lunar_month = base_month
+```
+
+### Lookup order
+1. `_lookup_db_year_type(cs_year)` — query `adhikamasa_years` ก่อน (authoritative)
+2. ถ้าไม่มี → fallback formula `(grate_year - 0.45222) % 2.7118886 < 1`
+
+### Holy day match กฎใหม่
+ใน adhikamasa year `find_holy_day()` reverse shift ก่อน lookup:
+- lunar_month=8 + is_intercalary=True → match HOLY_DAYS month=8 (อาสาฬหบูชา ✓)
+- lunar_month=8 + is_intercalary=False → return None (เดือน 8 ต้น ≠ วันพระใหญ่)
+- lunar_month ∈ {4,5,6,7} → search HOLY_DAYS month=(lunar_month-1)
+- อื่นๆ → search ปกติ
+
+## Era support (ม.ศ. / ร.ศ.)
+`thai_astro/calendar.py`:
+- `RS_EPOCH_YEAR = 1781` (ร.ศ. 1 = ค.ศ. 1782)
+- `convert_year_to_ce(year, era)` รองรับ {be, ce, ms, cs, rs}
+
+Form `/calendar` มี dropdown era ข้างปีรับ — convert เป็น พ.ศ. ก่อน underlying
+
+ผลลัพธ์แสดง 5 ศักราช: พ.ศ. + ค.ศ. + จ.ศ. + ม.ศ. + ร.ศ. (— ถ้าก่อนสถาปนากรุง)
+
+## Ancient mode (พุทธกาล)
+`thai_astro/ancient_lunar.py`:
+- Meeus new-moon JDE formula (Ch 49)
+- `find_k_for_jdn(jdn)` หา k (new moon number) แบบ walk
+- `ancient_lunar_tithi(jdn)` = (jdn − new_moon_jdn) × 30 / 29.530588861
+- `ancient_lunar_month(jdn, ce_year)` = นับ synodic months ตั้งแต่ ขึ้น 1 ค่ำ เดือน 5 ของปี
+
+Routing (`calendar_convert.py`):
+- `be_year >= 1181` → สูตรสุริยยาตร์ (แม่นยำ)
+- `544 <= be_year < 1181` → Meeus (`is_ancient=True` flag)
+- ก่อน 544 → ValueError
+
+UI: chip "⚠ ประมาณ ±5-15 วัน" สีน้ำตาล + note "ศึกษาประวัติศาสตร์เท่านั้น"
+
+## Usage counter
+`webapp/usage.py`:
+- 3 features: `suriyayatra_chart`, `horathaynu_chart`, `horathaynu_ask`
+- `increment(feature)` — upsert (ON CONFLICT DO UPDATE) สำหรับทั้ง SQLite + PostgreSQL
+- best-effort — fail silently ไม่ขัด user flow
+- `get_counts()` → dict {feature: int} inject เข้า `_common_context`
+- Trigger จุดที่ chart compute สำเร็จ (หลัง try) — fail → ไม่นับ
+- Display: ใต้ปุ่ม "ผูกดวง" บนหน้า index + ใต้ปุ่ม "ตั้งดวงยาม" บนหน้า horathaynu
+
+## National holidays (20 entries)
+| Category | Examples |
+|---|---|
+| royal | จักรี, ฉัตรมงคล, ราชินี, ร.10, แม่, สวรรคต ร.9, ปิยมหาราช, พ่อ (ร.9) |
+| national | รัฐธรรมนูญ |
+| tradition | สงกรานต์ (3 วัน) |
+| memorial | ครู, ข้าราชการพลเรือน, ฝนหลวง |
+| holiday | ปีใหม่, แรงงาน, สิ้นปี |
+| international | วาเลนไทน์, สตรีสากล |
+
+## Form: เดือน 8 หลัง (Intercalary 8/8)
+- Checkbox "เดือน 8 หลัง?" โผล่เฉพาะเมื่อเลือกเดือน 8
+- เปลี่ยนเดือนอื่น → auto-uncheck
+- Validate ที่ backend:
+  - `is_intercalary_month=True` + `lunar_month != 8` → ValueError
+  - `lunar_to_solar` คืน 0 matches + intercalary=True → hint "ปีอาจไม่ใช่ปีอธิกมาส"
+
+## Today widget
+`server.py:_today_widget()` คำนวณดวงวันนี้ (Thai TZ), inject เข้า `/` context.
+- "📅 วันนี้ + วัน...ที่ DD เดือน พ.ศ. + 🌙 ค่ำ เดือน ปี + 🇹🇭 national + 🪷 holy"
+- Pill style border-radius 999px, hover → translate-y(-1px) + shadow
+- Click → ไปเมนู `/calendar`
+
+## Bug ที่เคยเจอ
+1. **scrape myhora ทั้งหมดเป็น "adhikamasa"** — เพราะปีนอกช่วง 2300-2700 myhora redirect ไปหน้า default (2569 = adhikamasa) → แก้ด้วย title-check (regex จับเลขปีใน `<title>`)
+2. **Dataclass error** — `is_intercalary_month: bool = False` เป็น field ที่มี default ต้องอยู่ท้าย dataclass (ไม่ใช่กลาง field ที่ไม่มี default)
+3. **Server cache** — `--reload` ของ uvicorn จับ Python file แต่บางที module-level imports cache → restart manually เมื่อแก้ตาราง/model
+4. **Encoding crash บน Windows** — `sys.stdout.reconfigure(encoding="utf-8")` ที่ต้นทุก script (cp874 default พิมพ์ → ไม่ได้)
+5. **Timeline dot misalignment** — `right: calc(-4% - 9px)` ใช้ % ของ item width (46%) ทำให้ dot offset แค่ 1.84% ของ container แทน 4% → แก้เป็น `calc(-100% * 4/46 - 9px)`
+6. **"ทรง" ใช้ผิด** — ราชาศัพท์ใช้กับเชื้อพระวงศ์เท่านั้น, จอมพล ป. ไม่ใช่ราชวงศ์ → "ทรงนำเอา" → "ประกาศให้ใช้"
+
+## ขอบเขตข้อมูลที่ scrape แล้ว
+- BE 2300-2700 (401 ปี) — myhora.com
+- distribution: adhikamasa 148 (~37%) | adhikavara 78 (~19%) | normal 175 (~44%)
+- ตรงกับ Wikipedia ratio (~36.8%)
+
+## ที่ยังเหลือ (Phase 11)
+- Adhikamasa BE 1181-2299 + 2701-3000 (fallback formula ใช้งานได้)
+- Timeline paintings — รอ user download Wikimedia paintings ตาม `data/timeline_image_urls.md`
+- Chat + User (Session 2026-05-30 plan ใน CLAUDE.md เดิม) — ยังเก็บไว้
+
+## ตำราอ้างอิงเพิ่ม
+- Jean Meeus, "Astronomical Algorithms" 2nd ed (Ch 49: Phases of the Moon) — ใช้ใน ancient_lunar.py
+- myhora.com — ตารางปีอธิกมาส scrape source
+- กรมการศาสนา — กฎ shift วันสำคัญในปีอธิกมาส (แหล่งของ find_holy_day rule)
+

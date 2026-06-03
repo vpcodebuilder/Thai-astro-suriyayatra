@@ -17,6 +17,7 @@ from dataclasses import dataclass
 JDN_CS_EPOCH = 1954167          # 21 มีนาคม ค.ศ. 638 = จ.ศ. 0 (จุดเริ่มต้น)
 MS_EPOCH_YEAR = 78              # มหาศักราชเริ่มต้นปี ค.ศ. 78
 CS_EPOCH_YEAR = 638             # จุลศักราชเริ่มต้นปี ค.ศ. 638
+RS_EPOCH_YEAR = 1781            # รัตนโกสินทร์ศก: ร.ศ. 1 = ค.ศ. 1782 (สถาปนากรุง)
 BE_OFFSET = 543                 # พ.ศ. = ค.ศ. + 543
 THAI_SOLAR_YEAR = 365.25875     # วันต่อปีสุริยะไทย
 
@@ -63,6 +64,33 @@ def ce_to_mahasakarat(ce_year: int) -> int:
 def ce_to_buddhist(ce_year: int) -> int:
     """ค.ศ. -> พ.ศ. (พุทธศักราช)"""
     return ce_year + BE_OFFSET
+
+
+def ce_to_ratanakosin(ce_year: int) -> int:
+    """ค.ศ. -> ร.ศ. (รัตนโกสินทร์ศก)
+    ร.ศ. 1 = ค.ศ. 1782 (พ.ศ. 2325) — สถาปนากรุงรัตนโกสินทร์
+    ใช้ทางการในรัชสมัย ร.5-ร.6 ก่อนเปลี่ยนเป็น พ.ศ. ปี 2455 (ร.ศ. 131)
+    คืนค่า ≤0 หากปีก่อน 1782
+    """
+    return ce_year - RS_EPOCH_YEAR
+
+
+def convert_year_to_ce(year: int, era: str) -> int:
+    """แปลงปีตามศักราชต่างๆ -> ค.ศ.
+        era: 'be' (พ.ศ.), 'ce' (ค.ศ.), 'ms' (ม.ศ.), 'cs' (จ.ศ.), 'rs' (ร.ศ.)
+    """
+    era = era.lower()
+    if era == "be":
+        return year - BE_OFFSET
+    if era == "ce":
+        return year
+    if era == "ms":
+        return year + MS_EPOCH_YEAR
+    if era == "cs":
+        return year + CS_EPOCH_YEAR
+    if era == "rs":
+        return year + RS_EPOCH_YEAR
+    raise ValueError(f"ศักราช '{era}' ไม่รองรับ (be/ce/ms/cs/rs)")
 
 
 def jdn_to_chulasakarat(jdn: int) -> int:

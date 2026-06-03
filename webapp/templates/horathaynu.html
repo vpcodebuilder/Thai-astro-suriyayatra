@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260601h" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260603a" />
   <style>
     /* ===== 3-col layout 20/50/30 ===== */
     .ht-grid {
@@ -321,6 +321,7 @@
   <nav class="nav-links">
     <a href="/">ผูกดวงสุริยยาตร์</a>
     <a href="/horathaynu" class="active">โหรทายหนู</a>
+    <a href="/calendar">เทียบปฏิทิน</a>
     <a href="/about">เกี่ยวกับ{% if latest_version %} <span class="version-badge">v{{ latest_version }}</span>{% endif %}</a>
   </nav>
 
@@ -351,6 +352,18 @@
           <button type="submit" class="btn-primary">
             ตั้งดวงยาม <span class="btn-arrow">›</span>
           </button>
+          {% if usage_counts %}
+            {% set set_count = usage_counts.get('horathaynu_chart', 0) %}
+            {% set ask_count = usage_counts.get('horathaynu_ask', 0) %}
+            {% if set_count or ask_count %}
+            <p class="usage-stat">
+              ✦ มีผู้ตั้งดวงยามแล้ว <b>{{ "{:,}".format(set_count) }}</b> ครั้ง
+              {% if ask_count %}
+                · ถามคำถาม <b>{{ "{:,}".format(ask_count) }}</b> ครั้ง
+              {% endif %}
+            </p>
+            {% endif %}
+          {% endif %}
         </form>
 
         <div style="margin-top: 12px; font-size: 0.82em; color: var(--ink-soft); line-height: 1.55;">

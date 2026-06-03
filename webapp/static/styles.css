@@ -2865,3 +2865,860 @@ body.view-student .view-general { display: none !important; }
     font-size: 0.8rem;
   }
 }
+
+/* ===================================================================
+   เทียบปฏิทิน (Calendar Converter)
+   =================================================================== */
+
+.calendar-page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.calendar-converter h2,
+.calendar-result h2,
+.calendar-timeline h2,
+.calendar-holy-ref h2 {
+  text-align: center;
+  margin: 0 0 0.75rem;
+}
+
+.calendar-tabs {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin: 0.75rem 0 1.25rem;
+  flex-wrap: wrap;
+}
+
+.cal-tab-btn {
+  background: var(--cream);
+  border: 1.5px solid var(--gold);
+  color: var(--maroon-dark);
+  border-radius: 8px;
+  padding: 0.55rem 1rem;
+  font-family: "Sarabun", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.cal-tab-btn:hover {
+  background: var(--gold);
+  color: var(--maroon-deep);
+}
+
+.cal-tab-btn.active {
+  background: var(--maroon);
+  color: #fde9c8;
+  border-color: var(--maroon-dark);
+}
+
+.cal-form {
+  display: none;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cal-form.cal-form-active {
+  display: flex;
+}
+
+.cal-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.cal-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.cal-row label > span {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.cal-row input,
+.cal-row select {
+  border: 1.5px solid var(--gold);
+  border-radius: 6px;
+  padding: 0.5rem 0.65rem;
+  background: #fff;
+  font-size: 1rem;
+  font-family: "Sarabun", sans-serif;
+  color: var(--ink);
+}
+
+.cal-note {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  font-style: italic;
+  text-align: center;
+  margin: 0.5rem 0 0;
+  line-height: 1.5;
+}
+
+/* ---------- Result Card ---------- */
+
+.cal-result-note {
+  background: var(--cream-soft);
+  border-left: 4px solid var(--gold-deep);
+  padding: 0.5rem 0.8rem;
+  margin: 0 0 0.75rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.cal-result-rank {
+  font-weight: 700;
+  color: var(--maroon-dark);
+  margin-bottom: 0.4rem;
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.cal-result-item + .cal-result-item {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1.5px dashed var(--gold);
+}
+
+.cal-result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.cal-result-col {
+  background: linear-gradient(180deg, #fff9ed 0%, var(--cream-soft) 100%);
+  border: 1.5px solid var(--gold);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+}
+
+.cal-result-col h3 {
+  margin: 0 0 0.5rem;
+  color: var(--maroon-dark);
+  font-size: 1.05rem;
+}
+
+.cal-result-big {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--maroon-dark);
+  margin: 0.3rem 0;
+  line-height: 1.4;
+}
+
+.cal-result-meta {
+  font-size: 0.88rem;
+  color: var(--ink);
+  line-height: 1.7;
+  margin-top: 0.5rem;
+}
+
+.cal-result-meta b {
+  color: var(--maroon-dark);
+}
+
+.cal-result-holy {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  background: linear-gradient(135deg, #fff4d2 0%, #ffe4a3 100%);
+  border-left: 4px solid var(--gold-deep);
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.cal-result-uposatha {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.9rem;
+  background: rgba(232, 197, 112, 0.18);
+  border-left: 4px solid var(--gold);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.cal-ancient-tag {
+  display: inline-block;
+  background: #6b4226;
+  color: #fff8e7;
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+  font-weight: 600;
+  cursor: help;
+}
+
+.cal-leap-tag {
+  display: inline-block;
+  background: #c78b1b;
+  color: #fff8e7;
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+  font-weight: 600;
+}
+
+/* ===== Usage stat — แสดงจำนวนการใช้งานใต้ปุ่มผูกดวง ===== */
+.usage-stat {
+  margin: 12px 0 0;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  text-align: center;
+  color: var(--ink-soft);
+  background: rgba(232, 197, 112, 0.12);
+  border: 1px dashed rgba(199, 139, 27, 0.4);
+  border-radius: 6px;
+}
+.usage-stat b {
+  color: var(--maroon-dark);
+  font-weight: 700;
+}
+
+/* ===== Today widget — strip บนหน้าแรก ===== */
+.today-widget {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+  max-width: 1200px;
+  margin: 0.5rem auto 1.5rem;
+  padding: 0.55rem 1.2rem;
+  background: linear-gradient(135deg, rgba(255, 244, 210, 0.85) 0%, rgba(255, 228, 163, 0.7) 100%);
+  border: 1px solid rgba(199, 139, 27, 0.4);
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--ink);
+  font-size: 0.92rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.today-widget:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(122, 30, 30, 0.15);
+}
+.today-widget-label {
+  font-weight: 700;
+  color: var(--maroon-dark);
+}
+.today-widget-sep {
+  color: rgba(0,0,0,0.25);
+}
+.today-widget-lunar {
+  color: var(--ink-soft);
+}
+.today-widget-holy {
+  margin-left: auto;
+  padding: 2px 10px;
+  background: var(--maroon-dark);
+  color: #fff8e6;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.today-widget-uposatha {
+  margin-left: auto;
+  padding: 2px 10px;
+  background: rgba(232, 197, 112, 0.4);
+  color: var(--ink);
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+.today-widget-national {
+  padding: 2px 10px;
+  background: linear-gradient(135deg, #fde9c8 0%, #f6c878 100%);
+  color: #6b3a0e;
+  border: 1px solid #c78b1b;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* ===== Calendar result — National holiday card ===== */
+.cal-result-national {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border-left: 4px solid var(--gold-deep);
+  border-radius: 4px;
+  font-size: 0.95rem;
+  background: linear-gradient(135deg, #fff8e6 0%, #fde9c8 100%);
+}
+.cal-result-national-royal {
+  background: linear-gradient(135deg, #fff0e6 0%, #f8d5b8 100%);
+  border-left-color: var(--maroon-dark);
+}
+.cal-result-national-national {
+  background: linear-gradient(135deg, #fff4d2 0%, #ffd97a 100%);
+  border-left-color: #a0701a;
+}
+.cal-result-national-tradition {
+  background: linear-gradient(135deg, #e6f4ff 0%, #b8dcf8 100%);
+  border-left-color: #1a6fa0;
+}
+.cal-result-national-international,
+.cal-result-national-holiday,
+.cal-result-national-memorial {
+  background: linear-gradient(135deg, #f0f0f0 0%, #d8d8d8 100%);
+  border-left-color: #777;
+}
+@media (max-width: 700px) {
+  .today-widget {
+    border-radius: 12px;
+    font-size: 0.85rem;
+    margin: 0.5rem 0.8rem 1rem;
+  }
+  .today-widget-holy, .today-widget-uposatha {
+    margin-left: 0;
+  }
+}
+
+.cal-intercalary-wrapper .cal-intercalary-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(199, 139, 27, 0.1);
+  border: 1px solid rgba(199, 139, 27, 0.3);
+  border-radius: 6px;
+}
+.cal-intercalary-hint {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+.cal-year-group .cal-year-row {
+  display: flex;
+  gap: 6px;
+}
+.cal-year-row input[type="number"] {
+  flex: 1;
+  min-width: 0;
+}
+.cal-era-select {
+  flex: 0 0 80px;
+}
+.cal-meta-hint {
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+.cal-official-warning {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: rgba(199, 139, 27, 0.15);
+  border: 1px solid #c78b1b;
+  color: #8a5a0e;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 10px;
+  vertical-align: middle;
+  cursor: help;
+  white-space: nowrap;
+}
+
+/* ===================================================================
+   Timeline — 2-column alternating layout + era-themed backgrounds
+   =================================================================== */
+
+.timeline-intro {
+  text-align: center;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin: 0 0 1.5rem;
+}
+
+.timeline-list {
+  position: relative;
+  padding: 1.5rem 0;
+}
+
+/* center vertical line */
+.timeline-list::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg,
+    var(--gold-bright) 0%,
+    var(--gold) 30%,
+    var(--gold-deep) 60%,
+    var(--maroon) 100%);
+  transform: translateX(-50%);
+  border-radius: 3px;
+  z-index: 0;
+}
+
+.timeline-item {
+  width: 46%;
+  position: relative;
+  background: var(--paper);
+  border: 1.5px solid rgba(232, 197, 112, 0.6);
+  border-radius: 10px;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1.5rem;
+  z-index: 1;
+  box-shadow: 0 4px 12px rgba(60, 30, 0, 0.18);
+}
+
+/* clip background pattern only — keep dot/arrow visible outside */
+.timeline-item .timeline-bg-pattern {
+  border-radius: 9px;          /* match parent radius */
+  overflow: hidden;
+}
+
+/* alternating sides: odd = left, even = right */
+.timeline-item:nth-child(odd) {
+  margin-right: auto;
+  margin-left: 0;
+}
+
+.timeline-item:nth-child(even) {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+/* dot connector ที่ตรงกลาง pointing to center line */
+.timeline-item::after {
+  content: "";
+  position: absolute;
+  top: 22px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--gold-bright);
+  border: 3px solid var(--maroon);
+  box-shadow: 0 0 0 3px var(--paper), 0 0 8px rgba(232, 197, 112, 0.5);
+  z-index: 2;
+}
+
+/* tile = 46% ของ container, gap แต่ละข้าง = 4% ของ container
+   แต่ %offset ของ dot คำนวณจาก width ของ item (46%) ไม่ใช่ container
+   ดังนั้นต้อง 4/46 = 8.696% ของ item width + 9px (dot half-width) */
+.timeline-item:nth-child(odd)::after {
+  right: calc(-100% * 4 / 46 - 9px);
+}
+
+.timeline-item:nth-child(even)::after {
+  left: calc(-100% * 4 / 46 - 9px);
+}
+
+/* connector arrow ชี้เข้าหา line */
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  top: 26px;
+  width: 0; height: 0;
+  border-style: solid;
+  z-index: 1;
+}
+
+.timeline-item:nth-child(odd)::before {
+  right: -10px;
+  border-width: 8px 0 8px 10px;
+  border-color: transparent transparent transparent var(--paper);
+  filter: drop-shadow(2px 0 1px rgba(60, 30, 0, 0.15));
+}
+
+.timeline-item:nth-child(even)::before {
+  left: -10px;
+  border-width: 8px 10px 8px 0;
+  border-color: transparent var(--paper) transparent transparent;
+  filter: drop-shadow(-2px 0 1px rgba(60, 30, 0, 0.15));
+}
+
+/* ============================================================
+   Era-themed backgrounds (gradient + SVG decorative pattern)
+   ============================================================ */
+
+/* base: SVG pattern เป็น overlay (opacity ต่ำ ใช้เป็นลายน้ำ) */
+.timeline-item .timeline-bg-pattern {
+  position: absolute;
+  inset: 0;
+  background-repeat: repeat;
+  background-size: 100px 100px;
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.timeline-item > * {
+  position: relative;
+  z-index: 1;     /* ทับ background pattern */
+}
+
+/* 🌌 Astronomical (Kali Yuga) — dark cosmos + stars */
+.timeline-astronomical {
+  background: linear-gradient(135deg, #1a0530 0%, #0a0218 60%, #1a0820 100%);
+  color: #fff8e7;
+  border-color: #6ec5ff;
+}
+.timeline-astronomical .timeline-year,
+.timeline-astronomical .timeline-title {
+  color: #ffd166;
+}
+.timeline-astronomical .timeline-desc { color: #f6ecd2; }
+.timeline-astronomical .timeline-bg-pattern {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><circle cx='10' cy='15' r='1' fill='%23fff'/><circle cx='30' cy='40' r='0.8' fill='%23fff'/><circle cx='65' cy='25' r='1.2' fill='%23fff'/><circle cx='80' cy='60' r='0.6' fill='%23fff'/><circle cx='15' cy='75' r='0.9' fill='%23fff'/><circle cx='50' cy='85' r='1' fill='%23fff'/><circle cx='90' cy='90' r='0.7' fill='%23fff'/><circle cx='45' cy='10' r='0.5' fill='%23fff'/></svg>");
+  opacity: 0.6;
+}
+
+/* 🪷 Buddhist (BCE 543) — lotus pattern */
+.timeline-buddhist {
+  background: linear-gradient(135deg, #fff4d2 0%, #ffe4a3 100%);
+  border-color: #d49100;
+}
+.timeline-buddhist .timeline-bg-pattern {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><g transform='translate(40 40)' fill='%23d49100'><path d='M0,-25 Q-8,-15 0,0 Q8,-15 0,-25'/><path d='M0,-25 Q-8,-15 0,0 Q8,-15 0,-25' transform='rotate(60)'/><path d='M0,-25 Q-8,-15 0,0 Q8,-15 0,-25' transform='rotate(120)'/><path d='M0,-25 Q-8,-15 0,0 Q8,-15 0,-25' transform='rotate(180)'/><path d='M0,-25 Q-8,-15 0,0 Q8,-15 0,-25' transform='rotate(240)'/><path d='M0,-25 Q-8,-15 0,0 Q8,-15 0,-25' transform='rotate(300)'/></g></svg>");
+  background-size: 80px 80px;
+}
+
+/* 📜 Era (CE 78, CE 638) — scroll/mandala */
+.timeline-era {
+  background: linear-gradient(135deg, #f6ecd2 0%, #e8c570 60%, #c9a24a 100%);
+  border-color: var(--gold-deep);
+}
+.timeline-era .timeline-bg-pattern {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90' viewBox='0 0 90 90'><g transform='translate(45 45)' fill='none' stroke='%238a6a1f' stroke-width='1.5'><circle r='32'/><circle r='22'/><circle r='12'/><circle r='4'/><line x1='-32' y1='0' x2='32' y2='0'/><line x1='0' y1='-32' x2='0' y2='32'/><line x1='-23' y1='-23' x2='23' y2='23'/><line x1='-23' y1='23' x2='23' y2='-23'/></g></svg>");
+  background-size: 90px 90px;
+}
+
+/* 👑 Historical (1782) — temple + royal */
+.timeline-historical {
+  background: linear-gradient(135deg, #fff8e6 0%, #f5e6b8 50%, #d4b556 100%);
+  border-color: var(--maroon);
+}
+.timeline-historical .timeline-bg-pattern {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><g fill='%236b0e1b' opacity='0.6'><path d='M50 20 L60 35 L55 35 L55 55 L45 55 L45 35 L40 35 Z'/><rect x='42' y='55' width='16' height='4'/><rect x='38' y='59' width='24' height='3'/><circle cx='50' cy='12' r='3'/><path d='M48 8 L50 14 L52 8 Z'/></g></svg>");
+  background-size: 100px 100px;
+}
+
+/* ✂️ Reform (1889, 1912, 1941) — gear/clock */
+.timeline-reform {
+  background: linear-gradient(135deg, #fde9c8 0%, #e8c570 50%, #b8336a 100%);
+  border-color: #b71c1c;
+  color: var(--maroon-deep);
+}
+.timeline-reform .timeline-title { color: var(--maroon-dark); }
+.timeline-reform .timeline-bg-pattern {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'><g transform='translate(40 40)' fill='%236b0e1b'><circle r='3'/><g><circle r='18' fill='none' stroke='%236b0e1b' stroke-width='1.5'/><line x1='0' y1='-22' x2='0' y2='-15' stroke='%236b0e1b' stroke-width='1.5'/><line x1='0' y1='22' x2='0' y2='15' stroke='%236b0e1b' stroke-width='1.5'/><line x1='-22' y1='0' x2='-15' y2='0' stroke='%236b0e1b' stroke-width='1.5'/><line x1='22' y1='0' x2='15' y2='0' stroke='%236b0e1b' stroke-width='1.5'/><line x1='-16' y1='-16' x2='-11' y2='-11' stroke='%236b0e1b' stroke-width='1.5'/><line x1='16' y1='16' x2='11' y2='11' stroke='%236b0e1b' stroke-width='1.5'/><line x1='-16' y1='16' x2='-11' y2='11' stroke='%236b0e1b' stroke-width='1.5'/><line x1='16' y1='-16' x2='11' y2='-11' stroke='%236b0e1b' stroke-width='1.5'/></g></g></svg>");
+  background-size: 80px 80px;
+}
+
+/* dot color ตามยุค */
+.timeline-astronomical::after { background: #6ec5ff; border-color: #1a0530; }
+.timeline-buddhist::after     { background: #d49100; border-color: var(--maroon); }
+.timeline-era::after          { background: var(--gold-bright); border-color: var(--gold-deep); }
+.timeline-historical::after   { background: var(--maroon); border-color: var(--gold-deep); }
+.timeline-reform::after       { background: #b8336a; border-color: #4a0712; }
+
+/* arrow color ตามยุค (match background) */
+.timeline-astronomical:nth-child(odd)::before  { border-left-color:  #0a0218; }
+.timeline-astronomical:nth-child(even)::before { border-right-color: #0a0218; }
+.timeline-buddhist:nth-child(odd)::before  { border-left-color:  #ffe4a3; }
+.timeline-buddhist:nth-child(even)::before { border-right-color: #ffe4a3; }
+.timeline-era:nth-child(odd)::before  { border-left-color:  #e8c570; }
+.timeline-era:nth-child(even)::before { border-right-color: #e8c570; }
+.timeline-historical:nth-child(odd)::before  { border-left-color:  #f5e6b8; }
+.timeline-historical:nth-child(even)::before { border-right-color: #f5e6b8; }
+.timeline-reform:nth-child(odd)::before  { border-left-color:  #e8c570; }
+.timeline-reform:nth-child(even)::before { border-right-color: #e8c570; }
+
+/* ============================================================
+   Timeline item internal layout
+   ============================================================ */
+
+/* item ที่มีภาพ: 2-column flex (content | photo) */
+.timeline-item.timeline-has-image {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.timeline-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.timeline-figure {
+  margin: 0;
+  flex-shrink: 0;
+  width: 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.timeline-photo-frame {
+  width: 100px;
+  height: 130px;
+  border: 3px solid var(--gold);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--cream);
+  box-shadow:
+    0 0 0 2px var(--maroon-dark),
+    0 4px 10px rgba(60, 30, 0, 0.35);
+  position: relative;
+}
+
+.timeline-photo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+/* corner ornaments บนกรอบรูป */
+.timeline-photo-frame::before,
+.timeline-photo-frame::after {
+  content: "";
+  position: absolute;
+  width: 12px; height: 12px;
+  border: 2px solid var(--gold-bright);
+  pointer-events: none;
+}
+.timeline-photo-frame::before {
+  top: -2px; left: -2px;
+  border-right: none;
+  border-bottom: none;
+}
+.timeline-photo-frame::after {
+  bottom: -2px; right: -2px;
+  border-left: none;
+  border-top: none;
+}
+
+.timeline-caption {
+  margin-top: 0.4rem;
+  text-align: center;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.timeline-caption-name {
+  display: block;
+  color: var(--maroon-dark);
+  font-weight: 600;
+}
+
+.timeline-caption-credit {
+  display: block;
+  color: var(--ink-soft);
+  font-style: italic;
+  font-size: 0.65rem;
+  margin-top: 2px;
+}
+
+/* dark theme cards (astronomical) override caption color */
+.timeline-astronomical .timeline-caption-name { color: #ffd166; }
+.timeline-astronomical .timeline-caption-credit { color: #f6ecd2; opacity: 0.7; }
+
+/* attribution footer ของ timeline */
+.timeline-attribution {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin: 1.25rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1.5px dashed var(--gold);
+}
+
+.timeline-attribution a {
+  color: var(--maroon-dark);
+  text-decoration: underline;
+}
+
+.timeline-icon {
+  font-size: 2rem;
+  text-align: center;
+  background: var(--cream);
+  border: 2px solid var(--gold);
+  border-radius: 50%;
+  width: 54px; height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 2px 6px rgba(60, 30, 0, 0.2);
+}
+
+.timeline-astronomical .timeline-icon {
+  background: rgba(255, 248, 231, 0.15);
+  border-color: #6ec5ff;
+}
+
+.timeline-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+  margin-bottom: 0.3rem;
+}
+
+.timeline-year {
+  font-weight: 700;
+  color: var(--maroon-dark);
+  font-size: 1rem;
+}
+
+.timeline-be {
+  background: var(--gold-bright);
+  color: var(--maroon-deep);
+  font-size: 0.78rem;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.timeline-astronomical .timeline-be {
+  background: #6ec5ff;
+  color: #0a0218;
+}
+
+.timeline-title {
+  margin: 0.2rem 0 0.4rem;
+  color: var(--maroon-dark);
+  font-size: 1.08rem;
+  font-family: "Kanit", "Sarabun", sans-serif;
+  font-weight: 700;
+}
+
+.timeline-desc {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+/* ============================================================
+   Mobile fallback — collapse เป็น 1 column
+   ============================================================ */
+
+@media (max-width: 700px) {
+  .timeline-list::before {
+    left: 24px;
+    transform: none;
+  }
+  .timeline-item {
+    width: calc(100% - 56px);
+    margin-left: 56px !important;
+    margin-right: 0 !important;
+  }
+  .timeline-item::after {
+    left: -46px !important;
+    right: auto !important;
+  }
+  .timeline-item::before {
+    left: -10px !important;
+    right: auto !important;
+    border-width: 8px 10px 8px 0 !important;
+    border-color: transparent var(--paper) transparent transparent !important;
+  }
+  /* per-era mobile arrow color */
+  .timeline-astronomical::before { border-right-color: #0a0218 !important; }
+  .timeline-buddhist::before     { border-right-color: #ffe4a3 !important; }
+  .timeline-era::before          { border-right-color: #e8c570 !important; }
+  .timeline-historical::before   { border-right-color: #f5e6b8 !important; }
+  .timeline-reform::before       { border-right-color: #e8c570 !important; }
+
+  /* item ที่มีภาพ: stack vertical (text บน, ภาพล่าง) */
+  .timeline-item.timeline-has-image {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .timeline-figure {
+    width: 100%;
+    align-items: flex-start;
+  }
+  .timeline-photo-frame {
+    width: 90px;
+    height: 115px;
+  }
+}
+
+/* ---------- Holy Days Reference ---------- */
+
+.holy-days-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.holy-day-card {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 0.6rem;
+  background: var(--paper);
+  border: 1.5px solid rgba(232, 197, 112, 0.6);
+  border-radius: 8px;
+  padding: 0.7rem 0.85rem;
+}
+
+.holy-icon {
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+.holy-body h4 {
+  margin: 0 0 0.25rem;
+  color: var(--maroon-dark);
+  font-size: 0.95rem;
+}
+
+.holy-lunar {
+  background: var(--cream);
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  padding: 1px 6px;
+  display: inline-block;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  margin-bottom: 0.35rem;
+}
+
+.holy-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+/* ---------- Mobile ---------- */
+
+@media (max-width: 600px) {
+  .calendar-page {
+    padding: 0.75rem 1rem 2rem;
+  }
+  .timeline-list::before {
+    left: 22px;
+  }
+  .timeline-item {
+    grid-template-columns: 44px 1fr;
+    gap: 0.6rem;
+    padding: 0.6rem 0.8rem;
+  }
+  .timeline-icon {
+    font-size: 1.5rem;
+    width: 40px; height: 40px;
+  }
+}

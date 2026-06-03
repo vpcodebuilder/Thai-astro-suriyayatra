@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>เทียบปฏิทิน — โหรไทยสุริยยาตร์</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/static/styles.css?v=20260603b" />
+</head>
+<body class="view-general">
+  <header class="site-header">
+    <div class="ornament">❀</div>
+    <h1>เทียบปฏิทิน</h1>
+    <p class="subtitle">จันทรคติ ⇄ สุริยคติ — ตามคัมภีร์สุริยยาตร์ไทย</p>
+    <div class="ornament">❀</div>
+  </header>
+
+  <nav class="nav-links">
+    <a href="/">ผูกดวงสุริยยาตร์</a>
+    <a href="/horathaynu">โหรทายหนู</a>
+    <a href="/calendar" class="active">เทียบปฏิทิน</a>
+    <a href="/about">เกี่ยวกับ{% if latest_version %} <span class="version-badge">v{{ latest_version }}</span>{% endif %}</a>
+  </nav>
+
+  <main class="calendar-page">
+    <!-- ==================== Converter Card ==================== -->
+    <section class="card calendar-converter">
+      <h2><span class="title-deco">✦</span> เทียบวัน <span class="title-deco">✦</span></h2>
+
+      <div class="calendar-tabs">
+        <button type="button" class="cal-tab-btn active" data-direction="solar_to_lunar">
+          ☀ สุริยคติ → จันทรคติ 🌙
+        </button>
+        <button type="button" class="cal-tab-btn" data-direction="lunar_to_solar">
+          🌙 จันทรคติ → สุริยคติ ☀
+        </button>
+      </div>
+
+      <!-- ===== Form: สุริยคติ → จันทรคติ ===== -->
+      <form id="form-solar" class="cal-form cal-form-active">
+        <input type="hidden" name="direction" value="solar_to_lunar"/>
+        <div class="cal-row">
+          <label>
+            <span>วันที่</span>
+            <input type="number" name="day" min="1" max="31"
+                   value="{{ form.day }}" required/>
+          </label>
+          <label>
+            <span>เดือน</span>
+            <select name="month" required>
+              {% for i in range(1, 13) %}
+                <option value="{{ i }}" {% if i == form.month %}selected{% endif %}>
+                  {{ i }} — {% if i == 1 %}มกราคม{% elif i == 2 %}กุมภาพันธ์
+                  {% elif i == 3 %}มีนาคม{% elif i == 4 %}เมษายน
+                  {% elif i == 5 %}พฤษภาคม{% elif i == 6 %}มิถุนายน
+                  {% elif i == 7 %}กรกฎาคม{% elif i == 8 %}สิงหาคม
+                  {% elif i == 9 %}กันยายน{% elif i == 10 %}ตุลาคม
+                  {% elif i == 11 %}พฤศจิกายน{% else %}ธันวาคม{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="cal-year-group">
+            <span>ปี</span>
+            <div class="cal-year-row">
+              <input type="number" name="be_year" min="-1000" max="9999"
+                     value="{{ form.be_year }}" required/>
+              <select name="era" class="cal-era-select">
+                <option value="be" selected>พ.ศ.</option>
+                <option value="ce">ค.ศ.</option>
+                <option value="cs">จ.ศ.</option>
+                <option value="ms">ม.ศ.</option>
+                <option value="rs">ร.ศ.</option>
+              </select>
+            </div>
+          </label>
+        </div>
+        <button type="submit" class="btn-primary">แปลง <span class="btn-arrow">›</span></button>
+      </form>
+
+      <!-- ===== Form: จันทรคติ → สุริยคติ ===== -->
+      <form id="form-lunar" class="cal-form">
+        <input type="hidden" name="direction" value="lunar_to_solar"/>
+        <div class="cal-row">
+          <label>
+            <span>ข้างขึ้น/แรม</span>
+            <select name="lunar_phase" required>
+              <option value="waxing" selected>ขึ้น</option>
+              <option value="waning">แรม</option>
+            </select>
+          </label>
+          <label>
+            <span>ค่ำ</span>
+            <input type="number" name="lunar_day" min="1" max="15"
+                   value="{{ form.lunar_day }}" required/>
+          </label>
+          <label>
+            <span>เดือน</span>
+            <select name="lunar_month" id="lunar-month-select" required>
+              {% for i in range(1, 13) %}
+                <option value="{{ i }}" {% if i == form.lunar_month %}selected{% endif %}>
+                  เดือน {{ i }}
+                </option>
+              {% endfor %}
+            </select>
+          </label>
+          <label id="intercalary-wrapper" class="cal-intercalary-wrapper" style="display:none">
+            <span>เดือน 8 หลัง?</span>
+            <div class="cal-intercalary-control">
+              <input type="checkbox" name="lunar_intercalary" id="lunar-intercalary" value="1"/>
+              <span class="cal-intercalary-hint">เฉพาะปีอธิกมาส (เดือน 8/8)</span>
+            </div>
+          </label>
+          <label class="cal-year-group">
+            <span>ปี</span>
+            <div class="cal-year-row">
+              <input type="number" name="be_year" min="-1000" max="9999"
+                     value="{{ form.be_year }}" required/>
+              <select name="era" class="cal-era-select">
+                <option value="be" selected>พ.ศ.</option>
+                <option value="ce">ค.ศ.</option>
+                <option value="cs">จ.ศ.</option>
+                <option value="ms">ม.ศ.</option>
+                <option value="rs">ร.ศ.</option>
+              </select>
+            </div>
+          </label>
+        </div>
+        <button type="submit" class="btn-primary">แปลง <span class="btn-arrow">›</span></button>
+      </form>
+
+      <p class="cal-note">
+        ⚠ สูตรสุริยยาตร์ตามคัมภีร์ไทย: พ.ศ. 1181-3000 (ค.ศ. 638-2457 · จ.ศ. 0-1819 · ม.ศ. 560-2379 · ร.ศ. 1-676)<br/>
+        🌌 พุทธกาล: พ.ศ. 544-1180 ใช้ Meeus algorithm (ประมาณ ±5-15 วัน — ศึกษาประวัติศาสตร์เท่านั้น)<br/>
+        วันสำคัญทางพุทธศาสนาอาจคลาดเคลื่อน ±1 วันจากปฏิทินทางการ
+        (สูตร approximation ของอวมาน/ดิถี)
+      </p>
+    </section>
+
+    <!-- ==================== Result Card ==================== -->
+    <section id="cal-result-section" class="card calendar-result" style="display:none">
+      <h2><span class="title-deco">📅</span> ผลการเทียบ <span class="title-deco">📅</span></h2>
+      <div id="cal-result-body"></div>
+    </section>
+
+    <!-- ==================== Error ==================== -->
+    <div id="cal-error" class="error" style="display:none"></div>
+
+    <!-- ==================== Timeline ==================== -->
+    <section class="card calendar-timeline">
+      <h2><span class="title-deco">📜</span> Timeline ปฏิทินไทย <span class="title-deco">📜</span></h2>
+      <p class="timeline-intro">
+        เหตุการณ์สำคัญในประวัติศาสตร์ปฏิทินไทย —
+        จากกาลียุค (3102 ปีก่อน ค.ศ.) จนถึงการรับสากล
+      </p>
+      <div class="timeline-list">
+        {% for ep in epochs %}
+          <div class="timeline-item timeline-{{ ep.type }} {% if ep.image %}timeline-has-image{% endif %}">
+            <div class="timeline-bg-pattern"></div>
+            <div class="timeline-content">
+              <div class="timeline-icon">{{ ep.icon }}</div>
+              <div class="timeline-head">
+                <span class="timeline-year">{{ ep.year_label }}</span>
+                {% if ep.be_year %}
+                  <span class="timeline-be">พ.ศ. {{ ep.be_year }}</span>
+                {% endif %}
+              </div>
+              <h3 class="timeline-title">{{ ep.title }}</h3>
+              <p class="timeline-desc">{{ ep.description }}</p>
+            </div>
+            {% if ep.image %}
+              <figure class="timeline-figure">
+                <div class="timeline-photo-frame">
+                  <img src="{{ ep.image }}" alt="{{ ep.image_caption }}" loading="lazy"/>
+                </div>
+                <figcaption class="timeline-caption">
+                  <span class="timeline-caption-name">{{ ep.image_caption }}</span>
+                  <span class="timeline-caption-credit">{{ ep.image_credit }}</span>
+                </figcaption>
+              </figure>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <p class="timeline-attribution">
+        📷 ภาพประวัติศาสตร์จาก
+        <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a>
+        เป็น Public Domain (ลิขสิทธิ์หมดอายุตามกฎหมายไทย พ.ร.บ.ลิขสิทธิ์ 2537)
+      </p>
+    </section>
+
+    <!-- ==================== Holy Days Reference ==================== -->
+    <section class="card calendar-holy-ref">
+      <h2><span class="title-deco">🪷</span> วันสำคัญทางพุทธศาสนา <span class="title-deco">🪷</span></h2>
+      <p class="cal-note">วันเหล่านี้ใช้ปฏิทินจันทรคติ (เลื่อนทุกปีในปฏิทินสุริยคติ)</p>
+      <div class="holy-days-grid">
+        {% for hd in holy_days %}
+          <div class="holy-day-card">
+            <div class="holy-icon">{{ hd.icon }}</div>
+            <div class="holy-body">
+              <h4>{{ hd.name }}</h4>
+              <div class="holy-lunar">
+                {{ 'ขึ้น' if hd.waxing else 'แรม' }} {{ hd.day }} ค่ำ
+                เดือน {{ hd.month }}
+              </div>
+              <p class="holy-desc">{{ hd.description }}</p>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>คำนวณตามคัมภีร์สุริยยาตร์ของไทย · port มาจาก Devtino.Astrology</p>
+  </footer>
+
+  <script>
+  (function () {
+    'use strict';
+
+    const WEEKDAY_NAMES_TH = ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
+
+    // ============ intercalary toggle (show only when month=8) ============
+    const monthSel = document.getElementById('lunar-month-select');
+    const intercWrap = document.getElementById('intercalary-wrapper');
+    const intercCb = document.getElementById('lunar-intercalary');
+    function syncIntercalary() {
+      const show = monthSel.value === '8';
+      intercWrap.style.display = show ? '' : 'none';
+      if (!show) intercCb.checked = false;
+    }
+    monthSel?.addEventListener('change', syncIntercalary);
+    syncIntercalary();
+
+    // ============ tab switching ============
+    const tabBtns = document.querySelectorAll('.cal-tab-btn');
+    const forms = document.querySelectorAll('.cal-form');
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const dir = btn.dataset.direction;
+        tabBtns.forEach(b => b.classList.toggle('active', b === btn));
+        forms.forEach(f => {
+          const formDir = f.querySelector('[name="direction"]').value;
+          f.classList.toggle('cal-form-active', formDir === dir);
+        });
+        // clear result
+        document.getElementById('cal-result-section').style.display = 'none';
+        document.getElementById('cal-error').style.display = 'none';
+      });
+    });
+
+    // ============ submit handler ============
+    forms.forEach(form => {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(form);
+        const errBox = document.getElementById('cal-error');
+        const resBox = document.getElementById('cal-result-section');
+        errBox.style.display = 'none';
+        try {
+          const res = await fetch('/calendar/convert', {
+            method: 'POST',
+            body: fd,
+          });
+          const data = await res.json();
+          if (!data.ok) {
+            errBox.textContent = data.error || 'เกิดข้อผิดพลาด';
+            errBox.style.display = 'block';
+            resBox.style.display = 'none';
+            return;
+          }
+          renderResults(data.matches);
+          resBox.style.display = 'block';
+        } catch (err) {
+          errBox.textContent = 'เชื่อมต่อไม่ได้ ลองอีกครั้ง';
+          errBox.style.display = 'block';
+        }
+      });
+    });
+
+    // ============ render results ============
+    function renderResults(matches) {
+      const body = document.getElementById('cal-result-body');
+      body.innerHTML = '';
+      if (matches.length > 1) {
+        const note = document.createElement('p');
+        note.className = 'cal-result-note';
+        note.innerHTML = `🔁 พบ ${matches.length} ผลลัพธ์ (อาจเป็นปีอธิกมาส)`;
+        body.appendChild(note);
+      }
+      matches.forEach((m, idx) => {
+        const card = document.createElement('div');
+        card.className = 'cal-result-item';
+        const warningChip = m.official_calendar_warning
+          ? `<span class="cal-official-warning" title="สูตร approximation อวมาน/ดิถีของสุริยยาตร์ อาจให้วันที่ต่างจากปฏิทินที่กรมการศาสนา/สำนักนายกฯ ประกาศ ±1 วัน — แนะนำ cross-check ก่อนใช้งานจริง">⚠ อาจคลาดเคลื่อน ±1 วันจากปฏิทินทางการ</span>`
+          : '';
+        const holyLabel = m.holy_day
+          ? `<div class="cal-result-holy">${m.holy_day.icon} <b>${m.holy_day.name}</b> — ${m.holy_day.description}${warningChip}</div>`
+          : '';
+        const nationalLabel = m.national_holiday
+          ? `<div class="cal-result-national cal-result-national-${m.national_holiday.category}">${m.national_holiday.icon} <b>${escapeHtml(m.national_holiday.name)}</b> — ${escapeHtml(m.national_holiday.description)}</div>`
+          : '';
+        const uposathaLabel = (!m.holy_day && m.is_uposatha)
+          ? `<div class="cal-result-uposatha">🙏 <b>วันพระ</b></div>`
+          : '';
+        const leapTag = m.lunar.is_leap_month_year
+          ? '<span class="cal-leap-tag">⚠ ปีอธิกมาส</span>'
+          : '';
+        const ancientTag = m.is_ancient
+          ? '<span class="cal-ancient-tag" title="ยุคพุทธกาล — ใช้ Meeus algorithm ประมาณการ ความแม่นยำ ±5-15 วัน">⚠ ประมาณ ±5-15 วัน</span>'
+          : '';
+        card.innerHTML = `
+          ${matches.length > 1 ? `<div class="cal-result-rank">ผลที่ ${idx+1}</div>` : ''}
+          <div class="cal-result-grid">
+            <div class="cal-result-col cal-result-solar">
+              <h3>☀ สุริยคติ</h3>
+              <div class="cal-result-big">${escapeHtml(m.solar_pretty)}</div>
+              <div class="cal-result-meta">
+                <div>ค.ศ.: <b>${m.ce_year}</b></div>
+                <div>ม.ศ.: <b>${m.ms_year}</b></div>
+                <div>ร.ศ.: <b>${m.rs_year > 0 ? m.rs_year : '—'}</b>${m.rs_year <= 0 ? ' <span class="cal-meta-hint">(ก่อนสถาปนากรุง)</span>' : ''}</div>
+                <div>Julian Day: <b>${m.julian_day.toLocaleString()}</b></div>
+                <div>ISO: <b>${m.solar_iso}</b></div>
+              </div>
+            </div>
+            <div class="cal-result-col cal-result-lunar">
+              <h3>🌙 จันทรคติ</h3>
+              <div class="cal-result-big">${escapeHtml(m.lunar.pretty_short)} ${leapTag} ${ancientTag}</div>
+              <div class="cal-result-meta">
+                <div>เดือน: <b>${escapeHtml(m.lunar.lunar_month_name)}</b> (${m.lunar.lunar_month})</div>
+                <div>ปีนักษัตร: <b>${escapeHtml(m.lunar.zodiac_year_name)}</b></div>
+                <div>จ.ศ.: <b>${m.lunar.cs_year}</b></div>
+              </div>
+            </div>
+          </div>
+          ${nationalLabel}
+          ${holyLabel}
+          ${uposathaLabel}
+        `;
+        body.appendChild(card);
+      });
+      // scroll into view
+      document.getElementById('cal-result-section').scrollIntoView({
+        behavior: 'smooth', block: 'start'
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+  })();
+  </script>
+</body>
+</html>

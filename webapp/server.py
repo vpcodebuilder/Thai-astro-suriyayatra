@@ -1191,6 +1191,7 @@ def _common_context(request: Request, **extra) -> dict:
         "provinces": PROVINCES,
         "bhava_meanings": BHAVA_MEANINGS,
         "latest_version": _latest_version(),
+        "usage_counts": _stat_get_counts(),
     }
     base.update(extra)
     return base
@@ -1207,6 +1208,7 @@ async def index(request: Request) -> HTMLResponse:
             form=_default_form(),
             error=None,
             scroll_target="",
+            today_widget=_today_widget(),
         ),
     )
 
@@ -1220,6 +1222,182 @@ async def about_page(request: Request) -> HTMLResponse:
         "about.html",
         {"request": request, "changelog": CHANGELOG, "latest_version": _latest_version()},
     )
+
+
+# ============================================================
+# เทียบปฏิทิน — จันทรคติ ⇄ สุริยคติ (Phase 1)
+# ============================================================
+from thai_astro.calendar_convert import (
+    solar_to_lunar as _solar_to_lunar,
+    lunar_to_solar as _lunar_to_solar,
+)
+from thai_astro.calendar import (
+    ce_to_mahasakarat as _ce_to_ms,
+    ce_to_ratanakosin as _ce_to_rs,
+    convert_year_to_ce as _year_to_ce,
+)
+from webapp.calendar_data import (
+    CALENDAR_EPOCHS, HOLY_DAYS, NATIONAL_HOLIDAYS,
+    find_holy_day, find_national_holiday,
+)
+from webapp.usage import (
+    increment as _stat_increment,
+    get_counts as _stat_get_counts,
+    FEATURE_SURIYAYATRA, FEATURE_HORATHAYNU_SET, FEATURE_HORATHAYNU_ASK,
+)
+
+
+def _pair_to_dict(pair) -> dict:
+    """แปลง SolarLunarPair → dict สำหรับ JSON response"""
+    lun = pair.lunar
+    holy = find_holy_day(
+        lun.lunar_month, lun.waxing, lun.day_in_phase,
+        is_leap_month_year=lun.is_leap_month_year,
+        is_intercalary_month=lun.is_intercalary_month,
+    )
+    national = find_national_holiday(pair.month, pair.day)
+    is_uposatha = lun.day_in_phase in (8, 15)
+    return {
+        "ce_year": pair.ce_year,
+        "be_year": pair.be_year,
+        "month": pair.month,
+        "day": pair.day,
+        "weekday_th": pair.weekday_th,
+        "weekday_idx": pair.weekday_idx,
+        "julian_day": pair.julian_day,
+        "solar_pretty": pair.solar_pretty,
+        "solar_iso": pair.solar_iso,
+        "lunar": {
+            "phase_name": lun.phase_name,
+            "waxing": lun.waxing,
+            "day_in_phase": lun.day_in_phase,
+            "lunar_month": lun.lunar_month,
+            "lunar_month_name": lun.lunar_month_name,
+            "zodiac_year_name": lun.zodiac_year_name,
+            "is_leap_month_year": lun.is_leap_month_year,
+            "is_intercalary_month": lun.is_intercalary_month,
+            "cs_year": lun.cs_year,
+            "be_year_lunar": lun.be_year_lunar,
+            "pretty": lun.pretty,
+            "pretty_short": lun.pretty_short,
+        },
+        "holy_day": holy,            # None ถ้าไม่ใช่วันสำคัญ
+        "is_uposatha": is_uposatha,  # วันพระ
+        "national_holiday": national,  # วันสำคัญทางราชการ (None ถ้าไม่ใช่)
+        "ms_year": _ce_to_ms(pair.ce_year),   # ม.ศ.
+        "rs_year": _ce_to_rs(pair.ce_year),   # ร.ศ. (อาจติดลบสำหรับปีก่อน 1782)
+        "is_ancient": pair.be_year < 1181,    # ยุคพุทธกาล (ใช้ Meeus ประมาณ)
+        # warning ว่าผลลัพธ์อาจคลาดเคลื่อน ±1 วันจากปฏิทินทางการ
+        # (สูตร approximation อวมาน/ดิถี — ดู Known Limitations Phase 1)
+        "official_calendar_warning": holy is not None,
+    }
+
+
+def _today_widget() -> dict:
+    """วันนี้ — สุริยคติ + จันทรคติ + วันสำคัญ (สำหรับ widget บนหน้าต่างๆ)"""
+    now = datetime.now(THAI_TZ)
+    try:
+        pair = _solar_to_lunar(now.year + 543, now.month, now.day)
+        lun = pair.lunar
+        holy = find_holy_day(
+            lun.lunar_month, lun.waxing, lun.day_in_phase,
+            is_leap_month_year=lun.is_leap_month_year,
+            is_intercalary_month=lun.is_intercalary_month,
+        )
+        national = find_national_holiday(now.month, now.day)
+        is_uposatha = lun.day_in_phase in (8, 15)
+        return {
+            "solar_pretty": pair.solar_pretty,
+            "solar_iso": pair.solar_iso,
+            "lunar_pretty_short": lun.pretty_short,
+            "zodiac_year_name": lun.zodiac_year_name,
+            "holy_day": holy,
+            "national_holiday": national,
+            "is_uposatha": is_uposatha and holy is None,
+        }
+    except Exception:
+        return None
+
+
+@app.get("/calendar", response_class=HTMLResponse)
+async def calendar_page(request: Request) -> HTMLResponse:
+    """หน้าเทียบปฏิทิน"""
+    now = datetime.now(THAI_TZ)
+    default_form = {
+        "direction": "solar_to_lunar",
+        "be_year": now.year + 543,
+        "month": now.month,
+        "day": now.day,
+        "lunar_month": 6,
+        "lunar_phase": "waxing",
+        "lunar_day": 15,
+    }
+    return templates.TemplateResponse(
+        request,
+        "calendar.html",
+        _common_context(
+            request,
+            form=default_form,
+            result=None,
+            error=None,
+            epochs=CALENDAR_EPOCHS,
+            holy_days=HOLY_DAYS,
+        ),
+    )
+
+
+@app.post("/calendar/convert")
+async def calendar_convert(
+    request: Request,
+    direction: str = Form("solar_to_lunar"),
+    be_year: int = Form(2567),
+    era: str = Form("be"),  # be/ce/ms/cs/rs — ศักราชของ input year
+    month: int = Form(1),
+    day: int = Form(1),
+    lunar_month: int = Form(6),
+    lunar_phase: str = Form("waxing"),
+    lunar_day: int = Form(15),
+    lunar_intercalary: str = Form(""),  # "1" = เดือน 8 หลัง (intercalary)
+) -> JSONResponse:
+    """API: แปลงปฏิทิน (JSON response) — รองรับ พ.ศ./ค.ศ./ม.ศ./จ.ศ./ร.ศ."""
+    try:
+        # แปลง input year → พ.ศ. (ที่ underlying function ใช้)
+        try:
+            ce_year = _year_to_ce(be_year, era)
+            be_year_normalized = ce_year + 543
+        except ValueError as e:
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+
+        if direction == "solar_to_lunar":
+            pair = _solar_to_lunar(be_year_normalized, month, day)
+            return JSONResponse({
+                "ok": True,
+                "direction": direction,
+                "matches": [_pair_to_dict(pair)],
+            })
+        elif direction == "lunar_to_solar":
+            waxing = (lunar_phase == "waxing")
+            intercalary = (lunar_intercalary == "1")
+            matches = _lunar_to_solar(
+                be_year_normalized, lunar_month, waxing, lunar_day,
+                is_intercalary_month=intercalary,
+            )
+            return JSONResponse({
+                "ok": True,
+                "direction": direction,
+                "matches": [_pair_to_dict(m) for m in matches],
+            })
+        else:
+            return JSONResponse(
+                {"ok": False, "error": f"ทิศทาง '{direction}' ไม่ถูกต้อง"},
+                status_code=400,
+            )
+    except ValueError as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+    except Exception as e:
+        return JSONResponse(
+            {"ok": False, "error": f"เกิดข้อผิดพลาด: {e}"}, status_code=500
+        )
 
 
 def _format_thai_date_ce(year: int, month: int, day: int) -> str:
@@ -1288,6 +1466,8 @@ async def calculate(
             transit_chart=transit_chart,
             transit_meta=transit_meta,
         )
+        # ✓ chart computed successfully → bump usage stat (ไม่เก็บข้อมูลดวง)
+        _stat_increment(FEATURE_SURIYAYATRA)
     except (ValueError, IndexError) as e:
         error = f"กรอกข้อมูลไม่ถูกต้อง: {e}"
 
@@ -1522,6 +1702,7 @@ async def horathaynu_form(request: Request) -> HTMLResponse:
             "result": None,
             "error": None,
             "latest_version": _latest_version(),
+            "usage_counts": _stat_get_counts(),
         },
     )
 
@@ -1553,6 +1734,7 @@ async def horathaynu_calculate(
     result = None
     try:
         result = _compute_horathaynu_chart(date_th, time)
+        _stat_increment(FEATURE_HORATHAYNU_SET)
     except (ValueError, IndexError) as e:
         error = f"กรอกข้อมูลไม่ถูกต้อง: {e}"
 
@@ -1560,7 +1742,8 @@ async def horathaynu_calculate(
         request,
         "horathaynu.html",
         {"request": request, "form": form, "result": result, "error": error,
-         "latest_version": _latest_version()},
+         "latest_version": _latest_version(),
+         "usage_counts": _stat_get_counts()},
     )
 
 
@@ -1699,6 +1882,7 @@ async def horathaynu_ask(
         day, yam_index = datetime_to_day_yam(dt)
         chart = horathaynu_cast(day, yam_index)
         prophecy = _horathaynu_prophesy(q, chart)
+        _stat_increment(FEATURE_HORATHAYNU_ASK)
     except (ValueError, IndexError) as e:
         return JSONResponse({"error": f"กรอกข้อมูลไม่ถูกต้อง: {e}"}, status_code=400)
 

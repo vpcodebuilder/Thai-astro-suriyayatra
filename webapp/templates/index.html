@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260601h" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260603a" />
 </head>
 <body class="view-general" data-scroll-target="{% if scroll_target == '1' %}transit{% endif %}">
   <header class="site-header">
@@ -23,8 +23,26 @@
   <nav class="nav-links">
     <a href="/" class="active">ผูกดวงสุริยยาตร์</a>
     <a href="/horathaynu">โหรทายหนู</a>
+    <a href="/calendar">เทียบปฏิทิน</a>
     <a href="/about">เกี่ยวกับ{% if latest_version %} <span class="version-badge">v{{ latest_version }}</span>{% endif %}</a>
   </nav>
+
+  {% if today_widget %}
+  <a href="/calendar" class="today-widget" title="คลิกเพื่อเปิดเมนูเทียบปฏิทิน">
+    <span class="today-widget-label">📅 วันนี้</span>
+    <span class="today-widget-solar">{{ today_widget.solar_pretty }}</span>
+    <span class="today-widget-sep">·</span>
+    <span class="today-widget-lunar">🌙 {{ today_widget.lunar_pretty_short }}</span>
+    {% if today_widget.national_holiday %}
+      <span class="today-widget-national">{{ today_widget.national_holiday.icon }} {{ today_widget.national_holiday.name }}</span>
+    {% endif %}
+    {% if today_widget.holy_day %}
+      <span class="today-widget-holy">{{ today_widget.holy_day.icon }} {{ today_widget.holy_day.name }}</span>
+    {% elif today_widget.is_uposatha %}
+      <span class="today-widget-uposatha">🙏 วันพระ</span>
+    {% endif %}
+  </a>
+  {% endif %}
 
   <main class="container {% if result %}has-result{% endif %}">
 
@@ -107,6 +125,13 @@
           <button type="submit" class="btn-primary">
             ผูกดวง <span class="btn-arrow">›</span>
           </button>
+          {% if usage_counts and usage_counts.get('suriyayatra_chart') %}
+          <p class="usage-stat">
+            ✦ มีผู้ผูกดวงสุริยยาตร์แล้ว
+            <b>{{ "{:,}".format(usage_counts.get('suriyayatra_chart', 0)) }}</b>
+            ครั้ง
+          </p>
+          {% endif %}
         </form>
       </div>
     </section>

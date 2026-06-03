@@ -12,6 +12,99 @@
 
 CHANGELOG = [
     {
+        "version": "2026.06.03-a",
+        "date": "2026-06-03",
+        "title": "ปฏิทินครบรูป — DB + ปีอธิกมาสจริง + ยุคพุทธกาล + วันสำคัญทางราชการ + counter",
+        "highlights": [
+            "ย้าย calendar data → PostgreSQL/SQLite (SQLAlchemy + Alembic)",
+            "ตารางอธิกมาสจริง 401 ปี (BE 2300-2700) จาก myhora.com — แก้ off-by-1 เดือน + เดือน 8 หลัง (8/8)",
+            "รองรับ ม.ศ. / ร.ศ. input + แสดง 5 ศักราชในผลลัพธ์",
+            "ยุคพุทธกาล (พ.ศ. 544-1180) ผ่าน Meeus algorithm (±5-15 วัน)",
+            "20 วันสำคัญทางราชการ (จักรี, รัฐธรรมนูญ, สงกรานต์ ฯลฯ)",
+            "Auto-detect today widget บนหน้าแรก + national/holy day chip",
+            "Usage counter: ผูกดวง / โหรทายหนู (ไม่เก็บข้อมูลดวง)",
+            "Sukhothai/Ayutthaya/เสียกรุง เพิ่มใน Timeline",
+        ],
+        "details": [
+            {
+                "category": "เพิ่ม",
+                "items": [
+                    "webapp/db.py + models.py + alembic/ — SQLAlchemy infrastructure, DATABASE_URL pattern",
+                    "5 tables: calendar_epochs, holy_days, national_holidays, adhikamasa_years, usage_stats",
+                    "scripts/scrape_adhikamasa.py — ดึงปีอธิกมาส/อธิกวารจาก myhora.com (มี title-check กัน redirect ปีที่ไม่รองรับ)",
+                    "scripts/import_adhikamasa.py — upsert ลง DB (source='myhora')",
+                    "thai_astro/ancient_lunar.py — Meeus new-moon algorithm + compute_ancient_lunar_date()",
+                    "thai_astro/calendar.py: ce_to_ratanakosin() + convert_year_to_ce(year, era)",
+                    "เลือก era (พ.ศ./ค.ศ./จ.ศ./ม.ศ./ร.ศ.) ในฟอร์มเทียบปฏิทิน",
+                    "Checkbox \"เดือน 8 หลัง\" (intercalary) ในฟอร์ม lunar→solar — โผล่เมื่อเลือกเดือน 8 เท่านั้น",
+                    "20 วันสำคัญทางราชการใน calendar_data: 6 categories (royal/national/tradition/memorial/holiday/international)",
+                    "Today widget บนหน้าแรก: \"วันนี้ + จันทรคติ + ปีนักษัตร + holy/national chip\" คลิกไป /calendar",
+                    "usage_stats counter: 3 features (suriyayatra_chart, horathaynu_chart, horathaynu_ask)",
+                    "3 Timeline entries ใหม่: สุโขทัย (1238), อยุธยา (1351), เสียกรุงครั้งที่ 2 (1767)",
+                    "Round-trip warning chip บนวันสำคัญ \"⚠ อาจคลาดเคลื่อน ±1 วันจากปฏิทินทางการ\"",
+                    "Ancient mode tag \"⚠ ประมาณ ±5-15 วัน\" สำหรับยุคพุทธกาล",
+                    "Procfile release command: alembic upgrade head + seed",
+                ],
+            },
+            {
+                "category": "แก้",
+                "items": [
+                    "lunar.py: is_leap_month_year() query DB ก่อน fallback formula (port จาก Devtino)",
+                    "lunar.py: shift logic ปีอธิกมาส — base 5,6,7 → 6,7,8 / base 8 → 8 หลัง (intercalary flag)",
+                    "lunar.py: เพิ่ม is_intercalary_month field ใน LunarDate dataclass",
+                    "calendar_data: find_holy_day() ใช้กฎ adhikamasa — reverse shift ก่อน lookup",
+                    "calendar_convert: lunar_to_solar() รับ is_intercalary_month + error message ฉลาดขึ้น (\"ปีอาจไม่ใช่ปีอธิกมาส\")",
+                    "calendar_convert: รองรับ พ.ศ. 544-1180 (auto-route ไปยัง Meeus)",
+                    "Timeline dot alignment: -4% → -100%×4/46 (% offset ของ item width ไม่ใช่ container)",
+                    "Description ของ จอมพล ป. — เปลี่ยน \"ทรงนำเอา\" → \"ประกาศให้ใช้\" (ราชาศัพท์ผิด ใช้เฉพาะเชื้อพระวงศ์)",
+                ],
+            },
+            {
+                "category": "ปรับ",
+                "items": [
+                    "calendar_data.py: hardcoded lists → query functions (lazy load wrapper เผื่อ caller เก่า)",
+                    "requirements.txt: + sqlalchemy>=2.0, alembic>=1.13, psycopg2-binary>=2.9",
+                    ".gitignore: + local.db, .env, *.sqlite",
+                ],
+            },
+        ],
+    },
+    {
+        "version": "2026.06.02-a",
+        "date": "2026-06-02",
+        "title": "เมนูใหม่ \"เทียบปฏิทิน\" + Timeline ประวัติศาสตร์",
+        "highlights": [
+            "เมนูใหม่: เทียบปฏิทิน — จันทรคติ ⇄ สุริยคติ (2-way conversion)",
+            "Timeline ประวัติศาสตร์ปฏิทินไทย 8 ยุค พร้อมภาพประวัติศาสตร์",
+            "ภาพพระมหากษัตริย์ + จอมพล ป. (Public Domain จาก Wikimedia Commons)",
+            "Theme background ตามยุค (cosmos/lotus/mandala/temple/gear)",
+            "วันสำคัญทางพุทธศาสนา 6 วัน + Holy day detection",
+        ],
+        "details": [
+            {
+                "category": "เพิ่ม",
+                "items": [
+                    "หน้า /calendar — Tab 1: สุริยคติ→จันทรคติ + Tab 2: จันทรคติ→สุริยคติ",
+                    "thai_astro/calendar_convert.py — solar_to_lunar() + lunar_to_solar() (search-based 2-year window)",
+                    "webapp/calendar_data.py — 8 epochs + 6 buddhist holy days (hardcoded; Phase 2 จะย้าย DB)",
+                    "Timeline 2-column alternating (odd ซ้าย, even ขวา) + เส้นกลางแนวตั้ง gradient",
+                    "Dot connectors + SVG decorative patterns ตามยุค (cosmos/lotus/mandala/crown/gear)",
+                    "ภาพประวัติศาสตร์ 4 ภาพ (PD): ร.1 (1782), ร.5 (1889), ร.6 (1912), จอมพล ป. (1941)",
+                    "Photo frame ทอง 100×130px + caption + license credit + ornament corners",
+                    "Holy day detection: แสดง 🪷 badge เมื่อตรงวันสำคัญ (วิสาขบูชา, มาฆบูชา, ลอยกระทง ฯลฯ)",
+                    "วันพระ marker (ขึ้น/แรม 8, 15 ค่ำ)",
+                ],
+            },
+            {
+                "category": "ปรับ",
+                "items": [
+                    "Nav link เพิ่ม \"เทียบปฏิทิน\" ในทุก template (index/horathaynu/about)",
+                    "Cache version → v=20260601j",
+                ],
+            },
+        ],
+    },
+    {
         "version": "2026.06.01-e",
         "date": "2026-06-01",
         "title": "Orbit View + Checkbox ราศี/ภพ + UI polish",

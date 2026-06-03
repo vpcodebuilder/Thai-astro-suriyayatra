@@ -70,6 +70,8 @@ class LunarDate:
     pretty: str                 # "ขึ้น 11 ค่ำ เดือน 9 (เก้า) ปีมะแม จ.ศ. 1341"
     pretty_short: str           # "ขึ้น 11 ค่ำ เดือน 9 ปีมะแม"
 
+    is_intercalary_month: bool = False  # เดือน 8 หลัง (8/8) — เฉพาะปีอธิกมาส
+
 
 # ============================================================
 # Computation
@@ -109,12 +111,39 @@ def sun_rasi_to_lunar_month_approx(sun_rasi: int) -> int:
     return ((sun_rasi + 4) % 12) + 1
 
 
-def is_leap_month_year(cs_year: int) -> bool:
-    """ปีอธิกมาสหรือไม่ — port จาก ThaiLunarYear.cs ของ Devtino
-        GrateYear = cs_year + 560
-        value = (GrateYear - 0.45222) % 2.7118886
-        IsLeapMonth = (value < 1)
+def _lookup_db_year_type(cs_year: int) -> str | None:
+    """หาประเภทปีจาก DB (adhikamasa_years)
+    คืน 'adhikamasa' | 'adhikavara' | 'both' | 'normal' หรือ None ถ้าไม่มี
+    Best-effort: ถ้า DB ไม่พร้อม/error → None (caller จะ fallback formula)
     """
+    try:
+        # Late import เพื่อเลี่ยง circular dep และ optional DB
+        from webapp.db import SessionLocal
+        from webapp.models import AdhikamasaYear
+        s = SessionLocal()
+        try:
+            row = s.query(AdhikamasaYear).filter_by(cs_year=cs_year).first()
+            return row.type if row else None
+        finally:
+            s.close()
+    except Exception:
+        return None
+
+
+def is_leap_month_year(cs_year: int) -> bool:
+    """ปีอธิกมาสหรือไม่
+    ลำดับการตัดสิน:
+        1. ถ้ามี entry ใน adhikamasa_years (DB) → ใช้ค่านั้น (authoritative)
+        2. ถ้าไม่มี → fallback formula port จาก ThaiLunarYear.cs ของ Devtino
+            GrateYear = cs_year + 560
+            value = (GrateYear - 0.45222) % 2.7118886
+            IsLeapMonth = (value < 1)
+    """
+    db_type = _lookup_db_year_type(cs_year)
+    if db_type is not None:
+        return db_type in ("adhikamasa", "both")
+
+    # fallback algorithm
     grate_year = cs_year + 560
     value = (grate_year - 0.45222) % 2.7118886
     return value < 1.0
@@ -141,8 +170,7 @@ def compute_lunar_date(
     waxing, phase_name, day_in_phase = tithi_to_phase_day(tithi)
 
     # ใช้สูตรใหม่: count synodic months ตั้งแต่เถลิงศก
-    lunar_month = lunar_month_from_surathin(desire.surathin.total_days)
-    lunar_month_name = LUNAR_MONTH_NAMES[lunar_month]
+    base_month = lunar_month_from_surathin(desire.surathin.total_days)
 
     # ปี: ใช้ จ.ศ. ของเถลิงศกที่ใช้ (ปีจันทรคติเริ่มที่เถลิงศก)
     cs_year = desire.surathin.thaloengsok_cs_year
@@ -151,18 +179,39 @@ def compute_lunar_date(
 
     leap = is_leap_month_year(cs_year)
 
+    # Adhikamasa shift (Phase 2 — แก้ off-by-1 ของปีอธิกมาส)
+    # ปีอธิกมาสมีเดือน 13 เดือน — แทรก "เดือน 8 หลัง" (8/8) ระหว่าง 8 และ 9
+    # ปฏิทินทางการของกรมการศาสนาใช้กฎ:
+    #   - base_month 5,6,7 ในช่วงครึ่งปีต้นของอธิกมาส → shift +1 (กลายเป็น 6,7,8)
+    #   - base_month 8 → เป็น "เดือน 8 หลัง" (เลขยังเป็น 8 แต่ flag intercalary)
+    #   - base_month 9-12, 1-4 → ไม่ shift
+    # ตัวอย่าง: วิสาขบูชา = ขึ้น 15 ค่ำ เดือน 7 (base 6+1) / อาสาฬหบูชา = ขึ้น 15 ค่ำ เดือน 8 หลัง (base 8)
+    is_intercalary = False
+    if leap:
+        if base_month in (5, 6, 7):
+            lunar_month = base_month + 1
+        elif base_month == 8:
+            lunar_month = 8
+            is_intercalary = True
+        else:
+            lunar_month = base_month
+    else:
+        lunar_month = base_month
+    lunar_month_name = LUNAR_MONTH_NAMES[lunar_month]
+    intercalary_suffix = " หลัง" if is_intercalary else ""
+
     z_idx = zodiac_year_index(ce_year_lunar)
     z_name = ZODIAC_YEARS[z_idx]
     z_animal = ZODIAC_ANIMALS_EN[z_idx]
 
     # pretty strings
     pretty_short = (
-        f"{phase_name} {day_in_phase} ค่ำ เดือน {lunar_month} ปี{z_name}"
+        f"{phase_name} {day_in_phase} ค่ำ เดือน {lunar_month}{intercalary_suffix} ปี{z_name}"
     )
     leap_tag = " (อธิกมาส)" if leap else ""
     pretty = (
         f"{phase_name} {day_in_phase} ค่ำ "
-        f"เดือน {lunar_month} ({lunar_month_name}){leap_tag} "
+        f"เดือน {lunar_month}{intercalary_suffix} ({lunar_month_name}){leap_tag} "
         f"ปี{z_name} จ.ศ. {cs_year}"
     )
 
@@ -175,6 +224,7 @@ def compute_lunar_date(
         lunar_month=lunar_month,
         lunar_month_name=lunar_month_name,
         is_leap_month_year=leap,
+        is_intercalary_month=is_intercalary,
         zodiac_year_index=z_idx,
         zodiac_year_name=z_name,
         zodiac_animal_en=z_animal,

@@ -32,3 +32,13 @@ desktop.ini
 
 # Devtino.Astrology — C# reference ของบุคคลที่สาม ไม่ redistribute
 Devtino.Astrology/
+
+# SQLite local dev DB (Railway prod ใช้ PostgreSQL จาก DATABASE_URL)
+local.db
+local.db-journal
+*.sqlite
+*.sqlite-journal
+
+# env files
+.env
+.env.local
