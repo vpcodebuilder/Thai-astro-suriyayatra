@@ -59,6 +59,32 @@ app = FastAPI(title="ผูกดวงโหราศาสตร์ไทย")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+
+# ============================================================
+# Startup: auto-migrate + seed (resilient — เผื่อ Procfile release ไม่ run)
+# ============================================================
+@app.on_event("startup")
+async def _init_db_safely() -> None:
+    """รัน alembic migration + seed ตอน startup แบบ best-effort
+    ใช้กรณี Railway/Heroku ไม่ honor Procfile release หรือ SQLite ephemeral
+    """
+    try:
+        from alembic.config import Config
+        from alembic import command
+        cfg = Config(str(BASE_DIR.parent / "alembic.ini"))
+        command.upgrade(cfg, "head")
+        print("[startup] alembic upgrade head: ok", flush=True)
+    except Exception as e:
+        print(f"[startup] alembic upgrade failed: {e}", flush=True)
+
+    try:
+        from webapp.seed import main as seed_main
+        seed_main()
+    except SystemExit:
+        pass  # seed_main calls sys.exit on missing file path; safe to ignore
+    except Exception as e:
+        print(f"[startup] seed failed: {e}", flush=True)
+
 # เรียงจังหวัด: กรุงเทพฯ ก่อน แล้วเรียงตามตัวอักษร
 PROVINCES = ["กรุงเทพมหานคร"] + sorted(
     [p for p in LOCALITY_ADJUST_SECONDS if p != "กรุงเทพมหานคร"]

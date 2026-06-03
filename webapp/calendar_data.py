@@ -17,11 +17,15 @@ from webapp.models import CalendarEpoch, HolyDay, NationalHoliday
 # Calendar Epochs
 # ============================================================
 def get_calendar_epochs() -> list[dict]:
-    """ดึง timeline events ทั้งหมด เรียงตาม sort_order"""
+    """ดึง timeline events ทั้งหมด เรียงตาม sort_order
+    Fail-safe: ถ้า DB error → []
+    """
     s = SessionLocal()
     try:
         rows = s.query(CalendarEpoch).order_by(CalendarEpoch.sort_order).all()
         return [r.to_dict() for r in rows]
+    except Exception:
+        return []
     finally:
         s.close()
 
@@ -34,6 +38,8 @@ def get_holy_days() -> list[dict]:
     try:
         rows = s.query(HolyDay).order_by(HolyDay.month, HolyDay.waxing.desc(), HolyDay.day).all()
         return [r.to_dict() for r in rows]
+    except Exception:
+        return []
     finally:
         s.close()
 
@@ -79,6 +85,8 @@ def find_holy_day(
             .first()
         )
         return row.to_dict() if row else None
+    except Exception:
+        return None
     finally:
         s.close()
 
@@ -98,6 +106,8 @@ def get_national_holidays() -> list[dict]:
             NationalHoliday.month, NationalHoliday.day
         ).all()
         return [r.to_dict() for r in rows]
+    except Exception:
+        return []
     finally:
         s.close()
 
@@ -112,6 +122,8 @@ def find_national_holiday(month: int, day: int) -> Optional[dict]:
             .first()
         )
         return row.to_dict() if row else None
+    except Exception:
+        return None
     finally:
         s.close()
 

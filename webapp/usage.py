@@ -49,10 +49,14 @@ def increment(feature: str) -> None:
 
 
 def get_counts() -> dict[str, int]:
-    """คืน dict {feature: count} สำหรับทุก feature ที่มี"""
+    """คืน dict {feature: count} สำหรับทุก feature ที่มี
+    Fail-safe: ถ้า DB error (เช่น table ยังไม่ migrate) → {}
+    """
     s = SessionLocal()
     try:
         rows = s.query(UsageStat).all()
         return {r.feature: r.count for r in rows}
+    except Exception:
+        return {}
     finally:
         s.close()
