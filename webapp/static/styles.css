@@ -3233,7 +3233,323 @@ body.view-student .view-general { display: none !important; }
 }
 
 /* ===================================================================
+   Timeline — Cinematic Scene Layout (13 scenes, full-width hero blocks)
+   เส้นเวลาสีทองเชื่อมทุก scene · โทนสีเปลี่ยนตามยุค
+   =================================================================== */
+
+.calendar-timeline-cinematic {
+  margin: 2rem 0 1.5rem;
+  position: relative;
+}
+.calendar-timeline-cinematic .cinema-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding: 1.2rem 1rem;
+  background: linear-gradient(135deg, rgba(40, 10, 15, 0.92) 0%, rgba(15, 5, 5, 0.95) 100%);
+  border: 1px solid rgba(232, 197, 112, 0.5);
+  border-radius: 12px;
+  box-shadow:
+    0 0 24px rgba(232, 197, 112, 0.15),
+    inset 0 0 0 1px rgba(255, 215, 0, 0.15);
+}
+.calendar-timeline-cinematic .cinema-header h2 {
+  color: var(--gold-bright);
+  font-family: 'Kanit', sans-serif;
+  font-size: 1.8rem;
+  margin: 0 0 0.4rem;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+.calendar-timeline-cinematic .timeline-intro {
+  color: #fff8e6;
+  font-style: italic;
+  font-size: 0.95rem;
+  max-width: 720px;
+  margin: 0 auto;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* ---- Scene container ---- */
+.timeline-scenes {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+/* ---- Individual scene ---- */
+.scene {
+  position: relative;
+  overflow: hidden;
+  min-height: 320px;
+  display: flex;
+  align-items: stretch;
+  background: #1a0f08;
+  border-top: 1px solid rgba(232, 197, 112, 0.3);
+  border-bottom: 1px solid rgba(232, 197, 112, 0.3);
+}
+.scene:first-child { border-top: 2px solid var(--gold); }
+.scene:last-child { border-bottom: 2px solid var(--gold); }
+
+.scene-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+  transition: transform 0.6s ease;
+}
+.scene:hover .scene-bg {
+  transform: scale(1.04);
+}
+.scene-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(10, 5, 0, 0.85) 0%,
+    rgba(10, 5, 0, 0.65) 25%,
+    rgba(10, 5, 0, 0.35) 60%,
+    rgba(10, 5, 0, 0.55) 100%
+  );
+  z-index: 1;
+  pointer-events: none;
+}
+
+.scene-content {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(180px, 280px) 1fr;
+  gap: 1.5rem;
+  padding: 1.6rem 2rem;
+  width: 100%;
+  align-items: center;
+}
+
+/* ---- Year block (left) ---- */
+.scene-year-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: flex-start;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+.scene-year-big {
+  font-family: 'Kanit', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--gold-bright);
+  letter-spacing: 0.5px;
+}
+.scene-be {
+  display: inline-block;
+  padding: 2px 10px;
+  background: rgba(232, 197, 112, 0.25);
+  border: 1px solid rgba(232, 197, 112, 0.6);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  color: #fff8e6;
+  font-weight: 600;
+}
+
+/* ---- Body (center) ---- */
+.scene-body {
+  color: #fff8e6;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+.scene-title {
+  font-family: 'Kanit', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0 0 0.6rem;
+  color: #fff8e6;
+  line-height: 1.3;
+}
+.scene-desc {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: rgba(255, 248, 230, 0.92);
+  margin: 0 0 0.6rem;
+  max-width: 740px;
+}
+.scene-caption {
+  margin: 0;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: rgba(232, 197, 112, 0.85);
+  border-top: 1px solid rgba(232, 197, 112, 0.25);
+  padding-top: 0.4rem;
+}
+.scene-caption-credit {
+  opacity: 0.7;
+}
+
+/* ---- Gold glowing connector line ---- */
+.scene-connector {
+  position: absolute;
+  left: 50%;
+  bottom: -1px;
+  width: 4px;
+  height: 30px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 215, 0, 0) 0%,
+    var(--gold-bright) 30%,
+    var(--gold) 70%,
+    rgba(255, 215, 0, 0) 100%
+  );
+  box-shadow:
+    0 0 12px rgba(255, 215, 0, 0.8),
+    0 0 24px rgba(255, 215, 0, 0.5);
+  z-index: 3;
+  pointer-events: none;
+}
+.scene:last-child .scene-connector { display: none; }
+
+/* ============================================================
+   Era-themed accent colors per scene (border + glow)
+   ============================================================ */
+/* SCENE 1, 4 — อินเดียโบราณ น้ำเงินทอง */
+.scene-era-astronomical .scene-year-big {
+  color: #ffd700;
+  background: linear-gradient(135deg, #ffd700 0%, #a0c4ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.scene-era-astronomical .scene-overlay {
+  background: linear-gradient(
+    90deg,
+    rgba(5, 10, 30, 0.85) 0%,
+    rgba(5, 10, 30, 0.65) 25%,
+    rgba(15, 20, 50, 0.35) 60%,
+    rgba(5, 10, 30, 0.55) 100%
+  );
+}
+
+/* SCENE 2 — buddhist */
+.scene-era-buddhist .scene-year-big {
+  background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* SCENE 3, 5 — era */
+.scene-era-era .scene-year-big {
+  background: linear-gradient(135deg, #f6c878 0%, #ffe4a3 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* SCENE 6 — สุโขทัย ทองแดง */
+.scene-era-sukhothai .scene-year-big {
+  background: linear-gradient(135deg, #ff9a3c 0%, #ffd700 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.scene-era-sukhothai .scene-overlay {
+  background: linear-gradient(
+    90deg,
+    rgba(40, 15, 5, 0.85) 0%,
+    rgba(40, 15, 5, 0.6) 25%,
+    rgba(80, 30, 10, 0.3) 60%,
+    rgba(40, 15, 5, 0.55) 100%
+  );
+}
+
+/* SCENE 7 — อยุธยา ทองแดงเข้ม */
+.scene-era-ayutthaya .scene-year-big {
+  background: linear-gradient(135deg, #ff6a3c 0%, #ffd700 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.scene-era-ayutthaya .scene-overlay {
+  background: linear-gradient(
+    90deg,
+    rgba(40, 10, 5, 0.85) 0%,
+    rgba(40, 10, 5, 0.65) 25%,
+    rgba(80, 20, 10, 0.4) 60%,
+    rgba(40, 10, 5, 0.55) 100%
+  );
+}
+
+/* SCENE 8, 9 — รัตนโกสินทร์ ทองราชสำนัก */
+.scene-era-rattanakosin .scene-year-big {
+  background: linear-gradient(135deg, #ffd700 0%, #b8336a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.scene-era-rattanakosin .scene-overlay {
+  background: linear-gradient(
+    90deg,
+    rgba(40, 15, 20, 0.85) 0%,
+    rgba(40, 15, 20, 0.6) 25%,
+    rgba(60, 25, 35, 0.35) 60%,
+    rgba(40, 15, 20, 0.55) 100%
+  );
+}
+
+/* SCENE 10, 11, 12 — reform ทอง */
+.scene-era-reform .scene-year-big {
+  background: linear-gradient(135deg, #ffd700 0%, #f6c878 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* SCENE 13 — digital น้ำเงิน-ทอง */
+.scene-era-digital .scene-year-big {
+  background: linear-gradient(135deg, #ffd700 0%, #4dabf7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.scene-era-digital .scene-overlay {
+  background: linear-gradient(
+    90deg,
+    rgba(5, 15, 35, 0.85) 0%,
+    rgba(5, 15, 35, 0.6) 25%,
+    rgba(15, 25, 60, 0.3) 60%,
+    rgba(5, 15, 35, 0.55) 100%
+  );
+}
+
+/* ============================================================
+   Responsive — mobile stacks year above body
+   ============================================================ */
+@media (max-width: 760px) {
+  .scene {
+    min-height: 280px;
+  }
+  .scene-content {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+    padding: 1.2rem 1.2rem;
+  }
+  .scene-year-big {
+    font-size: 1.5rem;
+  }
+  .scene-title {
+    font-size: 1.15rem;
+  }
+  .scene-desc {
+    font-size: 0.88rem;
+  }
+}
+
+/* hide old timeline styles for safety (still used by older code paths?) */
+/* (legacy .timeline-list/.timeline-item kept below for backward compat) */
+
+/* ===================================================================
    Timeline — 2-column alternating layout + era-themed backgrounds
+   (LEGACY — kept for reference; new design uses .timeline-scenes above)
    =================================================================== */
 
 .timeline-intro {

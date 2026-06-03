@@ -12,6 +12,42 @@
 
 CHANGELOG = [
     {
+        "version": "2026.06.03-b",
+        "date": "2026-06-03",
+        "title": "Timeline ใหม่ — 13 cinematic scenes + ภาพประกอบเฉพาะ",
+        "highlights": [
+            "Timeline ปฏิทินไทยใหม่ทั้งหมด: 13 scenes (จากเดิม 11)",
+            "Cinematic full-width scene layout — ภาพ background + overlay + ปีใหญ่ซ้าย",
+            "เพิ่ม 2 entries ใหม่: ดาราศาสตร์อินเดียรุ่งเรือง (ค.ศ. 499) + อิทธิพลปฏิทินตะวันตก (ค.ศ. 1855)",
+            "เพิ่ม SCENE 13 (บทสรุป): ปฏิทินไทยในยุคดิจิทัล (ค.ศ. 2026)",
+            "ภาพประกอบใหม่ทั้ง 13 ภาพ — ฉากประวัติศาสตร์ wide cinematic",
+            "เส้นเชื่อมสีทอง glow ระหว่าง scene + โทนสีเปลี่ยนตามยุค",
+        ],
+        "details": [
+            {
+                "category": "เพิ่ม",
+                "items": [
+                    "13 ภาพ timeline01-13.png สำหรับ scenes ใหม่",
+                    "Era types ใหม่ใน calendar_epochs: sukhothai, ayutthaya, rattanakosin, digital",
+                    "Gold glowing connector ระหว่าง scenes (linear-gradient + box-shadow)",
+                    "Overlay tone ต่อยุค: อินเดียโบราณ=น้ำเงินทอง, สุโขทัย=ทองแดง, อยุธยา=ทองแดงเข้ม, รัตนโกสินทร์=ทอง-แดง, digital=น้ำเงิน-ทอง",
+                    "Hover effect: scene-bg scale(1.04) 0.6s ease",
+                    "Header card สำหรับ Timeline title พร้อม shadow + border ทอง (กัน text กลืนหลัง)",
+                ],
+            },
+            {
+                "category": "เปลี่ยน",
+                "items": [
+                    "Layout เก่า 2-column alternating → cinematic full-width hero scenes",
+                    "ลบ SCENE 0X label ออก (เคยมี SCENE 01 ... SCENE 13 ใต้ title)",
+                    "Description ของ 11 entries เดิม — เขียนใหม่ทั้งหมดให้ละเอียดและเป็นทางการมากขึ้น",
+                    "Image source: ภาพถ่ายบุคคล (Wikimedia) → ภาพประกอบ cinematic 13 ภาพ",
+                    "Timeline-intro text สีอ่อน → ใส่ใน dark card กับ text สีครีม-ทอง",
+                ],
+            },
+        ],
+    },
+    {
         "version": "2026.06.03-a",
         "date": "2026-06-03",
         "title": "ปฏิทินครบรูป — DB + ปีอธิกมาสจริง + ยุคพุทธกาล + วันสำคัญทางราชการ + counter",

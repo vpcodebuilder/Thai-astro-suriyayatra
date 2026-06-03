@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260603b" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260603d" />
 </head>
 <body class="view-general">
   <header class="site-header">
@@ -151,47 +151,48 @@
     <!-- ==================== Error ==================== -->
     <div id="cal-error" class="error" style="display:none"></div>
 
-    <!-- ==================== Timeline ==================== -->
-    <section class="card calendar-timeline">
-      <h2><span class="title-deco">📜</span> Timeline ปฏิทินไทย <span class="title-deco">📜</span></h2>
-      <p class="timeline-intro">
-        เหตุการณ์สำคัญในประวัติศาสตร์ปฏิทินไทย —
-        จากกาลียุค (3102 ปีก่อน ค.ศ.) จนถึงการรับสากล
-      </p>
-      <div class="timeline-list">
+    <!-- ==================== Timeline — Cinematic Scenes ==================== -->
+    <section class="calendar-timeline-cinematic">
+      <header class="cinema-header">
+        <h2><span class="title-deco">📜</span> Timeline ปฏิทินไทย <span class="title-deco">📜</span></h2>
+        <p class="timeline-intro">
+          13 ฉากประวัติศาสตร์ จากกาลียุค 3102 ปีก่อน ค.ศ. ถึงยุคดิจิทัล —
+          ร้อยเรียงด้วยเส้นเวลาสีทอง
+        </p>
+      </header>
+
+      <div class="timeline-scenes">
         {% for ep in epochs %}
-          <div class="timeline-item timeline-{{ ep.type }} {% if ep.image %}timeline-has-image{% endif %}">
-            <div class="timeline-bg-pattern"></div>
-            <div class="timeline-content">
-              <div class="timeline-icon">{{ ep.icon }}</div>
-              <div class="timeline-head">
-                <span class="timeline-year">{{ ep.year_label }}</span>
+          <article class="scene scene-era-{{ ep.type }}" data-scene="{{ loop.index }}">
+            <div class="scene-bg" style="background-image: url('{{ ep.image }}')"></div>
+            <div class="scene-overlay"></div>
+            <div class="scene-content">
+              <div class="scene-year-block">
+                <span class="scene-year-big">{{ ep.year_label }}</span>
                 {% if ep.be_year %}
-                  <span class="timeline-be">พ.ศ. {{ ep.be_year }}</span>
+                  <span class="scene-be">พ.ศ. {{ ep.be_year }}</span>
                 {% endif %}
               </div>
-              <h3 class="timeline-title">{{ ep.title }}</h3>
-              <p class="timeline-desc">{{ ep.description }}</p>
+              <div class="scene-body">
+                <h3 class="scene-title">{{ ep.icon }} {{ ep.title }}</h3>
+                <p class="scene-desc">{{ ep.description }}</p>
+                {% if ep.image_caption %}
+                  <p class="scene-caption">
+                    <span class="scene-caption-name">{{ ep.image_caption }}</span>
+                    {% if ep.image_credit %}
+                      <span class="scene-caption-credit"> · {{ ep.image_credit }}</span>
+                    {% endif %}
+                  </p>
+                {% endif %}
+              </div>
             </div>
-            {% if ep.image %}
-              <figure class="timeline-figure">
-                <div class="timeline-photo-frame">
-                  <img src="{{ ep.image }}" alt="{{ ep.image_caption }}" loading="lazy"/>
-                </div>
-                <figcaption class="timeline-caption">
-                  <span class="timeline-caption-name">{{ ep.image_caption }}</span>
-                  <span class="timeline-caption-credit">{{ ep.image_credit }}</span>
-                </figcaption>
-              </figure>
-            {% endif %}
-          </div>
+            <div class="scene-connector"></div>
+          </article>
         {% endfor %}
       </div>
 
       <p class="timeline-attribution">
-        📷 ภาพประวัติศาสตร์จาก
-        <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a>
-        เป็น Public Domain (ลิขสิทธิ์หมดอายุตามกฎหมายไทย พ.ร.บ.ลิขสิทธิ์ 2537)
+        🎨 ภาพประกอบสร้างขึ้นเฉพาะสำหรับ Timeline นี้ · ใช้ในเชิงการศึกษา
       </p>
     </section>
 

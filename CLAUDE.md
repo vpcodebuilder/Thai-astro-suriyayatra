@@ -1519,3 +1519,78 @@ UI: chip "⚠ ประมาณ ±5-15 วัน" สีน้ำตาล + no
 - myhora.com — ตารางปีอธิกมาส scrape source
 - กรมการศาสนา — กฎ shift วันสำคัญในปีอธิกมาส (แหล่งของ find_holy_day rule)
 
+---
+
+# ===== Session 11 Updates =====
+# Timeline cinematic redesign — 13 scenes — 2026-06-03
+
+## ภาพรวม
+เปลี่ยน Timeline จาก 11 entries แบบ 2-column alternating cards → 13 entries
+แบบ cinematic full-width hero scenes พร้อมภาพประกอบเฉพาะ (`timeline01-13.png`)
+ที่ user เตรียมไว้ และเส้นเชื่อมสีทอง glow ระหว่าง scene
+
+## เปลี่ยนแปลง
+| เก่า | ใหม่ |
+|---|---|
+| 11 entries (Wikimedia photos 4 ภาพ) | 13 entries (ภาพประกอบเฉพาะ 13 ภาพ) |
+| Layout 2-column alternating tiles + dot connectors | Full-width hero scenes + gold glowing connector |
+| `.timeline-list/.timeline-item` (legacy เก็บไว้) | `.timeline-scenes > article.scene` |
+| Era types: astronomical/buddhist/era/reform/historical | + sukhothai, ayutthaya, rattanakosin, digital |
+| `description` สั้น พรรณนาเร็ว | ละเอียดเป็นทางการ (เนื้อหาจาก user spec) |
+
+## 13 Scenes
+1. 3102 BCE — กาลียุค (astronomical)
+2. 543 BCE — ปรินิพพาน พ.ศ. 1 (buddhist)
+3. 78 CE — มหาศักราช (era)
+4. **499 CE — ดาราศาสตร์อินเดียรุ่งเรือง** ★ใหม่ (astronomical)
+5. 638 CE — จุลศักราช (era)
+6. **1283 CE — กำเนิดอักษรไทย พ่อขุนรามคำแหง** ★ใหม่ (sukhothai)
+7. **1455 CE — ระบบปฏิทินราชการอยุธยา** ★ใหม่ (ayutthaya)
+8. 1782 CE — สถาปนากรุงรัตนโกสินทร์ (rattanakosin)
+9. **1855 CE — อิทธิพลปฏิทินตะวันตก (เบาว์ริง)** ★ใหม่ (rattanakosin)
+10. 1889 CE — ปรับวันขึ้นปีใหม่เป็น 1 เมษายน (ร.5, reform)
+11. 1912 CE — ประกาศใช้ พ.ศ. (ร.6, reform)
+12. 1941 CE — เปลี่ยนวันขึ้นปีใหม่เป็น 1 ม.ค. (จอมพล ป., reform)
+13. **2026 CE — ปฏิทินไทยในยุคดิจิทัล** ★ใหม่ (digital, บทสรุป)
+
+## CSS layout ใหม่
+- `.scene` — min-height 320px, full-width, overflow hidden
+- `.scene-bg` — `background-size: cover` + hover scale 1.04 (transition 0.6s)
+- `.scene-overlay` — linear-gradient ดำ→ใส (90deg) เพื่อความ legibility
+- `.scene-content` — grid 280px / 1fr (year block ซ้าย, body ขวา) + padding 1.6rem 2rem
+- `.scene-year-big` — Kanit 2rem gold gradient text (เปลี่ยนสีตาม era)
+- `.scene-be` — pill chip รูปยา border ทอง
+- `.scene-connector` — เส้นทอง 4px กลาง bottom, linear-gradient + box-shadow glow
+- Responsive <760px: stack 1-col (year บน, body ล่าง)
+- Cinema header — dark card สีน้ำตาลเข้ม + ขอบทอง + glow shadow (กัน text กลืนหลัง)
+
+## Era tone (overlay gradient + year text color)
+| Type | Tone | ใช้ใน scene |
+|---|---|---|
+| astronomical | น้ำเงิน-ทอง | 1, 4 |
+| buddhist | ทองอุ่น | 2 |
+| era | ทองเข้ม | 3, 5 |
+| sukhothai | ทองแดง | 6 |
+| ayutthaya | ทองแดงเข้ม | 7 |
+| rattanakosin | ทอง-แดงเลือดหมู | 8, 9 |
+| reform | ทอง | 10, 11, 12 |
+| digital | น้ำเงิน-ทองดิจิทัล | 13 |
+
+## ไฟล์ที่ user เตรียม
+- `data/timeline01.png` ... `timeline13.png` — copy → `webapp/static/timeline-images/`
+- `data/timeline_all.png` — ภาพรวมต้นฉบับ (ไม่ใช้ใน app — ใช้สำหรับ re-crop ถ้าต้องการ)
+
+## ที่ทำไปแล้ว
+1. Copy 13 ภาพ data/ → static/timeline-images/
+2. Update seed.py: 11 → 13 entries (descriptions ใหม่ทั้งหมดจาก user spec)
+3. Re-seed DB: ลบ calendar_epochs เดิม → insert 13 entries ใหม่
+4. Rewrite HTML: `.timeline-scenes > article.scene`
+5. Rewrite CSS: 8 era tones + connector + responsive
+6. ลบ "SCENE 0X" label ตาม user feedback
+7. ใส่ dark card บน header (กัน timeline-intro กลืน background)
+
+## Legacy เก็บไว้
+- CSS เก่าของ `.timeline-list/.timeline-item` ยังอยู่ใน styles.css (comment "LEGACY — kept for reference")
+- HTML/template เก่าถูก replace แล้ว
+- ภาพถ่ายเก่า (rama1/5/6/phibun.jpg) ยังอยู่ใน static/timeline-images/ ไม่ได้ลบ — เผื่อใช้ที่อื่น
+
