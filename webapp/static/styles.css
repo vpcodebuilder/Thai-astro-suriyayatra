@@ -3088,16 +3088,12 @@ body.view-student .view-general { display: none !important; }
   color: var(--maroon-dark);
 }
 
-.sunrise-banner-section {
-  max-width: 1200px;
-  margin: 0 auto 1rem;
-  padding: 0 1rem;
-}
 .sunrise-banner {
   display: flex;
   align-items: center;
   gap: 1rem;
   padding: 0.9rem 1.2rem;
+  margin-bottom: 1rem;
   background: linear-gradient(135deg, rgba(255, 244, 210, 0.95) 0%, rgba(255, 228, 163, 0.85) 100%);
   border: 1px solid rgba(199, 139, 27, 0.5);
   border-radius: 10px;

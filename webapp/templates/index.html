@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260603e" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260603g" />
 </head>
 <body class="view-general" data-scroll-target="{% if scroll_target == '1' %}transit{% endif %}">
   <header class="site-header">
@@ -177,9 +177,10 @@
          data-transit-time="{{ result.transit.time_24 }}">
     </div>
 
-    {% if sunrise_info %}
-    <!-- ===== Sunrise mode banner (ปรากฏหลังตั้งดวง) ===== -->
-    <section class="sunrise-banner-section">
+    <!-- ===== กลาง: ผังจักรราศี (อยู่บนสุดเสมอ ทั้งสอง view) ===== -->
+    <section class="chart-section view-both">
+      {% if sunrise_info %}
+      <!-- Sunrise banner — บนสุดของ chart column -->
       <div class="sunrise-banner">
         <div class="sunrise-banner-text">
           {% if sunrise_info.shifted %}
@@ -212,11 +213,7 @@
           </button>
         </div>
       </div>
-    </section>
-    {% endif %}
-
-    <!-- ===== กลาง: ผังจักรราศี (อยู่บนสุดเสมอ ทั้งสอง view) ===== -->
-    <section class="chart-section view-both">
+      {% endif %}
       {# === การ์ดดาวกำเนิด — บนผัง === #}
       <div class="card info-card natal-info-card">
         <div class="info-card-head">
