@@ -12,6 +12,39 @@
 
 CHANGELOG = [
     {
+        "version": "2026.06.03-d",
+        "date": "2026-06-03",
+        "title": "Thai sunrise day convention — ผูกดวงตามตำราไทย",
+        "highlights": [
+            "ตำราไทย: วันใหม่เริ่มที่พระอาทิตย์ขึ้น ไม่ใช่เที่ยงคืน — ระบบรองรับให้อัตโนมัติ",
+            "ใส่วันและเวลาแบบเวลาสากล → ระบบปรับเป็นการนับวันแบบไทยให้",
+            "2 โหมด: 'อาทิตย์ขึ้นจริง' (default ตามวัน+จังหวัด) / '06:00 ตรง' (ตำราคลาสสิก)",
+            "Toggle หลังตั้งดวงเสร็จ สลับโหมดได้",
+            "Today widget ใช้ Thai sunrise convention — เที่ยงคืน-06:00 จะแสดงเป็นวันก่อนหน้า",
+        ],
+        "details": [
+            {
+                "category": "เพิ่ม",
+                "items": [
+                    "thai_astro/sunrise.py — NOAA-based sunrise computation per (date, จังหวัด)",
+                    "LATITUDE_BY_PROVINCE — 77 จังหวัด (accuracy ±0.3°)",
+                    "thai_birth_day_adjust(birth_dt, province, mode) — auto shift -1 day ถ้าก่อน sunrise",
+                    "server.py POST /: รับ sunrise_mode form field + apply adjustment ก่อน Chart.calculate",
+                    "Sunrise info banner หลังตั้งดวง — แสดงโหมด, sunrise ที่ใช้, วันที่ปรับแล้ว",
+                    "Toggle button: สลับ real_sunrise ⇄ six_am",
+                    "Info note ในฟอร์ม: อธิบายว่ากรอกเวลาสากล ระบบปรับให้",
+                    "calendar.html: note ว่าใช้วันตามเวลาสากล",
+                ],
+            },
+            {
+                "category": "แก้",
+                "items": [
+                    "_today_widget(): ใช้ Thai sunrise convention (วันใหม่ที่ ~06:00)",
+                ],
+            },
+        ],
+    },
+    {
         "version": "2026.06.03-c",
         "date": "2026-06-03",
         "title": "แก้สูตรเดือนจันทรคติ — ใช้ Devtino mas counter (เลิกใช้ floor approximation)",

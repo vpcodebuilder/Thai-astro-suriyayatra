@@ -1320,17 +1320,27 @@ def _pair_to_dict(pair) -> dict:
 
 
 def _today_widget() -> dict:
-    """วันนี้ — สุริยคติ + จันทรคติ + วันสำคัญ (สำหรับ widget บนหน้าต่างๆ)"""
+    """วันนี้ — สุริยคติ + จันทรคติ + วันสำคัญ (สำหรับ widget บนหน้าต่างๆ)
+
+    ใช้ Thai sunrise convention: ถ้าก่อนพระอาทิตย์ขึ้น (~06:00) ถือเป็นวันก่อนหน้า
+    """
     now = datetime.now(THAI_TZ)
     try:
-        pair = _solar_to_lunar(now.year + 543, now.month, now.day)
+        # Adjust ตามนิยมไทย (พระอาทิตย์ขึ้นจริงของกรุงเทพ)
+        from thai_astro.sunrise import thai_birth_day_adjust
+        adj_date, _, _ = thai_birth_day_adjust(
+            now.replace(tzinfo=None), "กรุงเทพมหานคร", "real_sunrise",
+        )
+        # ใช้วันที่ปรับแล้ว
+        now_adj = now.replace(year=adj_date.year, month=adj_date.month, day=adj_date.day)
+        pair = _solar_to_lunar(now_adj.year + 543, now_adj.month, now_adj.day)
         lun = pair.lunar
         holy = find_holy_day(
             lun.lunar_month, lun.waxing, lun.day_in_phase,
             is_leap_month_year=lun.is_leap_month_year,
             is_intercalary_month=lun.is_intercalary_month,
         )
-        national = find_national_holiday(now.month, now.day)
+        national = find_national_holiday(now_adj.month, now_adj.day)
         is_uposatha = lun.day_in_phase in (8, 15)
         return {
             "solar_pretty": pair.solar_pretty,
@@ -1437,6 +1447,7 @@ async def calculate(
     birth_date_th: str = Form(""),
     birth_time: str = Form(""),
     province: str = Form("กรุงเทพมหานคร"),
+    sunrise_mode: str = Form("real_sunrise"),  # 'real_sunrise' (default) | 'six_am'
     transit_date_iso: str = Form(""),   # YYYY-MM-DD; ว่าง = ใช้ now
     transit_time_24: str = Form(""),    # HH:MM;       ว่าง = ใช้ now
     scroll_to_transit: str = Form(""),  # "1" → scroll ไปที่ scrubber หลัง load
@@ -1446,10 +1457,12 @@ async def calculate(
         "birth_date_th": birth_date_th,
         "birth_time": birth_time,
         "province": province,
+        "sunrise_mode": sunrise_mode,
     }
     error: Optional[str] = None
     result = None
     scroll_target = scroll_to_transit.strip()
+    sunrise_info = None  # ส่งให้ template แสดง info banner
 
     try:
         if not birth_date_th.strip():
@@ -1460,7 +1473,30 @@ async def calculate(
         h, mi = [int(x) for x in birth_time.split(":")]
         if province not in LOCALITY_ADJUST_SECONDS:
             province = "กรุงเทพมหานคร"
-        chart = Chart.calculate(y, m, d, h, mi, province=province)
+
+        # ============================================================
+        # Thai sunrise convention — ปรับวันเกิดตามนิยมไทย
+        # (วันใหม่เริ่มที่พระอาทิตย์ขึ้น ไม่ใช่เที่ยงคืน)
+        # ============================================================
+        from thai_astro.sunrise import thai_birth_day_adjust, format_sunrise
+        from datetime import datetime as _dt
+        mode = "six_am" if sunrise_mode == "six_am" else "real_sunrise"
+        # y, m, d เป็น CE year/month/day จาก parse_thai_date()
+        adj_date, sunrise_h, _ = thai_birth_day_adjust(
+            _dt(y, m, d, h, mi), province, mode,
+        )
+        was_shifted = (adj_date.day, adj_date.month, adj_date.year) != (d, m, y)
+        sunrise_info = {
+            "mode": mode,
+            "sunrise": format_sunrise(sunrise_h),
+            "shifted": was_shifted,
+            "input_date": _format_thai_date_ce(y, m, d),
+            "input_time": f"{h:02d}:{mi:02d}",
+            "thai_date": _format_thai_date_ce(adj_date.year, adj_date.month, adj_date.day),
+            "province": province,
+        }
+        # ใช้วันที่ปรับแล้วในการ build chart (Chart.calculate ใช้ CE year ตาม y จาก parse_thai_date)
+        chart = Chart.calculate(adj_date.year, adj_date.month, adj_date.day, h, mi, province=province)
 
         # ดาวจร — ใช้ override ถ้ามี ไม่งั้นเป็น now()
         if transit_date_iso.strip() and transit_time_24.strip():
@@ -1506,6 +1542,8 @@ async def calculate(
             form=form,
             error=error,
             scroll_target=scroll_target,
+            sunrise_info=sunrise_info,
+            today_widget=_today_widget(),
         ),
     )
 

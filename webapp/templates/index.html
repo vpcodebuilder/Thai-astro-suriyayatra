@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260603a" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260603e" />
 </head>
 <body class="view-general" data-scroll-target="{% if scroll_target == '1' %}transit{% endif %}">
   <header class="site-header">
@@ -58,6 +58,8 @@
           <input type="hidden" name="transit_date_iso" id="hidden_transit_date" value="" />
           <input type="hidden" name="transit_time_24"  id="hidden_transit_time" value="" />
           <input type="hidden" name="scroll_to_transit" id="hidden_scroll_target" value="" />
+          {# โหมดพระอาทิตย์ขึ้น — default 'real_sunrise', toggle หลังตั้งดวง #}
+          <input type="hidden" name="sunrise_mode" id="hidden_sunrise_mode" value="{{ form.sunrise_mode or 'real_sunrise' }}" />
           <label>
             <span>ชื่อ-นามสกุล</span>
             <input
@@ -122,6 +124,12 @@
             <small class="hint">ใช้ปรับเวลาท้องถิ่นตามลองจิจูดจังหวัด</small>
           </label>
 
+          <p class="sunrise-info-note">
+            ☀ <b>ตำราไทย:</b> วันใหม่เริ่มที่พระอาทิตย์ขึ้น (~06:00 น.) ไม่ใช่เที่ยงคืน<br/>
+            ใส่วันและเวลาแบบ<strong>สากลปกติ</strong> — ระบบจะปรับเป็นการนับวันแบบไทย
+            (ถ้าเวลาเกิดก่อนพระอาทิตย์ขึ้น จะถือเป็นวันก่อนหน้า) ให้อัตโนมัติ
+          </p>
+
           <button type="submit" class="btn-primary">
             ผูกดวง <span class="btn-arrow">›</span>
           </button>
@@ -168,6 +176,44 @@
          data-transit-date="{{ result.transit.date_iso }}"
          data-transit-time="{{ result.transit.time_24 }}">
     </div>
+
+    {% if sunrise_info %}
+    <!-- ===== Sunrise mode banner (ปรากฏหลังตั้งดวง) ===== -->
+    <section class="sunrise-banner-section">
+      <div class="sunrise-banner">
+        <div class="sunrise-banner-text">
+          {% if sunrise_info.shifted %}
+            <span class="sunrise-banner-icon">🌅</span>
+            <span>
+              <b>ปรับวันตามตำราไทย:</b>
+              คุณกรอก <b>{{ sunrise_info.input_date }}</b> เวลา {{ sunrise_info.input_time }} น.
+              ซึ่งก่อนพระอาทิตย์ขึ้น (โหมด{% if sunrise_info.mode == 'six_am' %} 06:00 ตรง{% else %} อาทิตย์ขึ้นจริง{% endif %} =
+              {{ sunrise_info.sunrise }} น.{% if sunrise_info.mode == 'real_sunrise' %} ที่{{ sunrise_info.province }}{% endif %})
+              → ระบบใช้วัน <b>{{ sunrise_info.thai_date }}</b> ในการผูกดวง
+            </span>
+          {% else %}
+            <span class="sunrise-banner-icon">☀</span>
+            <span>
+              วันเกิด <b>{{ sunrise_info.input_date }}</b> {{ sunrise_info.input_time }} น.
+              หลังพระอาทิตย์ขึ้น ({% if sunrise_info.mode == 'six_am' %}06:00 ตรง{% else %}{{ sunrise_info.sunrise }} น. ที่{{ sunrise_info.province }}{% endif %})
+              — ใช้วันตามที่กรอก
+            </span>
+          {% endif %}
+        </div>
+        <div class="sunrise-banner-toggle">
+          {% set other_mode = 'six_am' if sunrise_info.mode == 'real_sunrise' else 'real_sunrise' %}
+          <button type="button" class="btn-sunrise-toggle"
+                  onclick="document.getElementById('hidden_sunrise_mode').value='{{ other_mode }}'; document.getElementById('birth-form').submit();">
+            {% if sunrise_info.mode == 'real_sunrise' %}
+              สลับเป็นโหมด <b>06:00 ตรง</b>
+            {% else %}
+              สลับเป็นโหมด <b>อาทิตย์ขึ้นจริง</b>
+            {% endif %}
+          </button>
+        </div>
+      </div>
+    </section>
+    {% endif %}
 
     <!-- ===== กลาง: ผังจักรราศี (อยู่บนสุดเสมอ ทั้งสอง view) ===== -->
     <section class="chart-section view-both">
