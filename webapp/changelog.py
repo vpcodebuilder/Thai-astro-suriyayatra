@@ -12,6 +12,25 @@
 
 CHANGELOG = [
     {
+        "version": "2026.06.03-e",
+        "date": "2026-06-03",
+        "title": "Layout fix — sunrise banner อยู่ใน chart column",
+        "highlights": [
+            "ย้าย sunrise banner เข้าไปใน chart-section (col 2)",
+            "Form ฝั่งซ้าย, banner+chart ฝั่งขวา — layout กลับมาปกติ",
+        ],
+        "details": [
+            {
+                "category": "แก้",
+                "items": [
+                    "เดิม banner ใช้ grid-column: 1/-1 ทำให้ chart ตกแถวล่าง",
+                    "ย้าย banner HTML ไปอยู่ใน chart-section element แรก",
+                    "ลบ grid-column: 1/-1 ของ .sunrise-banner-section ออก (ไม่ใช้แล้ว)",
+                ],
+            },
+        ],
+    },
+    {
         "version": "2026.06.03-d",
         "date": "2026-06-03",
         "title": "Thai sunrise day convention — ผูกดวงตามตำราไทย",

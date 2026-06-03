@@ -1594,3 +1594,117 @@ UI: chip "⚠ ประมาณ ±5-15 วัน" สีน้ำตาล + no
 - HTML/template เก่าถูก replace แล้ว
 - ภาพถ่ายเก่า (rama1/5/6/phibun.jpg) ยังอยู่ใน static/timeline-images/ ไม่ได้ลบ — เผื่อใช้ที่อื่น
 
+---
+
+# ===== Session 12 Updates =====
+# Lunar month fix (mas-based) + Thai sunrise day convention — 2026-06-03
+
+## ภาพรวม
+2 patches สำคัญในวันเดียวกัน:
+1. **แก้สูตรเดือนจันทรคติ** — เลิกใช้ floor(surathin/29.53) approximation ที่ off-by-1 ในปีอธิกมาส
+2. **Thai sunrise day convention** — ผูกดวงตามตำราไทย (วันใหม่เริ่มที่พระอาทิตย์ขึ้น)
+
+## Patch 1: Mas-based lunar month formula
+### Bug report
+User: "7 ก.พ. 2556 ระบบให้ แรม 12 ค่ำ **เดือน 3** ปีมะโรง — ที่ถูกคือ **เดือน 2**"
+
+### Root cause
+สูตรเก่า `floor((surathin + 7) / 29.530588)` เป็น approximation จากค่าเฉลี่ย
+synodic month (29.53 วัน). มี off-by-1 error ในปีอธิกมาสช่วงปลายปี
+(หลัง mas_diff = 4 = เดือน 8 หลัง)
+
+### Fix
+ใช้ `desire.mas - mas_at_thaloengsok` (synodic month count ที่ Devtino formula
+คำนวณไว้แล้วเป็น integer arithmetic — ไม่มี rounding error)
+
+```python
+def _mas_at_thaloengsok(thaloengsok) -> int:
+    """หา mas ณ วันเถลิงศก — cache ตาม cs_year"""
+    cs = thaloengsok.cs_year
+    if cs in _MAS_THALOENGSOK_CACHE:
+        return _MAS_THALOENGSOK_CACHE[cs]
+    d = build_desire(thaloengsok.be_year, thaloengsok.month, thaloengsok.day)
+    _MAS_THALOENGSOK_CACHE[cs] = d.mas
+    return d.mas
+
+# ปีปกติ: mas_diff 0..11 → เดือน 5,6,7,8,9,10,11,12,1,2,3,4
+# ปีอธิกมาส: mas_diff 0..12 → เดือน 5,6,7,8(ต้น),8(หลัง intercalary),9,10,...,4
+```
+
+### ทดสอบผ่าน
+- 7 ก.พ. 2556 = แรม 12 ค่ำ เดือน 2 ปีมะโรง ✓
+- 31 พ.ค. 2569 (Visakha) = ขึ้น 15 ค่ำ เดือน 7 ✓
+- 29 ก.ค. 2569 (Asalha) = ขึ้น 15 ค่ำ เดือน 8 หลัง ✓
+- 30 ก.ค. 2569 (เข้าพรรษา) = แรม 1 ค่ำ เดือน 8 หลัง ✓
+
+---
+
+## Patch 2: Thai sunrise day convention
+
+### หลักการ
+ตำราไทย: วันใหม่เริ่มที่พระอาทิตย์ขึ้น (~06:00) ไม่ใช่เที่ยงคืน
+- เกิด 3 มิ.ย. 02:00 (สากล) → ตำราไทยถือเป็น 2 มิ.ย. (ยังก่อนพระอาทิตย์ขึ้น)
+
+### 2 โหมด
+| Mode | Description |
+|---|---|
+| `real_sunrise` (default) | คำนวณ sunrise จริงตาม (date, จังหวัด) ผ่าน NOAA formula |
+| `six_am` | ใช้ 06:00 ตรง (Thai standard time) ตำราคลาสสิก SunriseType.SixAM |
+
+### ไฟล์ใหม่
+- `thai_astro/sunrise.py`:
+  - `LATITUDE_BY_PROVINCE` — 77 จังหวัด (≈ ศูนย์กลางจังหวัด, accuracy ±0.3°)
+  - `sunrise_hours_at(date, province)` — NOAA simplified formula
+    - Solar declination, EOT, hour angle at sunrise
+    - Accuracy ±5-10 min (พอเพียงสำหรับโหราศาสตร์)
+  - `thai_birth_day_adjust(birth_dt, province, mode)`
+    - คืน (adjusted_date, sunrise_hours_used, hour_decimal)
+    - ถ้า time < sunrise → adjusted = date - 1
+
+### Integration
+- `server.py POST /`: รับ form field `sunrise_mode` + apply adjustment ก่อน `Chart.calculate`
+- `_today_widget()`: ใช้ Thai sunrise convention (real_sunrise, กรุงเทพ)
+- UI: 
+  - Info note ในฟอร์ม — อธิบายว่ากรอกเวลาสากล ระบบปรับให้
+  - Banner หลังตั้งดวง — 🌅 ถ้า shift / ☀ ถ้าไม่ shift
+  - Toggle button: สลับ real_sunrise ⇄ six_am
+
+### Sunrise computed examples (Thai standard time)
+| Province | 21 มี.ค. | 21 มิ.ย. | 21 ก.ย. | 21 ธ.ค. |
+|---|---|---|---|---|
+| กรุงเทพ | 06:26 | 05:55 | 06:11 | 06:41 |
+| เชียงใหม่ | 06:32 | 05:52 | 06:17 | 06:57 |
+| ภูเก็ต | 06:35 | 06:14 | 06:19 | 06:39 |
+| นราธิวาส | 06:21 | 06:03 | 06:05 | 06:23 |
+
+### Implementation notes
+1. **Banner placement**: ต้องอยู่ใน `chart-section` (col 2) ไม่ใช่ `<section>` ระดับ
+   เดียวกัน — เพราะ grid auto-flow จะทำให้ chart ตกแถวล่าง user complained
+   "หน้าพัง" ครั้งแรกที่วาง section นอก chart-section
+2. **Time accuracy**: ลัคนา/สมผุสดาว ใช้เวลาเกิดจริง (ไม่ shift) เพราะ build_desire
+   รับ (adjusted_date, original_hour) → moment ใน sky อาจคลาดเคลื่อน ~24h เมื่อ shift
+   (acceptable approximation ตามที่ Thai practitioners ใช้กัน)
+3. **parse_thai_date** คืน **CE year** (ไม่ใช่ BE) — เคย bug ตอน integrate
+4. **_format_thai_date_ce(ce_y, m, d)** = "DD MONTH พ.ศ. {ce+543}"
+
+---
+
+# ===== Roadmap Updates =====
+# (เปลี่ยนแปลงสถานะของ Phase 11 เดิม)
+
+## ที่ทำเสร็จเพิ่มแล้ว (ตั้งแต่ Session 11)
+- ✓ Mas-based lunar month (แก้ adhikamasa ครึ่งปีหลัง)
+- ✓ Thai sunrise day convention (ผูกดวง + today widget)
+- ✓ Timeline 13 cinematic scenes (replaced 11 2-col tiles)
+
+## ที่ยังเหลือ
+- Adhikamasa BE 1181-2299 + 2701-3000 — fallback formula (ไม่ใช่ตำราจริง)
+- Timeline paintings — รอ user download Wikimedia paintings (data/timeline_image_urls.md)
+- Chat + User system (Session 2026-05-30 plan)
+- Off-by-1 day ใน ดิถี formula (rare cases) — Devtino approximation
+
+## Reference for future devs
+- ดูประวัติแก้ที่ webapp/changelog.py (เวอร์ชั่น 2026.06.03-a ถึง -d)
+- DB schema: webapp/models.py (5 tables)
+- Adhikamasa data: data/adhikamasa_scraped.json (401 entries BE 2300-2700)
+
