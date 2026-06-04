@@ -3073,6 +3073,52 @@ body.view-student .view-general { display: none !important; }
   font-weight: 600;
 }
 
+/* ===== Taksa reference chip (sync ตามวัน transit) ===== */
+.taksa-ref-chip {
+  display: inline-block;
+  margin: 8px 0 14px;
+  padding: 6px 12px;
+  background: rgba(232, 197, 112, 0.18);
+  border: 1px dashed rgba(199, 139, 27, 0.5);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+.taksa-ref-chip b { color: var(--maroon-dark); }
+
+.taksa-disabled-banner {
+  margin: 10px 0 14px;
+  padding: 10px 14px;
+  background: rgba(122, 30, 30, 0.08);
+  border: 1px solid rgba(122, 30, 30, 0.3);
+  border-left: 4px solid var(--maroon);
+  border-radius: 6px;
+  color: var(--maroon-dark);
+  font-size: 0.9rem;
+}
+
+/* ===== Transit header sep dot ===== */
+.transit-header-sep { opacity: 0.4; margin: 0 6px; }
+
+/* ===== Scrubber BE date input wrap ===== */
+.scrubber-date-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.scrubber-date-wrap input[type="text"] {
+  flex: 1;
+  min-width: 120px;
+}
+.scrubber-date-wrap .date-picker-btn {
+  padding: 4px 8px;
+  background: var(--gold);
+  border: 1px solid var(--gold-deep);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
 /* ===== Sunrise convention info + banner ===== */
 .sunrise-info-note {
   margin: 12px 0 16px;

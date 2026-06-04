@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260603g" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260603h" />
 </head>
 <body class="view-general" data-scroll-target="{% if scroll_target == '1' %}transit{% endif %}">
   <header class="site-header">
@@ -225,16 +225,17 @@
           {% endif %}
         </div>
         <div class="info-card-body info-card-body-grid">
-          <div class="info-row"><span class="info-label">วันเกิด</span>
-            <b>{{ result.birth_weekday_name }} {{ result.birth_date_th }}</b></div>
-          <div class="info-row"><span class="info-label">เวลาเกิด</span>
-            <b>{{ result.birth_time }} น.</b></div>
+          <div class="info-row"><span class="info-label">สูติกาล <small>(ตำราไทย)</small></span>
+            <b>{{ result.birth_weekday_name }}{% if result.lunar %} · {{ result.lunar.pretty_short }}{% endif %}</b></div>
+          {% if result.birth_intl %}
+            <div class="info-row"><span class="info-label">ตรงกับสากล</span>
+              <b>{{ result.birth_intl.weekday_name }}ที่ {{ result.birth_intl.date_th }} เวลา {{ result.birth_intl.time }} น.</b></div>
+          {% else %}
+            <div class="info-row"><span class="info-label">วันเกิด</span>
+              <b>{{ result.birth_weekday_name }} {{ result.birth_date_th }} เวลา {{ result.birth_time }} น.</b></div>
+          {% endif %}
           <div class="info-row"><span class="info-label">สถานที่เกิด</span>
             <b>จังหวัด{{ result.province }}</b></div>
-          {% if result.lunar %}
-            <div class="info-row"><span class="info-label">จันทรคติ</span>
-              🌙 {{ result.lunar.pretty_short }}</div>
-          {% endif %}
           <div class="info-row info-row-lakkana">
             <span class="info-label">ลัคนา</span>
             <b>{{ result.ascendant.rasi_name }}
@@ -591,15 +592,17 @@
       <div class="card info-card transit-info-card" id="transit-info-card">
         <div class="info-card-head">
           <span class="info-icon">🔭</span>
-          <h2>ดาวจร (ปัจจุบัน)</h2>
+          <h2>ดาวจร — <span id="transit-header-date">{{ result.transit.date_th }}</span>
+              <span class="transit-header-sep">·</span>
+              <span id="transit-header-time">{{ result.transit.time }} น.</span></h2>
         </div>
         <div class="info-card-body info-card-body-grid">
+          <div class="info-row"><span class="info-label">สถานที่</span>
+            <b>จังหวัด{{ result.transit.province }}</b></div>
           <div class="info-row"><span class="info-label">วันที่</span>
             <b id="transit-date-label">{{ result.transit.date_th }}</b></div>
           <div class="info-row"><span class="info-label">เวลา</span>
             <b id="transit-time-label">{{ result.transit.time }} น.</b></div>
-          <div class="info-row"><span class="info-label">สถานที่</span>
-            <b>จังหวัด{{ result.transit.province }}</b></div>
         </div>
         <div class="scrubber-block">
           <div class="scrubber-controls">
@@ -612,8 +615,20 @@
             <button type="button" class="scrub-btn" data-delta="30" title="ไปข้างหน้า 30 วัน">+30วัน ▶▶</button>
           </div>
           <div class="scrubber-picker-row">
-            <label>เลือกวันที่
-              <input type="date" id="scrubber-date-picker" value="{{ result.transit.date_iso }}">
+            <label>เลือกวันที่ (พ.ศ.)
+              <span class="scrubber-date-wrap">
+                <input type="text" id="scrubber-date-picker-th"
+                       placeholder="วว/ดด/ปปปป"
+                       value="{{ result.transit.day }}/{{ '%02d'|format(result.transit.month) }}/{{ result.transit.be_year }}"
+                       autocomplete="off" maxlength="10"
+                       inputmode="numeric"/>
+                <button type="button" class="date-picker-btn"
+                        data-picker-for="scrubber-date-picker"
+                        aria-label="เปิดปฏิทินเลือกวันที่">📅</button>
+                <input type="date" id="scrubber-date-picker"
+                       class="date-picker-hidden" tabindex="-1" aria-hidden="true"
+                       value="{{ result.transit.date_iso }}">
+              </span>
             </label>
             <label>เวลา
               <input type="time" id="scrubber-time-picker" value="{{ result.transit.time_24 }}" step="3600">
@@ -956,6 +971,16 @@
     <section class="prophecy-section view-both">
       <div class="card taksa-card">
         <h2><span class="title-deco">☸</span> ทักษา — ดาวประจำวันเกิด <span class="title-deco">☸</span></h2>
+        {% if result.taksa_disabled %}
+          <div class="taksa-disabled-banner">
+            ⛔ {{ result.taksa_disabled_reason }} — เลื่อนดาวจรไปวันที่เกิน {{ result.birth_intl.date_th if result.birth_intl else result.birth_date_th }} เพื่อดูคำทำนาย
+          </div>
+        {% elif result.taksa_ref_label %}
+          <div class="taksa-ref-chip">
+            📅 ทำนายตามวันที่ดาวจร: <b>{{ result.taksa_ref_label }}</b>
+            {% if result.taksa_age_label %} · <b>{{ result.taksa_age_label }}</b>{% endif %}
+          </div>
+        {% endif %}
 
         <div class="taksa-summary-bar">
           <div class="taksa-summary-item">

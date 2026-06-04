@@ -12,6 +12,41 @@
 
 CHANGELOG = [
     {
+        "version": "2026.06.03-f",
+        "date": "2026-06-03",
+        "title": "ดวงชะตา/ดาวจร/ทักษา UX rework",
+        "highlights": [
+            "ดวงชะตา (ดาวกำเนิด): แยก 2 บรรทัด — สูติกาล (ตำราไทย) / ตรงกับสากล",
+            "ดาวจร header dynamic: \"ดาวจร — DD MMM พ.ศ. YYYY · HH:MM น.\"",
+            "ฟอร์มดาวจร: เลือกวันเป็น พ.ศ. (DD/MM/YYYY) + ปุ่ม 📅",
+            "ทักษา sync ตาม transit: เลื่อน scrubber → คำทำนายเปลี่ยน + chip บอกวันที่",
+            "Edge case: ถ้า transit < birth → ปิดทักษา + แสดง \"ยังไม่เกิดในเวลานี้\"",
+        ],
+        "details": [
+            {
+                "category": "เพิ่ม",
+                "items": [
+                    "result.birth_intl: weekday + date_th + time + shifted (วันเกิดสากลก่อน sunrise shift)",
+                    "result.taksa_ref_label / taksa_age_label — chip บอก \"ทำนายตามวันที่ X · อายุ Y\"",
+                    "result.taksa_disabled / taksa_disabled_reason — เมื่อ transit < birth",
+                    "transit_meta.day/month/be_year — สำหรับฟอร์ม scrubber พ.ศ.",
+                    "JS sync scrubber-date-picker-th (DD/MM/YYYY พ.ศ.) ⇄ scrubber-date-picker (ISO ค.ศ.)",
+                    "CSS: .taksa-ref-chip, .taksa-disabled-banner, .transit-header-sep, .scrubber-date-wrap",
+                ],
+            },
+            {
+                "category": "แก้",
+                "items": [
+                    "chart_to_view รับ original_birth_intl parameter",
+                    "compute_taksa รับ today= taksa_reference_date (จาก transit_chart) แทน datetime.now()",
+                    "ดวงชะตา card: ลบ row \"จันทรคติ\" แยก — รวมเข้าบรรทัด \"สูติกาล\"",
+                    "ดาวจร card: y h2 header แสดง dynamic date + time",
+                    "_date import ย้ายขึ้น top-level เพื่อใช้ใน intl_view section",
+                ],
+            },
+        ],
+    },
+    {
         "version": "2026.06.03-e",
         "date": "2026-06-03",
         "title": "Layout fix — sunrise banner อยู่ใน chart column",

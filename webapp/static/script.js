@@ -376,7 +376,37 @@ function setupTransitScrubber() {
 
   if (datePicker) {
     datePicker.addEventListener("change", () => {
-      if (datePicker.value) submitWith(datePicker.value, currentTime);
+      if (datePicker.value) {
+        // sync ISO → BE text input
+        const dpTh = document.getElementById("scrubber-date-picker-th");
+        if (dpTh) {
+          const [yy, mm, dd] = datePicker.value.split("-").map(Number);
+          dpTh.value = `${dd}/${String(mm).padStart(2,"0")}/${yy + 543}`;
+        }
+        submitWith(datePicker.value, currentTime);
+      }
+    });
+  }
+
+  // BE-format text input (DD/MM/YYYY พ.ศ.) — parse + submit
+  const dpTh = document.getElementById("scrubber-date-picker-th");
+  if (dpTh) {
+    function commitTh() {
+      const m = dpTh.value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (!m) return;
+      const dd = parseInt(m[1], 10);
+      const mm = parseInt(m[2], 10);
+      const beY = parseInt(m[3], 10);
+      if (beY < 2000 || beY > 3100 || mm < 1 || mm > 12 || dd < 1 || dd > 31) return;
+      const ceY = beY - 543;
+      const iso = `${ceY}-${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`;
+      if (datePicker) datePicker.value = iso;
+      submitWith(iso, currentTime);
+    }
+    dpTh.addEventListener("change", commitTh);
+    dpTh.addEventListener("blur", commitTh);
+    dpTh.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); commitTh(); }
     });
   }
 

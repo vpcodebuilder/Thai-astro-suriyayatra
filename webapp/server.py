@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import math
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date as _date
 from pathlib import Path
 from typing import Optional
 
@@ -678,12 +678,15 @@ def chart_to_view(
     person_name: str,
     transit_chart: Optional[Chart] = None,
     transit_meta: Optional[dict] = None,
+    original_birth_intl: Optional[tuple] = None,  # (ce_y, m, d, h, mi) วันเกิดสากลจริง (ก่อน sunrise shift)
 ) -> dict:
     """แปลง Chart เป็น dict สำหรับ template
 
     หมายเหตุ: ผังดวงใช้ตำแหน่งราศี fix (เมษอยู่บนช่องที่ 2, ไล่ทวนเข็มจนถึงมีน)
     แต่ละช่องราศีจะคำนวณว่าเป็นภพอะไรตามลัคนา
     transit_chart: ถ้ามี จะแสดงดาวจรในวงนอก
+    original_birth_intl: ถ้ามี = วันเกิดสากล (ก่อน sunrise shift) — ใช้แสดง 2 บรรทัด
+        (สูติกาลตำราไทย: chart.day/month — vs สากล: original)
     """
     asc_rasi = chart.ascendant.zodiac.rasi
 
@@ -846,9 +849,22 @@ def chart_to_view(
     dignities = compute_all_dignities(chart.planets)
     yogas = detect_yogas(chart.ascendant.zodiac.rasi, chart.planets, dignities)
 
-    # ทักษา (Taksa) — ดาวประจำวันเกิด + 8 บริวาร + ดาวเสวยอายุ
+    # ทักษา (Taksa) — sync ตามวัน transit ถ้ามี (ไม่งั้นใช้ default = now)
+    taksa_reference_date = None
+    taksa_disabled = False
+    taksa_disabled_reason = None
+    if transit_chart is not None:
+        taksa_reference_date = _date(
+            transit_chart.ce_year, transit_chart.month, transit_chart.day,
+        )
+        birth_d = _date(chart.ce_year, chart.month, chart.day)
+        if taksa_reference_date < birth_d:
+            taksa_disabled = True
+            taksa_disabled_reason = "วันที่ดาวจรอยู่ก่อนวันเกิด — ยังไม่เกิดในเวลานี้"
+
     taksa = compute_taksa(
         chart.ce_year, chart.month, chart.day, chart.hour, chart.minute,
+        today=taksa_reference_date,
     )
     taksa_transit_aspects = transit_aspects_on_taksa(
         taksa,
@@ -876,11 +892,55 @@ def chart_to_view(
     d = chart.desire
     sr = d.surathin
 
+    # ===== วันเกิดสากล (ก่อน Thai sunrise shift) — แสดงเป็นบรรทัด "ตรงกับสากล" =====
+    intl_view = None
+    if original_birth_intl is not None:
+        o_y, o_m, o_d, o_h, o_mi = original_birth_intl
+        intl_be = o_y + 543
+        intl_weekday_idx = _date(o_y, o_m, o_d).weekday()  # 0=Mon, 6=Sun
+        intl_weekday_names_th = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"]
+        intl_view = {
+            "weekday_name": "วัน" + intl_weekday_names_th[intl_weekday_idx],
+            "date_th": f"{o_d} {THAI_MONTHS[o_m]} พ.ศ. {intl_be}",
+            "time": f"{o_h:02d}:{o_mi:02d}",
+            "shifted": (o_y, o_m, o_d) != (chart.ce_year, chart.month, chart.day),
+        }
+
+    # ===== Taksa reference label (ทำนายตามวันที่ดาวจร / ตามปัจจุบัน) =====
+    taksa_ref_label = None
+    taksa_age_label = None
+    if taksa_reference_date is not None:
+        # มี transit chart
+        # อายุ ณ วันนั้น
+        birth_d2 = _date(chart.ce_year, chart.month, chart.day)
+        delta_days = (taksa_reference_date - birth_d2).days
+        if delta_days < 0:
+            taksa_age_label = "ก่อนเกิด"
+        else:
+            years = taksa_reference_date.year - birth_d2.year
+            months_diff = taksa_reference_date.month - birth_d2.month
+            days_diff = taksa_reference_date.day - birth_d2.day
+            if days_diff < 0:
+                months_diff -= 1
+            if months_diff < 0:
+                years -= 1
+                months_diff += 12
+            taksa_age_label = f"อายุ {years} ปี {months_diff} เดือน"
+        taksa_ref_label = (
+            f"{taksa_reference_date.day} {THAI_MONTHS[taksa_reference_date.month]} "
+            f"พ.ศ. {taksa_reference_date.year + 543}"
+        )
+
     return {
         "person_name": person_name,
         "birth_date_th": f"{chart.day} {THAI_MONTHS[chart.month]} พ.ศ. {chart.be_year}",
         "birth_date_iso": f"{chart.ce_year:04d}-{chart.month:02d}-{chart.day:02d}",
         "birth_time": f"{chart.hour:02d}:{chart.minute:02d}",
+        "birth_intl": intl_view,        # อาจเป็น None ถ้าไม่ส่ง original_birth_intl
+        "taksa_ref_label": taksa_ref_label,    # "DD MMM พ.ศ. YYYY" หรือ None
+        "taksa_age_label": taksa_age_label,    # "อายุ X ปี Y เดือน" หรือ "ก่อนเกิด"
+        "taksa_disabled": taksa_disabled,
+        "taksa_disabled_reason": taksa_disabled_reason,
         "province": chart.province,
         "ce_year": chart.ce_year,
         "be_year": chart.be_year,
@@ -970,6 +1030,9 @@ def chart_to_view(
             "time": transit_meta.get("time") if transit_meta else None,
             "time_24": transit_meta.get("time_24") if transit_meta else None,
             "date_iso": transit_meta.get("date_iso") if transit_meta else None,
+            "day": transit_meta.get("day") if transit_meta else None,
+            "month": transit_meta.get("month") if transit_meta else None,
+            "be_year": transit_meta.get("be_year") if transit_meta else None,
             "province": transit_meta.get("province") if transit_meta else None,
             "planets": transit_positions,
             "aspects": transit_aspects,
@@ -1519,6 +1582,9 @@ async def calculate(
             "time": f"{th_h:02d}:{tmin:02d}",
             "time_24": f"{th_h:02d}:{tmin:02d}",
             "date_iso": f"{ty:04d}-{tm_t:02d}-{tday:02d}",
+            "day": tday,
+            "month": tm_t,
+            "be_year": ty + 543,
             "province": "กรุงเทพมหานคร",
         }
 
@@ -1527,6 +1593,7 @@ async def calculate(
             person_name=name,
             transit_chart=transit_chart,
             transit_meta=transit_meta,
+            original_birth_intl=(y, m, d, h, mi),  # วันเกิดสากลก่อน sunrise shift
         )
         # ✓ chart computed successfully → bump usage stat (ไม่เก็บข้อมูลดวง)
         _stat_increment(FEATURE_SURIYAYATRA)
