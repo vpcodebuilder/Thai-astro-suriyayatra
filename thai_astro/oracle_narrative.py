@@ -335,8 +335,8 @@ def _build_life_area_section(
                         line, _ = _flip_warning_with_yoga(line, True)
                     warn_lines.append(f"{prefix}: {line}")
 
-    _collect(natal_lord_summary, "ดวงพื้นฐาน")
-    _collect(transit_lord_summary, "ช่วงนี้")
+    _collect(natal_lord_summary, "ดวงเดิม")
+    _collect(transit_lord_summary, "ดาวจร")
 
     if not good_lines and not warn_lines:
         return None

@@ -3105,18 +3105,42 @@ body.view-student .view-general { display: none !important; }
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  position: relative;
 }
 .scrubber-date-wrap input[type="text"] {
   flex: 1;
   min-width: 120px;
+  border: 1.5px solid var(--gold);
+  border-radius: 6px;
+  padding: 0.28rem 0.45rem;
+  background: #fff;
+  font-size: 0.88rem;
+  font-family: "Sarabun", sans-serif;
+  color: var(--ink);
+}
+.scrubber-date-wrap input[type="text"]:focus {
+  outline: none;
+  border-color: var(--gold-deep);
+  box-shadow: 0 0 0 2px rgba(199, 139, 27, 0.25);
 }
 .scrubber-date-wrap .date-picker-btn {
-  padding: 4px 8px;
+  padding: 0.28rem 0.55rem;
   background: var(--gold);
-  border: 1px solid var(--gold-deep);
-  border-radius: 4px;
+  border: 1.5px solid var(--gold-deep);
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.9rem;
+  line-height: 1;
+}
+.scrubber-date-wrap .date-picker-btn:hover {
+  background: var(--gold-deep);
+  color: #fff;
+}
+.scrubber-date-wrap .date-picker-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* ===== Sunrise convention info + banner ===== */

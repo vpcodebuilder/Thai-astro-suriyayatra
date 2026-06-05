@@ -12,6 +12,26 @@
 
 CHANGELOG = [
     {
+        "version": "2026.06.03-g",
+        "date": "2026-06-03",
+        "title": "Polish — scrubber textbox theme + label prophecy",
+        "highlights": [
+            "Scrubber วันที่ดาวจร: textbox มี gold border + Sarabun font (เดิม browser default)",
+            "Prophecy life areas: เปลี่ยน label \"ดวงพื้นฐาน\"→\"ดวงเดิม\", \"ช่วงนี้\"→\"ดาวจร\"",
+            "→ คำเตือนที่ขึ้น \"⚠ ดวงเดิม\" ฟังเข้าใจง่ายขึ้น (เกณฑ์ติดตัว ≠ ช่วงนี้)",
+        ],
+        "details": [
+            {
+                "category": "แก้",
+                "items": [
+                    "oracle_narrative.py: prefix natal=\"ดวงเดิม\", transit=\"ดาวจร\"",
+                    "CSS .scrubber-date-wrap input[type=text]: border+bg+font ตามธีม + :focus glow",
+                    "CSS .scrubber-date-wrap .date-picker-btn: gold button hover state",
+                ],
+            },
+        ],
+    },
+    {
         "version": "2026.06.03-f",
         "date": "2026-06-03",
         "title": "ดวงชะตา/ดาวจร/ทักษา UX rework",
