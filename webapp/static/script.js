@@ -286,6 +286,34 @@ function setupTriyangkaToggle() {
   bindToggle("toggle-bhava",     "bhava",     "bhava_visible",     true);
   bindToggle("toggle-triyangka", "triyangka", "triyangka_visible", true);
   bindToggle("toggle-orbit",     "orbit",     "orbit_view",        false);
+
+  // collapsible chart-cb-stack — default ปิด, จำสถานะใน localStorage
+  document.querySelectorAll(".chart-cb-stack").forEach(function (stack) {
+    const btn = stack.querySelector(".chart-cb-toggle");
+    if (!btn) return;
+    const STORAGE_KEY = "chart_cb_open";
+    const initOpen = localStorage.getItem(STORAGE_KEY) === "1";
+    stack.dataset.open = initOpen ? "true" : "false";
+    btn.setAttribute("aria-expanded", initOpen ? "true" : "false");
+
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      const isOpen = stack.dataset.open === "true";
+      const next = !isOpen;
+      stack.dataset.open = next ? "true" : "false";
+      btn.setAttribute("aria-expanded", next ? "true" : "false");
+      localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+    });
+
+    // click outside → ปิด (เฉพาะตอน open)
+    document.addEventListener("click", function (e) {
+      if (stack.dataset.open !== "true") return;
+      if (stack.contains(e.target)) return;
+      stack.dataset.open = "false";
+      btn.setAttribute("aria-expanded", "false");
+      localStorage.setItem(STORAGE_KEY, "0");
+    });
+  });
 }
 
 /* ======================================================================

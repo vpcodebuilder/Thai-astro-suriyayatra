@@ -12,6 +12,36 @@
 
 CHANGELOG = [
     {
+        "version": "2026.06.05-d",
+        "date": "2026-06-05",
+        "title": "Checkbox toggles → ปุ่ม collapsible (ไม่บัง chip อีก)",
+        "highlights": [
+            "ปุ่ม ⚙ ชั้น เล็กกว่าเดิม ไม่บังราศีกุมภ์/พฤษภ/มีน อีกแล้ว",
+            "คลิกปุ่มเพื่อกาง 5 toggles (ราศี/ธาตุ/ภพ/ตรียางค์/Orbit)",
+            "Click outside / click ปุ่มอีกครั้ง → ปิด",
+            "จำสถานะ open/close ใน localStorage",
+            "Mobile: ปุ่มยิ่งเล็ก ซ่อน label \"ชั้น\" เหลือแค่ไอคอน ⚙",
+            "เพิ่ม seed.py: auto-import 401 ปีอธิกมาส (BE 2300-2700) ทุก deploy",
+        ],
+        "details": [
+            {
+                "category": "แก้",
+                "items": [
+                    ".chart-cb-stack — เพิ่มชั้น collapsible: ปุ่ม ⚙ ชั้น + รายการ checkboxes ที่ซ่อน default",
+                    "JS: bind click toggle + outside-click close + persist state",
+                    "Mobile: hide \"ชั้น\" label, font/padding เล็กลง (≤600px)",
+                ],
+            },
+            {
+                "category": "เพิ่ม",
+                "items": [
+                    "seed_adhikamasa() — import data/adhikamasa_scraped.json (401 entries) อัตโนมัติ",
+                    "idempotent: skip ถ้ามี row อยู่แล้ว",
+                ],
+            },
+        ],
+    },
+    {
         "version": "2026.06.05-c",
         "date": "2026-06-05",
         "title": "Fix: หลาย sub-intent ให้คำตอบซ้ำกัน — เพิ่ม category-specific intros",

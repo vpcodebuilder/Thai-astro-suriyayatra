@@ -646,13 +646,60 @@ body::before {
   font-size: 10px;        /* เล็กลงให้พอดี chip ดาวจรที่ขนาด r=11 */
 }
 
-/* Toggle checkbox stack — มุมขวาบน */
+/* Toggle checkbox stack — มุมขวาบน (collapsible) */
 .chart-cb-stack {
   position: absolute;
   top: 6px; right: 6px;
   z-index: 5;
   display: flex; flex-direction: column;
   gap: 4px;
+  align-items: flex-end;
+}
+.chart-cb-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: "Sarabun", sans-serif;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--maroon-dark);
+  background: rgba(255, 249, 237, 0.92);
+  border: 1px solid var(--gold-deep);
+  border-radius: 999px;
+  padding: 4px 10px;
+  cursor: pointer;
+  user-select: none;
+  backdrop-filter: blur(2px);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  min-height: 28px;
+}
+.chart-cb-toggle:hover {
+  background: #fff5dc;
+}
+.chart-cb-toggle .cb-toggle-icon {
+  display: inline-block;
+  transition: transform 0.2s;
+}
+.chart-cb-stack[data-open="true"] .chart-cb-toggle .cb-toggle-icon {
+  transform: rotate(60deg);
+}
+.chart-cb-list {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  animation: cbFadeIn 0.18s ease-out;
+}
+.chart-cb-stack[data-open="true"] .chart-cb-list {
+  display: flex;
+}
+@keyframes cbFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* Mobile: ปุ่มและรายการเล็กลงนิด เพื่อกินพื้นที่น้อย */
+@media (max-width: 600px) {
+  .chart-cb-toggle { font-size: 0.78em; padding: 3px 8px; }
+  .chart-cb-toggle .cb-toggle-text { display: none; }
 }
 .triyangka-toggle-cb {
   display: inline-flex;

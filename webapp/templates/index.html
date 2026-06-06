@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260605a" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260605d" />
 </head>
 <body class="view-general" data-scroll-target="{% if scroll_target == '1' %}transit{% endif %}">
   <header class="site-header">
@@ -248,27 +248,34 @@
       <div class="chart-wrapper">
         {% set c = result.circle %}
         <div class="zodiac-stage triyangka-on element-on rasi-on bhava-on" style="--svg-size: {{ c.size }}px;">
-          <div class="chart-cb-stack">
-            <label class="triyangka-toggle-cb" title="แสดง/ซ่อนชื่อราศี">
-              <input type="checkbox" id="toggle-rasi" checked/>
-              <span class="cb-text">ราศี</span>
-            </label>
-            <label class="triyangka-toggle-cb" title="แสดง/ซ่อนสัญลักษณ์ธาตุ">
-              <input type="checkbox" id="toggle-element" checked/>
-              <span class="cb-text">ธาตุ</span>
-            </label>
-            <label class="triyangka-toggle-cb" title="แสดง/ซ่อนเลขภพ">
-              <input type="checkbox" id="toggle-bhava" checked/>
-              <span class="cb-text">ภพ</span>
-            </label>
-            <label class="triyangka-toggle-cb" title="แสดง/ซ่อนชั้นตรียางค์">
-              <input type="checkbox" id="toggle-triyangka" checked/>
-              <span class="cb-text">ตรียางค์</span>
-            </label>
-            <label class="triyangka-toggle-cb" title="สลับโหมด Orbit (วงโคจร) / จักรราศี">
-              <input type="checkbox" id="toggle-orbit"/>
-              <span class="cb-text">🌌 Orbit</span>
-            </label>
+          <div class="chart-cb-stack" data-open="false">
+            <button type="button" class="chart-cb-toggle" aria-expanded="false"
+                    aria-controls="chart-cb-list" title="ตั้งค่าชั้นการแสดงผล">
+              <span class="cb-toggle-icon">⚙</span>
+              <span class="cb-toggle-text">ชั้น</span>
+            </button>
+            <div class="chart-cb-list" id="chart-cb-list">
+              <label class="triyangka-toggle-cb" title="แสดง/ซ่อนชื่อราศี">
+                <input type="checkbox" id="toggle-rasi" checked/>
+                <span class="cb-text">ราศี</span>
+              </label>
+              <label class="triyangka-toggle-cb" title="แสดง/ซ่อนสัญลักษณ์ธาตุ">
+                <input type="checkbox" id="toggle-element" checked/>
+                <span class="cb-text">ธาตุ</span>
+              </label>
+              <label class="triyangka-toggle-cb" title="แสดง/ซ่อนเลขภพ">
+                <input type="checkbox" id="toggle-bhava" checked/>
+                <span class="cb-text">ภพ</span>
+              </label>
+              <label class="triyangka-toggle-cb" title="แสดง/ซ่อนชั้นตรียางค์">
+                <input type="checkbox" id="toggle-triyangka" checked/>
+                <span class="cb-text">ตรียางค์</span>
+              </label>
+              <label class="triyangka-toggle-cb" title="สลับโหมด Orbit (วงโคจร) / จักรราศี">
+                <input type="checkbox" id="toggle-orbit"/>
+                <span class="cb-text">🌌 Orbit</span>
+              </label>
+            </div>
           </div>
           <svg class="zodiac-svg" viewBox="0 0 {{ c.size }} {{ c.size }}"
                xmlns="http://www.w3.org/2000/svg">
@@ -1322,6 +1329,6 @@
     <p>คำนวณตามคัมภีร์สุริยยาตร์ของไทย · port มาจาก Devtino.Astrology</p>
   </footer>
 
-  <script src="/static/script.js?v=20260601h"></script>
+  <script src="/static/script.js?v=20260605d"></script>
 </body>
 </html>

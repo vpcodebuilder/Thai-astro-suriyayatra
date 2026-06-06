@@ -1987,3 +1987,113 @@ Q2: "อุปสรรคเรื่องงานเกี่ยวกับ
 ## Cache version
 `v=20260605c`
 
+
+# ===== Session 15 Updates =====
+# Production migration + UI polish — 2026-06-05
+
+## ภาพรวม
+1. **Railway PostgreSQL migration** — counter ที่ห่ายทุก deploy แก้แล้ว
+2. **adhikamasa_years auto-seed** — 401 ปี (BE 2300-2700) ทุก deploy
+3. **Checkbox toggles → collapsible button** — ไม่บัง chip กุมภ์/พฤษภ/มีน
+
+## 1. Railway PostgreSQL migration
+
+### ปัญหาเดิม
+- `db.py` มี fallback: ถ้า `DATABASE_URL` env ไม่ตั้ง → ใช้ `sqlite:///./local.db`
+- Railway container = ephemeral filesystem → ทุก deploy = local.db ใหม่ว่าง → counter reset
+
+### วิธีแก้ (Manual ใน Railway dashboard)
+1. Add PostgreSQL service ใน Railway project
+2. Add Variable Reference ใน web service → `DATABASE_URL` ชี้ไป Postgres
+3. Postgres service มี `postgres-volume` (persistent) → ข้อมูลคงอยู่ข้าม deploy
+4. กด Deploy → release phase รัน `alembic upgrade head && python -m webapp.seed`
+
+### ผลลัพธ์
+- counter ใน `usage_stats` ตอนนี้อยู่ใน PostgreSQL → ไม่หายอีก
+- 5 tables seed สำเร็จ: calendar_epochs(13), holy_days(6), national_holidays(20), usage_stats, adhikamasa_years(401)
+
+### Gotchas
+- Railway PostgreSQL ให้ 2 URL: internal (`*.railway.internal`) สำหรับ web service ใช้,
+  public (`*.proxy.rlwy.net`) สำหรับ DBeaver/pgAdmin ต่อจากภายนอก
+- PostgreSQL log ที่ Railway แสดง = log ของ DB เอง (startup/checkpoint) ไม่ใช่ deploy log
+- Deploy log อยู่ที่ Web service → Deployments → คลิก deployment ล่าสุด
+
+## 2. seed_adhikamasa() — auto-import 401 ปี
+
+### Pattern (เพิ่มใน `webapp/seed.py`)
+```python
+ADHIKAMASA_JSON = Path(__file__).parent.parent / "data" / "adhikamasa_scraped.json"
+
+def seed_adhikamasa(session, reset: bool):
+    if reset:
+        session.execute(delete(AdhikamasaYear))
+    if session.query(AdhikamasaYear).count() > 0:
+        print("[skip] adhikamasa_years already populated")
+        return
+    if not ADHIKAMASA_JSON.exists():
+        print(f"[warn] ไม่พบ {ADHIKAMASA_JSON.name} — ข้าม adhikamasa seeding")
+        return
+    data = json.loads(ADHIKAMASA_JSON.read_text(encoding="utf-8"))
+    for be_str, info in data.items():
+        if info["type"] in ("error", "unknown"):
+            continue
+        session.add(AdhikamasaYear(
+            cs_year=int(be_str) - 1181,
+            be_year=int(be_str),
+            ce_year=int(be_str) - 543,
+            type=info["type"],
+            source="myhora",
+            note=info.get("evidence", ""),
+        ))
+```
+
+### Idempotent
+- ครั้งแรก: insert 401 entries
+- ครั้งถัดไป: count > 0 → skip
+- ถ้าจะ override ใช้ `python -m webapp.seed --reset`
+
+## 3. Checkbox toggles → collapsible button
+
+### ปัญหา
+- 5 checkboxes (ราศี/ธาตุ/ภพ/ตรียางค์/Orbit) อยู่ `position: absolute; top: 6px; right: 6px`
+- บัง chip ดาวจรในราศีกุมภ์ + เลขเกษตร 8 + พิษ + chip natal/transit ทั้งหลาย
+- Mobile: ยิ่งกินพื้นที่มาก
+
+### วิธีแก้ (Session 15)
+Wrap 5 checkboxes ใน `<div class="chart-cb-list">` ที่ default `display: none`
++ เพิ่มปุ่ม `<button class="chart-cb-toggle">⚙ ชั้น</button>`
+
+```html
+<div class="chart-cb-stack" data-open="false">
+  <button class="chart-cb-toggle" aria-expanded="false">⚙ ชั้น</button>
+  <div class="chart-cb-list">
+    [5 labels with checkboxes]
+  </div>
+</div>
+```
+
+### CSS
+- ปุ่ม: rounded pill, gold-deep border, สีครีม bg
+- `.chart-cb-stack[data-open="true"] .chart-cb-list { display: flex }`
+- Mobile (≤600px): `.cb-toggle-text { display: none }` — เหลือแค่ ⚙
+
+### JS (`setupTriyangkaToggle()` ใน script.js)
+- Click ปุ่ม → toggle `data-open` + บันทึก localStorage `chart_cb_open`
+- Click outside stack → close (เฉพาะตอน open)
+- localStorage persist → จำสถานะ open/closed ระหว่าง session
+
+### Gotchas
+1. `document.write()` หลัง POST **ไม่ refire DOMContentLoaded** → click handler ไม่ bind
+   → ใช้ form.submit() ปกติให้ browser navigate จริง ๆ
+2. Original page ไม่มี `.zodiac-stage` (form-only) → setupTriyangkaToggle returns early
+   ก่อน result มา — ปกติแล้ว เพราะหลัง submit แล้ว page reload จึง setup
+3. animation `cbFadeIn` 0.18s — เร็วพอไม่หน่วง UX
+
+## Cache version
+`v=20260605d` — bump เมื่อแก้ HTML/CSS/JS
+
+## ไอเดียถัดไป (ยังไม่ทำ)
+- Banner deploy "PostgreSQL connected ✓" หลัง migration แรก (ตอนนี้เห็นแค่ counter เพิ่มขึ้นจริง)
+- Guard `db.py`: ถ้า env Railway/prod แต่ DATABASE_URL=sqlite → raise warning (กันพลาดในอนาคต)
+- adhikamasa_years ขยาย BE 1181-2299 + 2701-3000 (ตอนนี้ครอบ 2300-2700)
+
