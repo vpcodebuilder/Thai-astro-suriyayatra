@@ -1805,3 +1805,185 @@ def _mas_at_thaloengsok(thaloengsok) -> int:
 ## Cache version
 `v=20260605a` — bump เมื่อแก้ HTML/CSS/JS
 
+
+# ===== Session 14 Updates =====
+# โหรทายหนู ลึก 5 ชั้น — Intent + Dignity + Verdict + House relation + Sub-intents — 2026-06-05
+
+## ภาพรวม
+ขยายความลึกของระบบคำพยากรณ์โหรทายหนูจาก 4 ชั้น (lens / planet×bhava /
+combo / lord×bhava) เป็น **5 ชั้น + binary verdict** ตามแนว prashna จริง
+
+## 5 Phase ที่ทำเสร็จ
+
+### Phase 1 — Intent detection ([intent.py](thai_astro/horathaynu/core/intent.py))
+แตกคำถามเป็น 3 มิติ:
+- `intent_type` ∈ {yes_no, when, where, who, why, how, outcome}
+- `polarity` ∈ {hope, worry, neutral}
+- `topic` (จาก category mapping)
+
+ตัวอย่าง:
+- "จะได้งานไหม" → (yes_no, neutral, "หางาน")
+- "เมื่อไหร่จะได้แฟน" → (when, neutral, "เนื้อคู่")
+- "อยากย้ายงาน กลัวพลาด" → (outcome, worry, "ลาออก")
+
+### Phase 2 — Dignity ([dignity_score.py](thai_astro/horathaynu/core/dignity_score.py))
+Port `EXALTATION/SWAKSHETRA/MULATRIKONA/PLANET_RELATIONS` จาก
+`thai_astro/dignities.py` มาใช้ key อังกฤษของ horathaynu (sun/moon/...)
+
+`compute_sig_dignity(planet, rashi)` → `SigDignity(dignity, label, strength, suffix)`
+- อุจน์/เกษตร/มูล = is_strong → suffix "พลังเต็มที่..."
+- นิจ/ประ/ศัตรู = is_weak → suffix "ติดขัด..."
+
+### Phase 3 — Binary verdict ([verdict.py](thai_astro/horathaynu/core/verdict.py))
+คะแนนรวม:
+| Factor | ±score |
+|--------|--------|
+| sig dignity (อุจน์/เกษตร/มูล) | +2 |
+| sig dignity (นิจ/ประ) | −2 |
+| sig in kendra (1/4/7/10) | +1 |
+| sig in trikona (1/5/9) | +1 |
+| sig in 11 (ลาภะ) | +1 |
+| sig in dusthana (6/8/12) | −2 |
+| house_relation_score (Phase 4) | ±2 |
+| ดาวมิตร (benefic) same bhava | +1/ดวง |
+| ดาวร้าย (malefic) same bhava | −1/ดวง |
+| จันทร์ในภพดี | +1 |
+| จันทร์ในทุกข์ | −1 |
+
+Tier mapping:
+- score ≥ +4 → very_high (85%) — "แทบจะแน่นอน"
+- ≥ +2 → high (70%) — "น่าจะได้"
+- ≥ 0 → moderate (50%) — "ก้ำกึ่ง"
+- ≥ −2 → low (30%) — "เสี่ยงพลาด"
+- < −2 → very_low (15%) — "ครั้งนี้ยังไม่ใช่"
+
+Benefics = {jupiter, venus, moon, mercury}
+Malefics = {saturn, mars, rahu, ketu, sun}
+
+### Phase 4 — House relation ([house_relation.py](thai_astro/horathaynu/core/house_relation.py))
+12 ระยะจากภพคำถามไปถึง sig:
+- 1 = ภพเดิม (มั่นคง, +2)
+- 5, 9 = ตรีโกณ (+2)
+- 11 = ลาภะ ✓ (สมหวัง +2)
+- 6, 8, 12 = ทุกข์ (−2)
+- 3 = สหัชชะ (เคลื่อนไหว, 0)
+- 4, 10 = เกณฑ์ (+1)
+
+`compute_house_relation(asked_bhava, sig_house, topic)` → text formatted กับ topic
+
+### Phase 5 — Sub-intents (+18 categories ใน [question_mapping.py](thai_astro/horathaynu/data/question_mapping.py))
+| Parent | Sub-intents เพิ่ม |
+|--------|-------------------|
+| career | promotion, boss_conflict, freelance |
+| love | love_loyalty, love_reconcile, love_new, love_thirdparty |
+| wealth | investment, loan, bonus, repay |
+| health | health_recover, health_surgery |
+| study | exam_pass, scholarship |
+| home | buy_house, move_home |
+
+แต่ละ sub-intent มี:
+- keywords เฉพาะ
+- primary_bhava + secondary_bhavas เฉพาะ
+- significator + co_significators เฉพาะ
+- priority สูง (8-9) เพื่อชนะ parent category
+
+career parent priority ลด 7→6 เพื่อให้ sub-intents (8-9) ชนะใน score-based matching
+
+## Orchestration ใน prophecy.predict()
+
+```
+1. classify_question(q) → (mapping, matched)         [Phase 5]
+2. parse_intent(q, topic=mapping.label_th) → intent  [Phase 1]
+3. compute_sig_dignity(sig, sig_rashi) → dignity     [Phase 2]
+4. compute_house_relation(primary_bhava, sig_house)  [Phase 4]
+5. compute_verdict(chart, sig, sig_house, ...)       [Phase 3]
+6. Render text:
+   - บรรทัด 1: intent_headline
+   - บรรทัด 2: verdict.label + "(โอกาส ~X%)"
+   - บรรทัด 3+: category renderer + dignity suffix + combos + house_relation + lord×bhava
+```
+
+## ProphecyResult — 13 fields ใหม่
+```
+intent_type, polarity, intent_headline,
+dignity_kind, dignity_label, dignity_strength,
+house_relation_distance, house_relation_name, house_relation_text,
+verdict_tier, verdict_percentage, verdict_label, verdict_factors
+```
+
+## JSON response /horathaynu/ask
+เพิ่ม 13 field ใหม่ส่งกลับ → frontend ใช้ได้ทันที (แสดงเป็น chip/badge)
+
+## Tests ผ่าน
+5 ประโยคทดสอบ (date 5/6/2569 10:30):
+- "สัมภาษณ์งานจะได้ไหม" → cat=job_search, intent=yes_no, verdict=30% (sig วินาส)
+- "เมื่อไหร่จะได้แฟน" → cat=love_new, intent=when, verdict=85% (sig=ศุกร์อุจน์)
+- "คนรักจริงใจไหม" → cat=love, intent=yes_no, verdict=85%
+- "ของรักหายอยู่ที่ไหน" → cat=lost_item, intent=where, verdict=50%
+- "ลงทุนหุ้นได้ไหม" → cat=investment, intent=yes_no, verdict=70%
+
+## Gotchas
+1. **`lordship.py` กุมภ์เคยเป็นเสาร์** — Session 13 แก้ใน planets.py แล้วแต่ไม่ sync มาที่นี่
+   → Session 14 แก้ให้ตรงกัน (กุมภ์ = ราหู)
+2. **career parent priority ต้องต่ำกว่า sub-intents** — ไม่งั้น "สัมภาษณ์งาน" จะ match career
+   ก่อน job_search เพราะ career มี keyword "งาน" ซึ่งสั้นกว่า "สัมภาษณ์" แต่ priority สูง
+3. **polarity=neutral เป็น default** — คำถามที่ไม่มี อยาก/หวัง/กลัว/ห่วง = neutral
+4. **horathaynu chart กระจายดาว** — same-house dignity & combo อาจไม่เจอ → fine
+
+## Cache version
+`v=20260605b` — bump เมื่อแก้ HTML/CSS/JS
+
+
+# ===== Session 14b Updates =====
+# Fix: หลาย sub-intent ให้คำตอบซ้ำ — 2026-06-05
+
+## ปัญหา
+หลัง Session 14 ครบ 5 phase แล้ว user พบว่า "จะได้เลื่อนตำแหน่งไหม" กับ
+"อุปสรรคเรื่องงานเกี่ยวกับคนมั้ย" → คำตอบเกือบเหมือนกันทั้งหมด
+
+**Root cause**: หลาย sub-category ใช้ `significator + primary_bhava` เดียวกัน:
+- career, promotion, boss_conflict ทั้งหมดมี sig=sun, bhava=10
+- ผัง chart เดียวกัน → ตำแหน่งดาวเดียวกัน → text ออกมาเกือบเหมือนกัน
+- generic renderer `_make_text_generic_category` แตกต่างเฉพาะ `cat_label` ที่ swap แล้ว
+
+## วิธีแก้
+
+### 1. เพิ่ม [category_intros.py](thai_astro/horathaynu/data/category_intros.py)
+- 33 categories × 3 tier (good/warn/neutral) = 99 บทเปิด
+- Token: `{sig}`, `{bhava}`, `{rashi}` substitute ตอน render
+- `get_category_intro(cat, tier, sig, bhava, rashi)` → text หรือ None (fallback)
+- Tier mapping: very_high/high → idx 0 (good), low/very_low → idx 1 (warn), moderate → idx 2
+
+### 2. เพิ่ม category `work_conflict`
+- keywords: อุปสรรคเรื่องงาน, ปัญหาที่ทำงาน, ขัดแย้งที่ทำงาน, เพื่อนร่วมงาน
+- primary_bhava=6 (อริ ทุกข์) — แทน 10 ที่ใช้ใน career
+- sig=mars (การกระทบกระทั่ง) แทน sun
+- **priority=10** — สูงสุด เพื่อชนะ career (priority=6)
+
+### 3. Orchestrate ใน prophecy.predict()
+- เพิ่มบรรทัด 3 ใน header_lines: `cat_intro` (intent_headline → verdict → intro → body)
+- ถ้า `get_category_intro` คืน None → ไม่ใส่ (backward compat)
+
+## ผลลัพธ์ (ทดสอบ 5/6/2569 10:30)
+
+```
+Q1: "จะได้เลื่อนตำแหน่งไหม"
+   cat=promotion | sig=อาทิตย์/พิจิก/ภพ3 | verdict=50%
+   intro: "📈 เรื่องเลื่อนตำแหน่ง — ก้ำกึ่ง ขึ้นกับว่าคุณจะ proactive แค่ไหน..."
+
+Q2: "อุปสรรคเรื่องงานเกี่ยวกับคนมั้ย"
+   cat=work_conflict | sig=อังคาร/พฤษภ/ภพ9 | verdict=70%
+   intro: "⚔️ เรื่องอุปสรรค/ปัญหาที่ทำงาน — อังคารอยู่ภพศุภะ (อริ-ทุกข์)..."
+```
+
+ทุกชั้นต่างกันหมด — category, sig, bhava, intro, verdict, house relation, lord×bhava
+
+## Pattern สำหรับเพิ่ม sub-intent ใหม่
+1. เพิ่ม QuestionMapping entry ใน `question_mapping.py` พร้อม keywords + priority สูงพอ
+2. **เพิ่ม entry ใน `CATEGORY_INTROS`** — 3 บรรทัด (good/warn/neutral)
+   ⚠️ ถ้าไม่เพิ่ม จะตกไป fallback generic ที่อาจซ้ำกับ category อื่นที่ sig+bhava เดียวกัน
+3. ถ้าต้องใช้ renderer เฉพาะ (เช่น lost_item) → เพิ่ม branch ใน `predict()` orchestrator
+
+## Cache version
+`v=20260605c`
+

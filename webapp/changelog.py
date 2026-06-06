@@ -12,6 +12,75 @@
 
 CHANGELOG = [
     {
+        "version": "2026.06.05-c",
+        "date": "2026-06-05",
+        "title": "Fix: หลาย sub-intent ให้คำตอบซ้ำกัน — เพิ่ม category-specific intros",
+        "highlights": [
+            "ปัญหา: career/promotion/boss_conflict ใช้ sig+bhava เดียวกัน → text ออกซ้ำ",
+            "แก้: CATEGORY_INTROS — 33 categories × 3 tier (good/warn/neutral)",
+            "เพิ่ม work_conflict sub-intent (priority 10) สำหรับ \"อุปสรรคงาน/ปัญหาที่ทำงาน\"",
+            "Intro เปลี่ยนตาม verdict tier — ทำให้แต่ละคำถามได้คำตอบเฉพาะตัว",
+        ],
+        "details": [
+            {
+                "category": "เพิ่ม",
+                "items": [
+                    "horathaynu/data/category_intros.py — get_category_intro() + 33 entries",
+                    "QuestionMapping work_conflict — primary_bhava=6 (อริ), sig=mars, priority=10",
+                ],
+            },
+            {
+                "category": "แก้",
+                "items": [
+                    "prophecy.predict() — ผนวก cat_intro เข้า header (บรรทัด 3) เปลี่ยนตาม cat+tier",
+                ],
+            },
+        ],
+    },
+    {
+        "version": "2026.06.05-b",
+        "date": "2026-06-05",
+        "title": "โหรทายหนู ลึก 5 ชั้น — Intent + Dignity + Verdict + House relation + Sub-intents",
+        "highlights": [
+            "Intent parser: จับ yes_no / when / where / who / why / how / outcome",
+            "Polarity: hope / worry / neutral (จาก keyword อยาก/กลัว/ห่วง)",
+            "Verdict tier 5 ระดับ + โอกาส % (very_high 85 → very_low 15)",
+            "Dignity ของ sig — อุจน์/เกษตร/มูล/มิตร/ประ/นิจ ผนวกเข้าทุกคำทำนาย",
+            "House relation 12 ระยะ (ลาภะ✓/ตรีโกณ/ทุกข์...) ตอบ \"ภพผสมภพ\"",
+            "ขยาย sub-intents: career, love, wealth, study, home → +18 categories",
+            "ลัคนา/ดาวเกษตรกุมภ์ในโหรทายหนู = ราหู (sync Session 13)",
+        ],
+        "details": [
+            {
+                "category": "เพิ่ม",
+                "items": [
+                    "horathaynu/core/intent.py — parse_intent + INTENT_HEADLINE_TEMPLATES",
+                    "horathaynu/core/dignity_score.py — compute_sig_dignity + DIGNITY_SUFFIX",
+                    "horathaynu/core/verdict.py — compute_verdict (yes/no scoring)",
+                    "horathaynu/core/house_relation.py — 12 ระยะภพคำถาม→sig",
+                    "ProphecyResult: เพิ่ม 13 fields ใหม่ (intent/verdict/dignity/relation)",
+                    "Sub-intents: promotion, boss_conflict, freelance, love_loyalty, love_reconcile, love_new, love_thirdparty, investment, loan, bonus, repay, health_recover, health_surgery, exam_pass, scholarship, buy_house, move_home (+18)",
+                ],
+            },
+            {
+                "category": "แก้",
+                "items": [
+                    "horathaynu/data/lordship.py: กุมภ์ = ราหู (เดิมเสาร์ — sync RASI_LORD)",
+                    "career priority ลด 7→6 เพื่อให้ sub-intents ชนะ score-based matching",
+                    "love category match love_loyalty/love_reconcile/love_new prefix สำหรับ renderer",
+                ],
+            },
+            {
+                "category": "ปรับ",
+                "items": [
+                    "prophecy.predict() orchestrate 5 phases: Intent → Dignity → House relation → Verdict → Render",
+                    "answer text: บรรทัดบนสุด = intent_headline + verdict label + %",
+                    "JSON response /horathaynu/ask: ขยาย field 13 ตัว (verdict/intent/dignity/relation)",
+                ],
+            },
+        ],
+    },
+    {
         "version": "2026.06.05-a",
         "date": "2026-06-05",
         "title": "ดาวเกษตรกุมภ์ = ราหู + คำพยากรณ์โหรขยาย dignity",

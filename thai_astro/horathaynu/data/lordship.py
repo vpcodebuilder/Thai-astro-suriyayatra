@@ -19,7 +19,7 @@ RASHI_LORD: dict[int, str] = {
     7:  "mars",      # พิจิก
     8:  "jupiter",   # ธนู
     9:  "saturn",    # มกร
-    10: "saturn",    # กุมภ์
+    10: "rahu",      # กุมภ์ — เลขเกษตร 8 (ตำราโหรทายหนู / Session 13)
     11: "jupiter",   # มีน
 }
 

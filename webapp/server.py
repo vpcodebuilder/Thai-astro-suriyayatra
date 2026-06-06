@@ -1671,6 +1671,7 @@ def _horathaynu_prophesy(question: str, chart) -> dict:
     return {
         "significator": r.significator_th,
         "category": r.category,
+        "category_label": r.category_label,
         "rashi": r.sig_rashi_name,
         "bhava": r.sig_bhava,
         "house": r.sig_house,
@@ -1679,6 +1680,20 @@ def _horathaynu_prophesy(question: str, chart) -> dict:
         "co_planets": [HORATHAYNU_PLANET_NAME_TH[k] for k in r.co_planets],
         "sign_lord": r.sign_lord_th,
         "text": r.text,
+        # ----- Session 14 fields -----
+        "intent_type": r.intent_type,
+        "polarity": r.polarity,
+        "intent_headline": r.intent_headline,
+        "dignity_kind": r.dignity_kind,
+        "dignity_label": r.dignity_label,
+        "dignity_strength": r.dignity_strength,
+        "house_relation_distance": r.house_relation_distance,
+        "house_relation_name": r.house_relation_name,
+        "house_relation_text": r.house_relation_text,
+        "verdict_tier": r.verdict_tier,
+        "verdict_percentage": r.verdict_percentage,
+        "verdict_label": r.verdict_label,
+        "verdict_factors": list(r.verdict_factors),
     }
 
 
@@ -2043,6 +2058,7 @@ async def horathaynu_ask(
         "answer": prophecy["text"],
         "significator": prophecy["significator"],
         "category": prophecy.get("category"),
+        "category_label": prophecy.get("category_label"),
         "warning": warning,
         "rashi": prophecy["rashi"],
         "bhava": prophecy["bhava"],
@@ -2051,6 +2067,20 @@ async def horathaynu_ask(
         "co_planets": prophecy["co_planets"],
         "sign_lord": prophecy["sign_lord"],
         "is_own_sign": prophecy["is_own_sign"],
+        # ----- Session 14 5-phase output -----
+        "intent_type": prophecy.get("intent_type"),
+        "polarity": prophecy.get("polarity"),
+        "intent_headline": prophecy.get("intent_headline"),
+        "dignity_kind": prophecy.get("dignity_kind"),
+        "dignity_label": prophecy.get("dignity_label"),
+        "dignity_strength": prophecy.get("dignity_strength"),
+        "house_relation_distance": prophecy.get("house_relation_distance"),
+        "house_relation_name": prophecy.get("house_relation_name"),
+        "house_relation_text": prophecy.get("house_relation_text"),
+        "verdict_tier": prophecy.get("verdict_tier"),
+        "verdict_percentage": prophecy.get("verdict_percentage"),
+        "verdict_label": prophecy.get("verdict_label"),
+        "verdict_factors": prophecy.get("verdict_factors"),
         "timestamp": now.strftime("%H:%M:%S"),
     })
 

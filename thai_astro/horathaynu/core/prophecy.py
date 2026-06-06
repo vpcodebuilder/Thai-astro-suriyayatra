@@ -29,6 +29,23 @@ from thai_astro.horathaynu.data.bhava_meanings_prashna import get_bhava as _get_
 from thai_astro.horathaynu.data.lord_in_bhava import predict_for_primary_bhava
 from thai_astro.horathaynu.data.planet_combo import find_combos
 
+# ===== Phase 1-4 modules =====
+from thai_astro.horathaynu.core.intent import (
+    QuestionIntent,
+    parse_intent,
+    make_intent_headline,
+)
+from thai_astro.horathaynu.core.dignity_score import (
+    SigDignity,
+    compute_sig_dignity,
+)
+from thai_astro.horathaynu.core.house_relation import (
+    HouseRelation,
+    compute_house_relation,
+)
+from thai_astro.horathaynu.core.verdict import Verdict, compute_verdict
+from thai_astro.horathaynu.data.category_intros import get_category_intro
+
 
 # ===== ความหมายเชิงพยากรณ์ของดาว (สำหรับเป็น significator) =====
 PLANET_SIGNIFICATIONS = {
@@ -133,6 +150,21 @@ class ProphecyResult:
     matched_keywords: tuple[str, ...] = ()           # debug
     category_label: str = ""                         # ป้ายแสดงผล เช่น "การงาน"
     tone_hint: str = "neutral"                       # จาก QuestionMapping
+
+    # ----- Phase 1-4 ใหม่ (Session 14) -----
+    intent_type: str = "outcome"          # yes_no/when/where/who/why/how/outcome
+    polarity: str = "neutral"             # hope/worry/neutral
+    intent_headline: str = ""             # ประโยคหัวข้อตาม intent
+    dignity_kind: str = ""                # อุจน์/เกษตร/นิจ/ประ/...
+    dignity_label: str = ""               # "เกษตร (บ้านตัวเอง)"
+    dignity_strength: int = 0             # -3..+3
+    house_relation_distance: int = 0      # 1-12
+    house_relation_name: str = ""         # "ลาภะ ✓"
+    house_relation_text: str = ""         # ประโยค
+    verdict_tier: str = ""                # very_high/high/moderate/low/very_low
+    verdict_percentage: int = 0           # 5-95
+    verdict_label: str = ""               # "🎯 โอกาสสูง..."
+    verdict_factors: tuple[str, ...] = () # สาเหตุที่ทำให้ verdict เป็นแบบนี้
 
 
 RASHI_TH = ["เมษ", "พฤษภ", "เมถุน", "กรกฎ", "สิงห์", "กันย์",
@@ -600,6 +632,28 @@ def predict(chart: Chart, question: str) -> ProphecyResult:
         else ""
     )
 
+    # ===== Phase 1: Parse intent =====
+    intent = parse_intent(question, topic=mapping.label_th)
+    intent_headline = make_intent_headline(intent)
+
+    # ===== Phase 2: Compute sig dignity =====
+    sig_dignity = compute_sig_dignity(significator, sig_rashi_index)
+
+    # ===== Phase 4: House relation =====
+    house_rel: HouseRelation | None = None
+    if 1 <= primary_bhava <= 12:
+        house_rel = compute_house_relation(primary_bhava, sig_house, topic=mapping.label_th)
+
+    # ===== Phase 3: Verdict =====
+    verdict = compute_verdict(
+        chart=chart,
+        sig_planet=significator,
+        sig_house=sig_house,
+        sig_rashi=sig_rashi_index,
+        asked_bhava=primary_bhava if 1 <= primary_bhava <= 12 else 0,
+        house_relation_score=(house_rel.score if house_rel else 0),
+    )
+
     result = ProphecyResult(
         significator=significator,
         significator_th=PLANET_NAME_TH.get(significator, significator),
@@ -622,6 +676,20 @@ def predict(chart: Chart, question: str) -> ProphecyResult:
         matched_keywords=tuple(matched_keywords),
         category_label=mapping.label_th,
         tone_hint=mapping.tone_hint,
+        # ----- Phase 1-4 ใหม่ -----
+        intent_type=intent.intent_type,
+        polarity=intent.polarity,
+        intent_headline=intent_headline,
+        dignity_kind=sig_dignity.dignity,
+        dignity_label=sig_dignity.label,
+        dignity_strength=sig_dignity.strength,
+        house_relation_distance=(house_rel.distance if house_rel else 0),
+        house_relation_name=(house_rel.name if house_rel else ""),
+        house_relation_text=(house_rel.text if house_rel else ""),
+        verdict_tier=verdict.tier,
+        verdict_percentage=verdict.percentage,
+        verdict_label=verdict.label,
+        verdict_factors=tuple(verdict.factors),
     )
 
     # เลือก renderer ตาม category — render ชั้นที่ 3 (ดาว × ภพ) + Layer 1 บริบท
@@ -629,14 +697,18 @@ def predict(chart: Chart, question: str) -> ProphecyResult:
         text = _make_text_lost_item(result)
     elif category == "person":
         text = _make_text_person(result)
-    elif category == "love":
+    elif category == "love" or category.startswith("love_"):
         text = _make_text_love(result)
-    elif category == "wealth":
+    elif category == "wealth" or category in {"investment", "bonus", "luck_windfall"}:
         text = _make_text_wealth(result)
     elif category == "general" or category == "current_event":
         text = _make_text_general(result, question)
     else:
         text = _make_text_generic_category(result, category)
+
+    # ===== Phase 2: เพิ่ม dignity suffix ของ sig =====
+    if sig_dignity.suffix:
+        text = text + "\n" + f"💎 {sig_dignity.suffix.lstrip(' —')}"
 
     # ===== Phase 5: ดาวครองร่วม (planet combo) ที่มีนัยพิเศษ =====
     same_house_planets = [
@@ -647,32 +719,43 @@ def predict(chart: Chart, question: str) -> ProphecyResult:
     combo_lines = _format_combo_lines(
         result.significator, combo_candidates, result.category
     )
-
-    # คำนวณ tones ของ combos สำหรับ verdict
-    combo_tones: list[str] = []
-    for c in find_combos(
-        [result.significator] + combo_candidates, category=result.category
-    )[:2]:
-        combo_tones.append(c.tone)
-
     if combo_lines:
         text = text + "\n" + "\n".join(combo_lines)
 
-    # ===== Phase 4: เพิ่มชั้นที่ 2 (ภพผสมภพ) ต่อท้าย =====
-    layer2_tone: str | None = None
+    # ===== Phase 4: เพิ่ม house relation (ภพคำถาม → sig) =====
+    if house_rel:
+        rel_emoji = {"good": "🌟", "warning": "⚠️", "neutral": "🌀"}.get(house_rel.tone, "📐")
+        text = text + "\n" + f"{rel_emoji} ชั้นที่ 4 (ระยะภพ): {house_rel.text}"
+
+    # ===== Phase 4 (Layer 2 lord-in-bhava เดิม) =====
     if result.primary_bhava >= 1:
-        layer2_result = predict_for_primary_bhava(chart, result.primary_bhava)
-        if layer2_result is not None:
-            layer2_tone = layer2_result.tone
         layer2_lines = _format_lord_in_bhava_lines(chart, result.primary_bhava)
         if layer2_lines:
             text = text + "\n" + "\n".join(layer2_lines)
 
-    # ===== Phase C: Verdict — สังเคราะห์ tone ทุกชั้น แล้วใส่ด้านบนสุด =====
-    verdict_tone, verdict_line = _compute_verdict(
-        result.significator, result.sig_house, layer2_tone, combo_tones
+    # ===== Phase 5b: Category-specific intro ด้านบนสุด =====
+    # แทนที่บรรทัด generic "📌 เรื่อง{cat_label}..." ใน _make_text_generic_category
+    # ด้วยบทเปิดเฉพาะ category ที่สะท้อนทั้ง verdict tier + ดาว + ภพ
+    cat_intro = get_category_intro(
+        category=category,
+        tier=verdict.tier,
+        sig=PLANET_NAME_TH.get(significator, significator),
+        bhava=sig_bhava,
+        rashi=sig_rashi_name,
     )
-    text = verdict_line + "\n" + text
+
+    # ===== Phase 1+3: Verdict + Intent headline ด้านบนสุด =====
+    # บรรทัด 1: intent headline (ผู้ถามมาด้วยใจแบบไหน)
+    # บรรทัด 2: verdict tier + percentage (yes/no answer)
+    # บรรทัด 3: category-specific intro (เปลี่ยนตาม cat + tier)
+    # บรรทัด 4+: เนื้อหาเดิม
+    header_lines = [
+        intent_headline,
+        f"{verdict.label} (โอกาส ~{verdict.percentage}%)",
+    ]
+    if cat_intro:
+        header_lines.append(cat_intro)
+    text = "\n".join(header_lines) + "\n\n" + text
 
     result.text = text
     return result

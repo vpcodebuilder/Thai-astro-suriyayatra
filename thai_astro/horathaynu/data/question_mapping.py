@@ -122,15 +122,14 @@ QUESTION_MAPPINGS: tuple[QuestionMapping, ...] = (
     QuestionMapping(
         category="career",
         label_th="การงาน / อาชีพ",
-        keywords=("การงาน", "งาน", "อาชีพ", "ตำแหน่ง", "เลื่อนขั้น",
-                  "เลื่อนตำแหน่ง", "หน้าที่", "เจ้านาย", "ลูกน้อง",
-                  "ที่ทำงาน"),
-        primary_bhava=10,               # กัมมะ
-        secondary_bhavas=(6, 11),       # อริ (อุปสรรค) + ลาภะ (ผลตอบแทน)
-        significator="sun",             # อำนาจ/ตำแหน่ง
-        co_significators=("saturn",),   # ระยะยาว/อดทน
+        keywords=("การงาน", "งาน", "อาชีพ", "ตำแหน่ง", "หน้าที่",
+                  "เจ้านาย", "ลูกน้อง", "ที่ทำงาน"),
+        primary_bhava=10,
+        secondary_bhavas=(6, 11),
+        significator="sun",
+        co_significators=("saturn",),
         tone_hint="material",
-        priority=7,
+        priority=6,
     ),
     QuestionMapping(
         category="job_search",
@@ -138,9 +137,9 @@ QUESTION_MAPPINGS: tuple[QuestionMapping, ...] = (
         keywords=("หางาน", "สมัครงาน", "สัมภาษณ์", "interview",
                   "งานใหม่", "ได้งาน"),
         primary_bhava=10,
-        secondary_bhavas=(11, 7),       # ลาภะ (ผลรับ) + ปัตนิ (ทำกับใคร)
-        significator="mercury",         # การติดต่อ
-        co_significators=("jupiter",),  # โอกาส/บุญ
+        secondary_bhavas=(11, 7),
+        significator="mercury",
+        co_significators=("jupiter",),
         tone_hint="material",
         priority=8,
     ),
@@ -150,11 +149,111 @@ QUESTION_MAPPINGS: tuple[QuestionMapping, ...] = (
         keywords=("ลาออก", "ย้ายงาน", "เปลี่ยนงาน", "ทิ้งงาน",
                   "อยากออก", "ออกจากงาน"),
         primary_bhava=10,
-        secondary_bhavas=(12, 3),       # วินาส (จาก) + สหัชชะ (ย้าย)
-        significator="saturn",          # การเปลี่ยน/ขัดข้อง
-        co_significators=("mars",),     # ตัดสินใจเด็ดขาด
+        secondary_bhavas=(12, 3),
+        significator="saturn",
+        co_significators=("mars",),
         tone_hint="material",
         priority=8,
+    ),
+    # Sub-intents ใหม่
+    QuestionMapping(
+        category="promotion",
+        label_th="เลื่อนตำแหน่ง / เลื่อนขั้น",
+        keywords=("เลื่อนขั้น", "เลื่อนตำแหน่ง", "ขึ้นเงินเดือน",
+                  "อัพตำแหน่ง", "ปรับตำแหน่ง", "ปรับขึ้น"),
+        primary_bhava=10,
+        secondary_bhavas=(11, 2),       # ลาภะ + กดุมภะ (เงินเดือน)
+        significator="sun",
+        co_significators=("jupiter",),
+        tone_hint="material",
+        priority=9,
+    ),
+    QuestionMapping(
+        category="boss_conflict",
+        label_th="ปัญหากับเจ้านาย",
+        keywords=("เจ้านายโกรธ", "หัวหน้าโกรธ", "ปัญหากับเจ้านาย",
+                  "ขัดแย้งเจ้านาย", "เจ้านายไม่ชอบ"),
+        primary_bhava=10,
+        secondary_bhavas=(6, 12),
+        significator="sun",
+        co_significators=("mars",),
+        tone_hint="urgent",
+        priority=9,
+    ),
+    QuestionMapping(
+        category="freelance",
+        label_th="ทำงานอิสระ / รับงานเสริม",
+        keywords=("ฟรีแลนซ์", "freelance", "งานเสริม", "รับงาน",
+                  "ทำเอง", "ทำธุรกิจส่วนตัว"),
+        primary_bhava=10,
+        secondary_bhavas=(11, 3),
+        significator="mercury",
+        co_significators=("venus",),
+        tone_hint="material",
+        priority=8,
+    ),
+    QuestionMapping(
+        category="work_conflict",
+        label_th="อุปสรรค / ปัญหาเรื่องงาน",
+        keywords=("อุปสรรคเรื่องงาน", "ปัญหาเรื่องงาน", "ปัญหาที่ทำงาน",
+                  "งานติดขัด", "งานมีปัญหา", "ทะเลาะที่ทำงาน",
+                  "อุปสรรคงาน", "เพื่อนร่วมงาน", "ขัดแย้งที่ทำงาน"),
+        primary_bhava=6,                # อริ — ปัญหา/ศัตรู
+        secondary_bhavas=(10, 12),      # กัมมะ + วินาส
+        significator="mars",            # การกระทบกระทั่ง
+        co_significators=("sun",),      # อำนาจ/เจ้านาย
+        tone_hint="urgent",
+        priority=10,                    # ลำดับสูงสุด ชนะ career
+    ),
+
+    # ---------- กลุ่ม ความรัก sub-intents ----------
+    QuestionMapping(
+        category="love_loyalty",
+        label_th="คนรักจริงใจไหม",
+        keywords=("จริงใจ", "นอกใจ", "คนนี้จริง", "เขาจริง", "หลอก",
+                  "หลอกลวง", "เชื่อใจ", "เขาคิดยังไง"),
+        primary_bhava=7,
+        secondary_bhavas=(12, 8),
+        significator="venus",
+        co_significators=("rahu",),     # ของลับ/ลึก
+        tone_hint="personal",
+        priority=9,
+    ),
+    QuestionMapping(
+        category="love_reconcile",
+        label_th="คืนดี / กลับมาคบ",
+        keywords=("คืนดี", "กลับมา", "กลับมาคบ", "กลับมาเหมือนเดิม",
+                  "ดีกัน"),
+        primary_bhava=7,
+        secondary_bhavas=(5, 11),
+        significator="venus",
+        co_significators=("moon",),
+        tone_hint="personal",
+        priority=9,
+    ),
+    QuestionMapping(
+        category="love_new",
+        label_th="เนื้อคู่จะมาเมื่อไหร่",
+        keywords=("เนื้อคู่", "จะเจอคู่", "จะมีคนรัก", "จะได้แฟน",
+                  "หาคู่"),
+        primary_bhava=7,
+        secondary_bhavas=(5, 11),
+        significator="venus",
+        co_significators=("jupiter",),
+        tone_hint="personal",
+        priority=8,
+    ),
+    QuestionMapping(
+        category="love_thirdparty",
+        label_th="มีมือที่ 3 ไหม",
+        keywords=("มือที่สาม", "มือที่ 3", "มีคนอื่น", "ชู้",
+                  "แอบกิ๊ก", "นอกใจไหม"),
+        primary_bhava=7,
+        secondary_bhavas=(12, 8),
+        significator="venus",
+        co_significators=("rahu",),
+        tone_hint="urgent",
+        priority=9,
     ),
 
     # ---------- กลุ่ม ทรัพย์ / โชค / หนี้ ----------
@@ -195,6 +294,56 @@ QUESTION_MAPPINGS: tuple[QuestionMapping, ...] = (
         priority=8,
     ),
 
+    # ---------- กลุ่ม ทรัพย์ sub-intents ----------
+    QuestionMapping(
+        category="investment",
+        label_th="ลงทุนได้ไหม",
+        keywords=("ลงทุน", "หุ้น", "คริปโต", "crypto", "ซื้อหุ้น",
+                  "ลงทุนได้ไหม", "ทองคำ", "กองทุน"),
+        primary_bhava=2,
+        secondary_bhavas=(8, 11),       # มรณะ (เสี่ยง) + ลาภะ (กำไร)
+        significator="jupiter",
+        co_significators=("mercury",),
+        tone_hint="material",
+        priority=9,
+    ),
+    QuestionMapping(
+        category="loan",
+        label_th="กู้ได้ไหม",
+        keywords=("กู้", "ขอกู้", "สินเชื่อ", "ขอสินเชื่อ", "ขอเงิน",
+                  "ยืมเงิน"),
+        primary_bhava=6,                # หนี้
+        secondary_bhavas=(2, 8),
+        significator="saturn",
+        co_significators=("jupiter",),  # ผู้ให้
+        tone_hint="material",
+        priority=9,
+    ),
+    QuestionMapping(
+        category="bonus",
+        label_th="โบนัส / รางวัล",
+        keywords=("โบนัส", "รางวัล", "เงินพิเศษ", "ค่าคอม", "คอมมิชชั่น",
+                  "incentive", "เงินก้อน"),
+        primary_bhava=11,
+        secondary_bhavas=(10, 2),
+        significator="jupiter",
+        co_significators=("sun",),
+        tone_hint="material",
+        priority=9,
+    ),
+    QuestionMapping(
+        category="repay",
+        label_th="ปลดหนี้ / ใช้คืน",
+        keywords=("ปลดหนี้", "หมดหนี้", "ใช้หนี้หมด", "ทวงหนี้",
+                  "ได้คืน", "ทวงคืน"),
+        primary_bhava=6,
+        secondary_bhavas=(12, 11),
+        significator="saturn",
+        co_significators=("jupiter",),
+        tone_hint="material",
+        priority=9,
+    ),
+
     # ---------- กลุ่ม สุขภาพ ----------
     QuestionMapping(
         category="health",
@@ -207,6 +356,32 @@ QUESTION_MAPPINGS: tuple[QuestionMapping, ...] = (
         co_significators=("moon",),     # ของเหลว/อารมณ์
         tone_hint="urgent",
         priority=7,
+    ),
+
+    # ---------- กลุ่ม สุขภาพ sub-intents ----------
+    QuestionMapping(
+        category="health_recover",
+        label_th="จะหายไหม",
+        keywords=("จะหาย", "หายไหม", "หายเมื่อไหร่", "ดีขึ้น",
+                  "หายป่วย"),
+        primary_bhava=1,
+        secondary_bhavas=(6, 11),
+        significator="sun",
+        co_significators=("jupiter",),  # บุญหนุน
+        tone_hint="urgent",
+        priority=9,
+    ),
+    QuestionMapping(
+        category="health_surgery",
+        label_th="ผ่าตัด / การรักษา",
+        keywords=("ผ่าตัด", "ผ่า", "operation", "รักษา", "ฉีดยา",
+                  "นอนรพ", "นอนโรงพยาบาล"),
+        primary_bhava=8,                # มรณะ
+        secondary_bhavas=(1, 6),
+        significator="mars",            # มีดหมอ
+        co_significators=("saturn",),
+        tone_hint="urgent",
+        priority=9,
     ),
 
     # ---------- กลุ่ม การศึกษา / บุตร ----------
@@ -235,6 +410,32 @@ QUESTION_MAPPINGS: tuple[QuestionMapping, ...] = (
         priority=8,
     ),
 
+    # ---------- กลุ่ม การศึกษา sub-intents ----------
+    QuestionMapping(
+        category="exam_pass",
+        label_th="สอบผ่านไหม",
+        keywords=("สอบผ่าน", "สอบติด", "สอบเข้า", "สอบไหม",
+                  "ผลสอบ", "เข้ามหาวิทยาลัย"),
+        primary_bhava=4,
+        secondary_bhavas=(5, 11),
+        significator="mercury",
+        co_significators=("jupiter",),
+        tone_hint="personal",
+        priority=9,
+    ),
+    QuestionMapping(
+        category="scholarship",
+        label_th="ทุนการศึกษา",
+        keywords=("ทุน", "scholarship", "ทุนการศึกษา", "เรียนต่อนอก",
+                  "ทุนรัฐบาล"),
+        primary_bhava=9,                # ต่างแดน + บุญ
+        secondary_bhavas=(11, 4),
+        significator="jupiter",
+        co_significators=("mercury",),
+        tone_hint="material",
+        priority=9,
+    ),
+
     # ---------- กลุ่ม ครอบครัว / พี่น้อง ----------
     QuestionMapping(
         category="parent",
@@ -259,6 +460,31 @@ QUESTION_MAPPINGS: tuple[QuestionMapping, ...] = (
         co_significators=("mercury",),  # เพื่อน/เด็ก
         tone_hint="personal",
         priority=6,
+    ),
+
+    # ---------- กลุ่ม บ้าน sub-intents ----------
+    QuestionMapping(
+        category="buy_house",
+        label_th="ซื้อบ้าน / ซื้อที่ดิน",
+        keywords=("ซื้อบ้าน", "ซื้อที่ดิน", "ซื้อคอนโด", "ผ่อนบ้าน",
+                  "ดาวน์บ้าน"),
+        primary_bhava=4,
+        secondary_bhavas=(2, 6),
+        significator="saturn",
+        co_significators=("jupiter",),
+        tone_hint="material",
+        priority=9,
+    ),
+    QuestionMapping(
+        category="move_home",
+        label_th="ย้ายบ้าน",
+        keywords=("ย้ายบ้าน", "ย้ายที่อยู่", "ย้ายคอนโด", "เปลี่ยนบ้าน"),
+        primary_bhava=4,
+        secondary_bhavas=(3, 12),
+        significator="moon",
+        co_significators=("mercury",),
+        tone_hint="neutral",
+        priority=8,
     ),
 
     # ---------- กลุ่ม เดินทาง ----------
