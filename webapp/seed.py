@@ -7,12 +7,16 @@ Usage:
 """
 from __future__ import annotations
 
+import json
 import sys
+from pathlib import Path
 
 from sqlalchemy import delete
 
 from webapp.db import SessionLocal
 from webapp.models import CalendarEpoch, HolyDay, NationalHoliday, AdhikamasaYear
+
+ADHIKAMASA_JSON = Path(__file__).parent.parent / "data" / "adhikamasa_scraped.json"
 
 # ============================================================
 # Source data (hardcoded — same as the original calendar_data.py)
@@ -233,6 +237,43 @@ def seed_national_holidays(session, reset: bool):
     print(f"[seed] national_holidays: {len(NATIONAL_HOLIDAYS_DATA)} entries")
 
 
+def seed_adhikamasa(session, reset: bool):
+    """Import ปีอธิกมาส/อธิกวาร 401 entries (BE 2300-2700) จาก myhora scrape.
+
+    Idempotent: ถ้ามี row อยู่แล้ว → skip ทั้งหมด (ไม่ overwrite)
+    ถ้ายังไม่มี → bulk insert จาก data/adhikamasa_scraped.json
+    """
+    if reset:
+        session.execute(delete(AdhikamasaYear))
+    if session.query(AdhikamasaYear).count() > 0:
+        print("[skip] adhikamasa_years already populated")
+        return
+    if not ADHIKAMASA_JSON.exists():
+        print(f"[warn] ไม่พบ {ADHIKAMASA_JSON.name} — ข้าม adhikamasa seeding")
+        return
+
+    data = json.loads(ADHIKAMASA_JSON.read_text(encoding="utf-8"))
+    inserted = skipped = 0
+    for be_str, info in data.items():
+        be_year = int(be_str)
+        kind = info["type"]
+        if kind in ("error", "unknown"):
+            skipped += 1
+            continue
+        cs_year = be_year - 1181
+        ce_year = be_year - 543
+        session.add(AdhikamasaYear(
+            cs_year=cs_year,
+            be_year=be_year,
+            ce_year=ce_year,
+            type=kind,
+            source="myhora",
+            note=info.get("evidence", ""),
+        ))
+        inserted += 1
+    print(f"[seed] adhikamasa_years: {inserted} entries (skipped {skipped})")
+
+
 def main():
     reset = "--reset" in sys.argv
     session = SessionLocal()
@@ -240,7 +281,7 @@ def main():
         seed_epochs(session, reset)
         seed_holy_days(session, reset)
         seed_national_holidays(session, reset)
-        # adhikamasa_years: เว้นไว้ Stage 2 (scraper จะ populate)
+        seed_adhikamasa(session, reset)
         session.commit()
         print("[done] seed complete")
     except Exception as e:
