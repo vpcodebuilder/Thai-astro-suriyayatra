@@ -831,23 +831,29 @@ def chart_to_view(
             "element_icon": tinfo.element_icon,
         })
 
-    # คำทำนายเจ้าเรือนครองภพ (Bhava Lord)
-    natal_lord_preds = predict_natal_lords(chart.ascendant.zodiac.rasi, chart.planets)
+    # ตำแหน่งกำลังดาว + เกณฑ์โยค (คำนวณก่อนเพื่อส่งเข้า bhava lord predictor)
+    dignities = compute_all_dignities(chart.planets)
+    yogas = detect_yogas(chart.ascendant.zodiac.rasi, chart.planets, dignities)
+    transit_dignities = (
+        compute_all_dignities(transit_chart.planets) if transit_chart is not None else None
+    )
+
+    # คำทำนายเจ้าเรือนครองภพ (Bhava Lord) — ใส่ dignity context เข้าไปด้วย
+    natal_lord_preds = predict_natal_lords(
+        chart.ascendant.zodiac.rasi, chart.planets, dignities=dignities,
+    )
     natal_lord_summary = generate_bhava_lord_summary(natal_lord_preds)
     # ไฮไลต์ 5 ภพสำคัญสำหรับโหมดดูดวง
     natal_lord_summary["highlights_top5"] = _pick_lord_highlights(natal_lord_preds)
     transit_lord_data = None
     if transit_chart is not None:
         transit_lord_preds = predict_transit_lords(
-            chart.ascendant.zodiac.rasi, transit_chart.planets
+            chart.ascendant.zodiac.rasi, transit_chart.planets,
+            dignities=transit_dignities,
         )
         transit_lord_data = {
             "summary": generate_bhava_lord_summary(transit_lord_preds),
         }
-
-    # ตำแหน่งกำลังดาว + เกณฑ์โยค
-    dignities = compute_all_dignities(chart.planets)
-    yogas = detect_yogas(chart.ascendant.zodiac.rasi, chart.planets, dignities)
 
     # ทักษา (Taksa) — sync ตามวัน transit ถ้ามี (ไม่งั้นใช้ default = now)
     taksa_reference_date = None
@@ -879,6 +885,11 @@ def chart_to_view(
 
     # บทพูดโหร (oracle narrative) — สังเคราะห์ทุก source
     oracle_seed = f"{chart.ce_year}-{chart.month}-{chart.day}-{chart.hour}-{chart.minute}"
+    transit_date_label = None
+    if transit_meta:
+        _dt = transit_meta.get("date_th") or ""
+        _tt = transit_meta.get("time") or ""
+        transit_date_label = (f"{_dt} เวลา {_tt} น." if _dt and _tt else (_dt or _tt or None))
     oracle_reading = compose_oracle_reading(
         person_name=person_name,
         transit_summary=transit_summary,
@@ -887,6 +898,7 @@ def chart_to_view(
         yogas=yogas,
         dignities=dignities,
         seed=oracle_seed,
+        transit_date_label=transit_date_label,
     )
 
     d = chart.desire

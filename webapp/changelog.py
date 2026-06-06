@@ -12,6 +12,48 @@
 
 CHANGELOG = [
     {
+        "version": "2026.06.05-a",
+        "date": "2026-06-05",
+        "title": "ดาวเกษตรกุมภ์ = ราหู + คำพยากรณ์โหรขยาย dignity",
+        "highlights": [
+            "RASI_LORD[กุมภ์] เปลี่ยนจากเสาร์ → ราหู (เลขเกษตร 8 ตามตำราไทย)",
+            "ทุก section ของ \"คำพยากรณ์จากโหร\" แสดงดาวจรเสมอ (ไม่หายเงียบ)",
+            "แยกชั้น \"ดวงเดิม\" / \"ดาวจร\" พร้อมเส้นคั่น + label วันที่ดาวจร",
+            "คำทำนายแต่ละ entry ผนวก dignity: เกษตร / อุจน์ / นิจ / ประ ฯลฯ",
+            "ดาวเกษตรในราศีตัวเอง → \"แสดงพลังเต็ม\"; ดาวนิจ → พลิกดีเป็นเตือน",
+        ],
+        "details": [
+            {
+                "category": "แก้",
+                "items": [
+                    "planets.py: RASI_LORD[10] = ราหู (สอดคล้องเลขเกษตรกุมภ์ = 8)",
+                    "dignities.py: SWAKSHETRA — เสาร์={9}, ราหู={10}",
+                    "oracle_narrative._build_life_area_section: รับประกัน transit ≥1 line + แยก natal/transit",
+                    "ลัคนาที่ทำให้กุมภ์เป็นภพสำคัญ → chart_lord/house_lords เปลี่ยนเป็นราหู (กระทบทั่วระบบ)",
+                ],
+            },
+            {
+                "category": "เพิ่ม",
+                "items": [
+                    "BhavaLordPrediction: field dignity / dignity_label / dignity_strength",
+                    "_DIGNITY_SUFFIX 7 ระดับ — append เข้าทุกคำทำนาย เจ้าเรือนภพ",
+                    "Auto-flip tone: อุจน์/เกษตร/มูล บรรเทาเตือน; นิจ/ประ พลิกดีเป็นปะปน",
+                    "oracle_narrative: transit_date_label + แสดงในการ์ดหัว + per-section",
+                    "server.py: คำนวณ transit_dignities ผ่าน compute_all_dignities(transit_chart.planets)",
+                    "CSS .oracle-source-label / .oracle-divider / .oracle-transit-window",
+                ],
+            },
+            {
+                "category": "ปรับ",
+                "items": [
+                    "Template life_areas — render natal block → <hr> → transit block",
+                    "label ดาวจร per section มีวันที่: \"🌠 ดาวจร (5 กรกฎาคม พ.ศ. 2569 09:55 น.)\"",
+                    "Cap good/warn เพิ่มจาก [:2] → [:3] (รองรับทั้งดวงเดิม+ดาวจร)",
+                ],
+            },
+        ],
+    },
+    {
         "version": "2026.06.03-g",
         "date": "2026-06-03",
         "title": "Polish — scrubber textbox theme + label prophecy",

@@ -316,36 +316,77 @@ def _build_life_area_section(
     transit_lord_summary: Optional[dict],
     has_flip_yoga: bool,
 ) -> Optional[dict]:
+    """รวมคำทำนาย "ดวงเดิม" + "ดาวจร" สำหรับ section นี้
+
+    หลักการ:
+        - แสดงดวงเดิมก่อน (รวม good/warn เท่าที่มี) → แยกเส้นคั่น → ตามด้วยดาวจร
+        - ดาวจร: รับประกันมีอย่างน้อย 1 line ถ้ามีข้อมูล (ใช้ neutral fallback)
+    """
     info = LIFE_AREAS[area_key]
     target = set(info["bhavas"])
 
-    good_lines: List[str] = []
-    warn_lines: List[str] = []
-
-    def _collect(summary: Optional[dict], prefix: str) -> None:
+    def _bucket(summary: Optional[dict]) -> Tuple[List[str], List[str], List[str]]:
+        g, w, n = [], [], []
         if not summary:
-            return
+            return g, w, n
         for p in summary.get("all_items", []):
-            if p["lord_bhava"] in target or p["located_bhava"] in target:
-                line = _strip_modifier(p["prediction"])
-                if p["tone"] == "good":
-                    good_lines.append(f"{prefix}: {line}")
-                elif p["tone"] == "warning":
-                    if has_flip_yoga:
-                        line, _ = _flip_warning_with_yoga(line, True)
-                    warn_lines.append(f"{prefix}: {line}")
+            if p["lord_bhava"] not in target and p["located_bhava"] not in target:
+                continue
+            line = _strip_modifier(p["prediction"])
+            tone = p["tone"]
+            if tone == "good":
+                g.append(line)
+            elif tone == "warning":
+                if has_flip_yoga:
+                    line, _ = _flip_warning_with_yoga(line, True)
+                w.append(line)
+            else:
+                n.append(line)
+        return g, w, n
 
-    _collect(natal_lord_summary, "ดวงเดิม")
-    _collect(transit_lord_summary, "ดาวจร")
+    n_good, n_warn, n_neutral = _bucket(natal_lord_summary)
+    t_good, t_warn, t_neutral = _bucket(transit_lord_summary)
 
-    if not good_lines and not warn_lines:
+    # ====== ดวงเดิม (natal) ======
+    natal_good: List[str] = []
+    natal_warn: List[str] = []
+    for line in n_good[:2]:
+        natal_good.append(line)
+    for line in n_warn[:2]:
+        natal_warn.append(line)
+    # ถ้าไม่มี good/warn ลงตัว ใช้ neutral 1 line
+    if not natal_good and not natal_warn and n_neutral:
+        natal_good.append(n_neutral[0])
+
+    # ====== ดาวจร (transit) ======
+    transit_good: List[str] = []
+    transit_warn: List[str] = []
+    for line in t_good[:2]:
+        transit_good.append(line)
+    for line in t_warn[:2]:
+        transit_warn.append(line)
+    if not transit_good and not transit_warn and t_neutral:
+        transit_good.append(t_neutral[0])
+
+    has_natal = bool(natal_good or natal_warn)
+    has_transit = bool(transit_good or transit_warn)
+    if not has_natal and not has_transit:
         return None
+
+    # backward-compat: รวมเป็น good/warn flat (เผื่อ template เก่า)
+    flat_good = [f"ดวงเดิม: {x}" for x in natal_good] + [f"ดาวจร: {x}" for x in transit_good]
+    flat_warn = [f"ดวงเดิม: {x}" for x in natal_warn] + [f"ดาวจร: {x}" for x in transit_warn]
 
     return {
         "key": area_key,
         "title": info["title"],
-        "good": good_lines[:2],
-        "warn": warn_lines[:2],
+        "natal": {"good": natal_good, "warn": natal_warn},
+        "transit": {"good": transit_good, "warn": transit_warn},
+        "has_natal": has_natal,
+        "has_transit": has_transit,
+        # backward-compat
+        "good": flat_good,
+        "warn": flat_warn,
     }
 
 
@@ -432,6 +473,7 @@ def compose_oracle_reading(
     yogas: Optional[List[Yoga]] = None,
     dignities: Optional[Dict[str, PlanetDignity]] = None,
     seed: str = "default",
+    transit_date_label: Optional[str] = None,
 ) -> dict:
     yogas = yogas or []
     dignities = dignities or {}
@@ -487,4 +529,5 @@ def compose_oracle_reading(
         "dignity_highlights": dignity_highlights,
         "has_flip_yoga": has_flip_yoga,
         "closing": closing,
+        "transit_date_label": transit_date_label,
     }

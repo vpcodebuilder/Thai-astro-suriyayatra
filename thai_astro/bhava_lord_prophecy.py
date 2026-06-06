@@ -259,6 +259,9 @@ class BhavaLordPrediction:
     tone: str                 # "good" | "warning" | "neutral"
     tone_label: str           # "ดี" | "ระวัง" | "กลาง" | "ดี (วิปริต)" | "ปะปน"
     source: str               # "natal" หรือ "transit"
+    dignity: str = ""         # "อุจน์" | "เกษตร" | "มูล" | "มิตร" | "สมพล" | "ประ" | "นิจ" | ""
+    dignity_label: str = ""   # ป้ายภาษาไทยพร้อมขยาย เช่น "อุจน์ (มหาอุจ)"
+    dignity_strength: int = 0 # -3..+3
 
 
 def _rasi_to_house(rasi: int, asc_rasi: int) -> int:
@@ -268,26 +271,43 @@ def _rasi_to_house(rasi: int, asc_rasi: int) -> int:
 def predict_natal_lords(
     asc_rasi: int,
     natal_planets: Dict[str, "object"],
+    dignities: Optional[Dict[str, "object"]] = None,
 ) -> List[BhavaLordPrediction]:
     """ทายเจ้าเรือนทั้ง 12 ภพในชะตากำเนิด
 
     asc_rasi: ราศีลัคนา (0-11)
     natal_planets: dict[name, Planet] (จาก thai_astro.planets)
+    dignities: optional dict[planet_name, PlanetDignity] — ถ้ามีจะเติม dignity label
     """
-    return _predict(asc_rasi, natal_planets, asc_rasi, source="natal")
+    return _predict(asc_rasi, natal_planets, asc_rasi, source="natal", dignities=dignities)
 
 
 def predict_transit_lords(
     asc_rasi: int,
     transit_planets: Dict[str, "object"],
+    dignities: Optional[Dict[str, "object"]] = None,
 ) -> List[BhavaLordPrediction]:
     """ทายเจ้าเรือนเดิม ณ ตำแหน่งดาวจร
 
     asc_rasi: ราศีลัคนาของชะตาเดิม
     transit_planets: ดาวจร — เจ้าเรือนเดิม (ดาวที่ครองราศีของภพ X ในชะตาเดิม)
                      ขณะนี้สถิตในราศีจร → แปลงเป็นภพของชะตาเดิม
+    dignities: optional dict[planet_name, PlanetDignity] ของดาวจร
     """
-    return _predict(asc_rasi, transit_planets, asc_rasi, source="transit")
+    return _predict(asc_rasi, transit_planets, asc_rasi, source="transit", dignities=dignities)
+
+
+# คำเสริมเมื่อดาวเจ้าเรือนได้ตำแหน่งดี/ร้าย — ใส่ต่อท้ายคำทำนาย
+_DIGNITY_SUFFIX = {
+    "อุจน์":  " — ดาวเจ้าเรือนได้ §อุจน์§ พลังเต็มที่ ส่งผลแรงในด้านดี",
+    "มูล":    " — ดาวเจ้าเรือนอยู่ §มูลตรีโกณ§ พลังหนุนเรื่องนี้อย่างมั่นคง",
+    "เกษตร": " — ดาวเจ้าเรือนอยู่ §เกษตร§ (บ้านตัวเอง) แสดงพลังเต็ม เรื่องนี้พึ่งตัวเองได้",
+    "มิตร":   " — ดาวเจ้าเรือนอยู่ราศี §มิตร§ มีคนหนุนหลังเรื่องนี้",
+    "ประ":    " — ดาวเจ้าเรือนตก §ประ§ (ราศีศัตรู) เรื่องนี้ติดขัด ต้องอาศัยความพยายามมากกว่าปกติ",
+    "ศัตรู":  " — ดาวเจ้าเรือนตก §ศัตรู§ มีอุปสรรคในเรื่องนี้",
+    "นิจ":    " — ดาวเจ้าเรือนตก §นิจ§ (มหานิจ) อ่อนกำลังที่สุด ระวังเรื่องนี้ให้มาก",
+    "สมพล":   "",  # ไม่ต้องเสริม
+}
 
 
 def _predict(
@@ -295,6 +315,7 @@ def _predict(
     planets: Dict[str, "object"],
     natal_asc_rasi: int,
     source: str,
+    dignities: Optional[Dict[str, "object"]] = None,
 ) -> List[BhavaLordPrediction]:
     out: List[BhavaLordPrediction] = []
     for bhava in range(1, 13):
@@ -311,6 +332,28 @@ def _predict(
         tone, tone_label = _classify_pair(bhava, located_bhava)
         text = text_for_pair(bhava, located_bhava)
 
+        # เสริม dignity context (ถ้ามี)
+        d_kind = ""
+        d_label = ""
+        d_strength = 0
+        if dignities and lord_planet in dignities:
+            d_obj = dignities[lord_planet]
+            d_kind = getattr(d_obj, "dignity", "") or ""
+            d_label = getattr(d_obj, "label", "") or ""
+            d_strength = getattr(d_obj, "strength", 0) or 0
+            suffix = _DIGNITY_SUFFIX.get(d_kind, "")
+            if suffix:
+                text = text + suffix
+            # ปรับโทน: ดาวอุจน์/เกษตร/มูล ที่ตกภพดี → ดียิ่งขึ้น
+            # ดาวนิจ/ประ ที่ตกภพดี → ระวังขึ้น
+            if tone == "good" and d_kind in ("นิจ", "ประ"):
+                tone = "warning"
+                tone_label = "ปะปน (ดาวอ่อน)"
+            elif tone == "warning" and d_kind in ("อุจน์", "เกษตร", "มูล"):
+                # ดาวแรง พลิกร้ายเป็นกลาง/ดี
+                tone = "neutral"
+                tone_label = "บรรเทา (ดาวแรง)"
+
         out.append(BhavaLordPrediction(
             lord_bhava=bhava,
             lord_bhava_name=BHAVA_NAMES[bhava - 1],
@@ -322,6 +365,9 @@ def _predict(
             tone=tone,
             tone_label=tone_label,
             source=source,
+            dignity=d_kind,
+            dignity_label=d_label,
+            dignity_strength=d_strength,
         ))
     return out
 
@@ -370,4 +416,7 @@ def _to_dict(p: BhavaLordPrediction) -> dict:
         "tone": p.tone,
         "tone_label": p.tone_label,
         "source": p.source,
+        "dignity": p.dignity,
+        "dignity_label": p.dignity_label,
+        "dignity_strength": p.dignity_strength,
     }

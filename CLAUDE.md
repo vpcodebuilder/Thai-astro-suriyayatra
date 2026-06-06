@@ -1708,3 +1708,100 @@ def _mas_at_thaloengsok(thaloengsok) -> int:
 - DB schema: webapp/models.py (5 tables)
 - Adhikamasa data: data/adhikamasa_scraped.json (401 entries BE 2300-2700)
 
+
+
+# ===== Session 13 Updates =====
+# ดาวเกษตรกุมภ์ = ราหู + คำพยากรณ์โหรขยาย dignity context — 2026-06-05
+
+## ภาพรวม
+แก้ 4 จุดในระบบ "คำพยากรณ์จากโหร" ตามคำขอ user (วันเกิด 2/9/2522 14:18, ดาวจร 5/7/2569 9:55):
+1. **RASI_LORD[กุมภ์] เปลี่ยนจากเสาร์ → ราหู** (ตามเลขเกษตรกุมภ์ = 8)
+2. **คำทำนายดาวจรปรากฏในทุก section** (เดิมหายเงียบเมื่อ tone=neutral)
+3. **แยก "ดวงเดิม" / "ดาวจร" + เส้นคั่น + label วันที่ดาวจร**
+4. **ผนวก dignity** (เกษตร/อุจน์/นิจ/ประ ฯลฯ) เข้าทุกคำทำนายเจ้าเรือนภพ
+
+## ไฟล์ที่แก้
+| ไฟล์ | การแก้ |
+|------|--------|
+| `thai_astro/planets.py` | `RASI_LORD[10] = "ราหู"` (เดิมเสาร์) |
+| `thai_astro/dignities.py` | `SWAKSHETRA`: เสาร์={9}, ราหู={10} (sync ตาม RASI_LORD) |
+| `thai_astro/bhava_lord_prophecy.py` | + `Optional dignities` param, `BhavaLordPrediction.dignity*` 3 field, `_DIGNITY_SUFFIX` ผนวกท้ายคำทำนาย, auto-flip tone (อุจน์/เกษตรพลิกเตือน→กลาง, นิจ/ประพลิกดี→เตือน) |
+| `thai_astro/oracle_narrative.py` | `_build_life_area_section` แยก natal/transit dict, รับประกัน transit ≥1 line (ใช้ neutral fallback), `compose_oracle_reading` รับ/คืน `transit_date_label` |
+| `webapp/server.py` | compute `transit_dignities = compute_all_dignities(transit_chart.planets)`, ส่งเข้า `predict_*_lords`, ตั้ง `transit_date_label = "DD MONTH พ.ศ. YYYY เวลา HH:MM น."` |
+| `webapp/templates/index.html` | life area renders 2 blocks: `📜 ดวงเดิม` → `<hr class="oracle-divider">` → `🌠 ดาวจร (วันที่)`, การ์ดหัวมี `.oracle-transit-window` |
+| `webapp/static/styles.css` | `.oracle-source-label`, `.oracle-divider`, `.oracle-transit-window` |
+
+## หมายเหตุสำคัญ
+
+### ผลกระทบจากการเปลี่ยน RASI_LORD[10]
+**ระบบทั้งระบบเปลี่ยนหมด** เมื่อกุมภ์เกี่ยวข้อง:
+- `chart.py`: `house_lords[X]` / `chart_lord` เปลี่ยนเป็นราหู (ลัคนาที่ทำให้กุมภ์เป็นภพไหน)
+- `dignities.py`: ดาวที่ตกกุมภ์ → ราหู = เกษตร, เสาร์ที่กุมภ์ ≠ swakshetra อีกต่อไป
+- `triyangka.py:164`: ปฐมตรียางค์ของกุมภ์ = ราหู (เดิมเสาร์ ตาม Parashara ดั้งเดิม)
+- `chart.py:43-45`, `dignities.py:329` (nicchabhanga), `server.py:722` ใช้ RASI_LORD[X] ทั้งหมด
+
+`HORATHAYNU_LORD_NUMBERS = [3,6,4,2,1,4,6,3,5,7,8,5]` (โหรทายหนู) มี กุมภ์=8 อยู่แล้ว — sync กันแล้ว
+
+### Dignity suffix pattern
+ใน `bhava_lord_prophecy._DIGNITY_SUFFIX`:
+```
+อุจน์   → " — ดาวเจ้าเรือนได้ §อุจน์§ พลังเต็มที่..."
+มูล     → " — ดาวเจ้าเรือนอยู่ §มูลตรีโกณ§..."
+เกษตร  → " — ดาวเจ้าเรือนอยู่ §เกษตร§ (บ้านตัวเอง) แสดงพลังเต็ม..."
+มิตร    → " — ดาวเจ้าเรือนอยู่ราศี §มิตร§ มีคนหนุนหลัง..."
+ประ     → " — ดาวเจ้าเรือนตก §ประ§ (ราศีศัตรู) เรื่องนี้ติดขัด..."
+ศัตรู   → " — ดาวเจ้าเรือนตก §ศัตรู§ มีอุปสรรค..."
+นิจ     → " — ดาวเจ้าเรือนตก §นิจ§ (มหานิจ) อ่อนกำลังที่สุด..."
+สมพล    → "" (ไม่เสริม)
+```
+`§...§` = marker ที่ template strip ออกตอน render (`| replace('§', '')`). คงไว้
+เพื่ออนาคต — ถ้าจะ bold ก็ render เป็น `<strong>...</strong>` แทน
+
+### Auto-flip tone logic
+ใน `_predict()`:
+- `tone == "good"` + ดาวกำลังอ่อน (นิจ/ประ) → `tone = "warning"`, label = "ปะปน (ดาวอ่อน)"
+- `tone == "warning"` + ดาวกำลังแข็ง (อุจน์/เกษตร/มูล) → `tone = "neutral"`, label = "บรรเทา (ดาวแรง)"
+ทำให้ดาวที่แข็งมาก "พลิกร้ายเป็นดี" สอดคล้องตำราโหรไทย
+
+### _build_life_area_section (ใหม่)
+- bucket แยก: natal (good/warn/neutral), transit (good/warn/neutral)
+- natal: เก็บ good[:2] + warn[:2], ถ้าว่างทั้งคู่ใช้ neutral[0]
+- transit: เก็บ good[:2] + warn[:2], ถ้าว่างทั้งคู่ใช้ neutral[0] (รับประกันมี ≥1 line)
+- คืน dict ใหม่: `natal: {good, warn}`, `transit: {good, warn}`, `has_natal`, `has_transit`,
+  + keep flat `good`/`warn` backward-compat
+
+### Template structure ใหม่
+```jinja
+{% for area in o.life_areas %}
+  <h3>{{ area.title }}</h3>
+  {% if area.has_natal %}
+    <div class="oracle-source oracle-source-natal">
+      <div class="oracle-source-label">📜 ดวงเดิม</div>
+      <ul>...</ul>
+    </div>
+  {% endif %}
+  {% if area.has_transit %}
+    {% if area.has_natal %}<hr class="oracle-divider"/>{% endif %}
+    <div class="oracle-source oracle-source-transit">
+      <div class="oracle-source-label">🌠 ดาวจร ({{ o.transit_date_label }})</div>
+      <ul>...</ul>
+    </div>
+  {% endif %}
+{% endfor %}
+```
+
+## ทดสอบที่ผ่าน
+วันเกิด 2/9/2522 14:18 (ลัคนาพิจิก) + ดาวจร 5/7/2569 9:55 — ตรวจ "ครอบครัวและบ้าน":
+- **ก่อนแก้**: "เจ้าเรือนพันธุไปอยู่ปุตตะ" (RASI_LORD[10]=เสาร์เก่า, เสาร์จรอยู่มีน)
+- **หลังแก้**: "เจ้าเรือนพันธุ**อยู่พันธุ** — ดาวเจ้าเรือนอยู่ **เกษตร** (บ้านตัวเอง)" ✓
+  (ราหูจรอยู่ในราศีกุมภ์ = ภพพันธุ = swakshetra ของราหูใหม่)
+
+## Gotchas
+1. **uvicorn ไม่มี --reload ใน launch.json** — ต้อง preview_stop + preview_start เมื่อแก้ Python
+2. **§...§ marker** ใน prediction text ต้อง template strip ออกด้วย `| replace('§', '')` ไม่งั้นโผล่บนหน้าจอ
+3. **dignity_strength** เก็บไว้ใน BhavaLordPrediction แต่ยังไม่ใช้ — เผื่ออนาคต sort/rank
+4. **local.db ห้ามทับ** — มี usage_stats counter จริงในนั้น (user เน้น)
+
+## Cache version
+`v=20260605a` — bump เมื่อแก้ HTML/CSS/JS
+

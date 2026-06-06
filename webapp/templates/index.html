@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260603i" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260605a" />
 </head>
 <body class="view-general" data-scroll-target="{% if scroll_target == '1' %}transit{% endif %}">
   <header class="site-header">
@@ -1206,6 +1206,11 @@
       <div class="card oracle-card oracle-{{ o.tone_class }}">
         <h2><span class="title-deco">🔮</span> คำพยากรณ์จากโหร <span class="title-deco">🔮</span></h2>
         <div class="oracle-subtitle">บทสรุปจากดวงดาวทั้งหมด — อ่านเหมือนนั่งคุยกับโหรหนึ่งคน</div>
+        {% if o.transit_date_label %}
+        <div class="oracle-transit-window">
+          ⏳ คำทำนายช่วงเวลาดาวจร: <strong>{{ o.transit_date_label }}</strong>
+        </div>
+        {% endif %}
 
         <div class="oracle-greeting">{{ o.greeting }}</div>
 
@@ -1244,15 +1249,36 @@
             {% for area in o.life_areas %}
               <div class="oracle-area">
                 <h3>{{ area.title }}</h3>
-                {% if area.good %}
-                  <ul class="oracle-good">
-                    {% for g in area.good %}<li>✨ {{ g }}</li>{% endfor %}
-                  </ul>
+                {% if area.has_natal %}
+                  <div class="oracle-source oracle-source-natal">
+                    <div class="oracle-source-label">📜 ดวงเดิม</div>
+                    {% if area.natal.good %}
+                      <ul class="oracle-good">
+                        {% for g in area.natal.good %}<li>✨ {{ g | replace('§', '') }}</li>{% endfor %}
+                      </ul>
+                    {% endif %}
+                    {% if area.natal.warn %}
+                      <ul class="oracle-warn">
+                        {% for w in area.natal.warn %}<li>⚠ {{ w | replace('§', '') }}</li>{% endfor %}
+                      </ul>
+                    {% endif %}
+                  </div>
                 {% endif %}
-                {% if area.warn %}
-                  <ul class="oracle-warn">
-                    {% for w in area.warn %}<li>⚠ {{ w }}</li>{% endfor %}
-                  </ul>
+                {% if area.has_transit %}
+                  {% if area.has_natal %}<hr class="oracle-divider"/>{% endif %}
+                  <div class="oracle-source oracle-source-transit">
+                    <div class="oracle-source-label">🌠 ดาวจร{% if o.transit_date_label %} ({{ o.transit_date_label }}){% endif %}</div>
+                    {% if area.transit.good %}
+                      <ul class="oracle-good">
+                        {% for g in area.transit.good %}<li>✨ {{ g | replace('§', '') }}</li>{% endfor %}
+                      </ul>
+                    {% endif %}
+                    {% if area.transit.warn %}
+                      <ul class="oracle-warn">
+                        {% for w in area.transit.warn %}<li>⚠ {{ w | replace('§', '') }}</li>{% endfor %}
+                      </ul>
+                    {% endif %}
+                  </div>
                 {% endif %}
               </div>
             {% endfor %}

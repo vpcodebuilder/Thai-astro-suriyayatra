@@ -1674,6 +1674,32 @@ footer {
 }
 .oracle-good li { color: #d8efc7; }
 .oracle-warn li { color: #fbd9b6; }
+
+/* แยกชั้นดวงเดิม / ดาวจร ใน life area */
+.oracle-source-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gold-bright);
+  margin: 0.2rem 0 0.3rem;
+  opacity: 0.9;
+}
+.oracle-source-transit .oracle-source-label {
+  color: #f4c98a;
+}
+.oracle-divider {
+  border: none;
+  border-top: 1px dashed rgba(232, 197, 112, 0.3);
+  margin: 0.7rem 0;
+}
+.oracle-transit-window {
+  background: rgba(244, 201, 138, 0.12);
+  border-left: 3px solid #f4c98a;
+  padding: 0.5rem 0.85rem;
+  border-radius: 4px;
+  margin: 0.6rem 0 1rem;
+  font-size: 0.95rem;
+  color: var(--cream-soft);
+}
 .oracle-block {
   margin: 1.5rem 0;
   padding: 1rem 1.25rem;
