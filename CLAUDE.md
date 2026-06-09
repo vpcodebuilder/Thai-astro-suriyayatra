@@ -2097,3 +2097,344 @@ Wrap 5 checkboxes ใน `<div class="chart-cb-list">` ที่ default `displa
 - Guard `db.py`: ถ้า env Railway/prod แต่ DATABASE_URL=sqlite → raise warning (กันพลาดในอนาคต)
 - adhikamasa_years ขยาย BE 1181-2299 + 2701-3000 (ตอนนี้ครอบ 2300-2700)
 
+
+# ===== Feature plan (รอทำ) =====
+# 🌟 หาฤกษ์ (Muhurta) — เมนูใหม่ + Navamsa chart
+# คุยกัน: 2026-06-05 | สถานะ: APPROVED — ยังไม่เริ่มเขียนโค้ด
+
+## Decisions (จาก user)
+- **Q1 = c**: ทำครบ 3 phase ทีเดียว (Foundation + เกณฑ์พิเศษ + Navamsa + Tab 2 บุคคล)
+- **Q2 = a**: Navamsa chart แสดง **12 ช่อง** เหมือน rashi chakra
+  (ใช้เป็น "ภาพขยาย" — ดาวลงตามตำแหน่ง navamsa rashi)
+- **Q3 = ทำเลย**: Date range scanner (กรอกช่วง → list ฤกษ์ดี)
+- **Q4 = ทำเลย**: Pre-set events (ปุ่ม shortcut หาฤกษ์แต่งงาน/ขึ้นบ้านใหม่ ฯลฯ)
+
+## URL + Nav
+- `/muhurta` — เมนูใหม่
+- Nav order: ผูกดวงสุริยยาตร์ | โหรทายหนู | **🌟 หาฤกษ์** | เทียบปฏิทิน | เกี่ยวกับ
+- เพิ่ม nav link ใน index.html, horathaynu.html, calendar.html, about.html, muhurta.html
+
+## 2 Tabs
+
+### Tab 1 — 🌅 ฤกษ์ประจำวัน (general)
+**Form**: วันที่ + เวลา + จังหวัด (3 fields)
+**Output**:
+- วาร (ดาวประจำวัน) + คุณภาพ
+- ดิถี (ขึ้น/แรม) + คุณภาพ
+- นักษัตร (27 ฤกษ์) ที่จันทร์ตก + ประเภทฤกษ์
+- กาลโยค (Athibodi, Lokawinat, Thongchai, Ubat, Criterion)
+- เกณฑ์พิเศษ: กนกนารี / กนกกุญชร / จักขุมายา (ถ้าเข้าเกณฑ์)
+- ผังจักร์ 2 วง (rashi+trine + navamsa)
+- Verdict + activity suggestions
+
+### Tab 2 — 👤 ฤกษ์เฉพาะบุคคล
+**Form**: ผูกดวง (ชื่อ/วัน/เวลา/จังหวัด เกิด) + วัน/เวลาที่จะหาฤกษ์
+**Output เพิ่ม**:
+- เทียบฤกษ์กับลัคนาเจ้าชะตา (ตก kendra/trikona/dusthana ของลัคนาไหม)
+- ดาวจรกระทบดาวเดิม (reuse `transit_prophecy`)
+- Vargottama detection (ดาวเจ้าชะตาอยู่ราศีเดียวกันใน rashi + navamsa = แรง)
+- ทักษาจรขณะนั้น (reuse `taksa`)
+
+## Pre-set events (Q4)
+ปุ่ม shortcut ใน Tab 1 (และ Tab 2):
+- 💍 หาฤกษ์แต่งงาน
+- 🏠 ขึ้นบ้านใหม่
+- 🏪 เปิดร้าน/เปิดธุรกิจ
+- 💰 ลงทุน/เริ่มหุ้น
+- 📋 เซ็นสัญญา
+- ✈️ เดินทางไกล
+- 🚗 ออกรถใหม่
+- 🎓 เริ่มเรียน/สมัครสอบ
+- 🪔 ทำบุญ/พิธีกรรม
+
+แต่ละ event มี `criteria` ของตัวเอง — filter เกณฑ์ที่เกี่ยวข้องเฉพาะ event นั้น
+(เช่น แต่งงาน เน้นศุกร์+พฤหัสบดี ตรีโกณ, ขึ้นบ้านใหม่ เน้นเสาร์ภพ 4)
+
+## Date range scanner (Q3)
+- กรอก start + end date (สูงสุด 30 วัน)
+- Loop scan ทุกชั่วโมง (หรือทุก 30 นาที) ใน range
+- เรียงตามคะแนน muhurta → list ฤกษ์ดี 5-10 อันดับแรก
+- Highlight วันที่ดีที่สุด: 🏆 ฤกษ์ดีที่สุดในช่วงนี้
+- ถ้าเลือก event → score ตาม event criteria
+
+## ผังจักร์ 2 วง (Q2 = แบบ 12 ช่อง)
+
+### วง A: ราศีจักร์ + ตรียางค์ (rashi chakra)
+- ใช้ของเดิม (`/` มี layer ตรียางค์อยู่แล้ว)
+- 12 ช่อง × 3 decanate = 36 sub-cells
+- chip ดาวจร + chip ดาวกำเนิด (ถ้ามี Tab 2)
+- Vargottama marker (✨) บน chip ที่ตรงกัน
+
+### วง B: นวางค์จักร์ (navamsa chakra)
+- **12 ช่อง เหมือน rashi chakra** (ตาม Q2)
+- chip ดาวลงตามตำแหน่ง navamsa rashi (ไม่ใช่ rashi เดิม)
+- ตัวอย่าง: ศุกร์อยู่ราศีพฤษภ 5° → navamsa = พฤษภ (cell 1) → chip ศุกร์ลงราศีพฤษภในวง B
+- ถ้าศุกร์ที่ 12° → navamsa = สิงห์ → chip ศุกร์ลงสิงห์ในวง B (แม้ในวง A อยู่พฤษภ)
+- "ภาพขยาย" — เห็นได้ทันทีว่าดาวอยู่ navamsa อะไร
+
+### วงไหนแสดงก่อน?
+- Layout: 2-col side-by-side (desktop) หรือ stack (mobile)
+- หรือ tab switcher ใน chart-stage (กดสลับวง A ⇄ วง B)
+- Decision: ทำ **side-by-side** ก่อน (Q2 confirmed ว่าอยากได้ขยาย)
+
+## เกณฑ์พิเศษ (study from horapayakorn.com)
+- **กนกนารี (Kanaka-naree)** — เกณฑ์เคลื่อนไหวสตรี (เหมาะการเดินทาง/พบสตรี)
+- **กนกกุญชร (Kanaka-kunchara)** — เกณฑ์เคลื่อนไหวยานพาหนะ/ช้าง (เหมาะเดินทาง/ออกรถ)
+- **จักขุมายา (Chakkhumaya)** — เกณฑ์ภาพลวงตา (ระวัง หลอกตา)
+
+ต้องศึกษาตำราจริงก่อนเขียน — เก็บ URL ไว้ใน docstring
+
+## โมดูล/ไฟล์ที่ต้องสร้าง
+
+### Backend
+```
+thai_astro/
+├── nakshatra.py        ★ ใหม่ — 27 นักษัตร + คุณภาพ + ฤกษ์บน/ล่าง
+├── navamsa.py          ★ ใหม่ — compute_navamsa(rashi, deg, arcmin)
+├── muhurta.py          ★ ใหม่ — orchestrator + verdict + criteria
+└── muhurta_criteria.py ★ ใหม่ — กนกนารี/กนกกุญชร/จักขุมายา + pre-set events
+```
+
+### Webapp
+```
+webapp/
+├── server.py
+│   ├── GET  /muhurta           — render form + result (Tab 1+2)
+│   ├── POST /muhurta           — compute single date
+│   └── POST /muhurta/scan      — date range scanner (JSON)
+├── templates/
+│   └── muhurta.html            ★ ใหม่ — 2 tabs + 2 charts + verdict + scanner
+└── static/
+    ├── styles.css              — navamsa chakra (reuse rashi styles ได้มาก)
+    └── script.js               — tab switcher + scanner AJAX
+```
+
+## เนื้อหาคำนวณ (รายละเอียด)
+
+### Navamsa formula
+```python
+def compute_navamsa(rashi: int, degree: int, arcmin: int = 0) -> tuple[int, int]:
+    """แต่ละราศี 30° แบ่ง 9 ส่วน × 3°20' (200 arcmin)
+    คืน (navamsa_rashi, navamsa_index 1-9)
+    
+    Rule (Parashara):
+        - Movable signs (เมษ/กรกฎ/ตุล/มกร): navamsa เริ่มที่ราศีตัวเอง
+        - Fixed signs (พฤษภ/สิงห์/พิจิก/กุมภ์): navamsa เริ่มที่ 9 ราศีจากตัวเอง
+        - Dual signs (เมถุน/กันย์/ธนู/มีน): navamsa เริ่มที่ 5 ราศีจากตัวเอง
+    """
+    total_arcmin = degree * 60 + arcmin
+    navamsa_index = total_arcmin // 200  # 0-8
+    
+    if rashi in (0, 3, 6, 9):     # movable
+        start = rashi
+    elif rashi in (1, 4, 7, 10):  # fixed
+        start = (rashi + 8) % 12
+    else:                          # dual (2, 5, 8, 11)
+        start = (rashi + 4) % 12
+    
+    navamsa_rashi = (start + navamsa_index) % 12
+    return navamsa_rashi, navamsa_index + 1
+```
+
+### 27 นักษัตร (Nakshatra)
+- จันทร์เคลื่อน 360° / 27 = 13°20' ต่อนักษัตร
+- ลำดับ: อัศวินี, ภรณี, กฤติกา, ... (27 ชื่อ)
+- แต่ละนักษัตรมี pada 4 (3°20' ต่อ pada)
+- คุณภาพฤกษ์: เคลื่อน/เกษตร/มฤตยู/ฯลฯ
+
+### Vargottama
+```python
+def is_vargottama(planet, chart) -> bool:
+    rashi_pos = chart.planets[planet].zodiac.rasi
+    nav_pos, _ = compute_navamsa(rashi_pos, deg, arcmin)
+    return rashi_pos == nav_pos
+```
+
+## ตำราอ้างอิง (ต้องใส่ใน docstring)
+- mahamongkol.com/m/content.php?id=491 — หลักการหาฤกษ์ทั่วไป
+- horapayakorn.com — กนกนารี/กนกกุญชร/จักขุมายา (id=539993303)
+- horasaadrevision.com — นวางค์ + วิธีคำนวณ (id=19689)
+- อ.เทพย์ สาริกบุตร — หลักเกณฑ์ฤกษ์ในตำราโหราศาสตร์ภาคพยากรณ์
+
+## ลำดับลงมือ (เมื่อเริ่ม)
+1. **Setup**: route /muhurta + template skeleton + nav links
+2. **nakshatra.py**: 27 ดาวฤกษ์ + คุณภาพ + ฟังก์ชัน compute_from_moon_position
+3. **navamsa.py**: compute_navamsa + ฟังก์ชัน chart_to_navamsa_view
+4. **muhurta.py**: aggregate ทุก factor (วาร/ดิถี/นักษัตร/กาลโยค) + verdict
+5. **muhurta_criteria.py**: 3 เกณฑ์พิเศษ + pre-set events (10 events)
+6. **Template Tab 1**: form + result + verdict + activity suggestions + pre-set buttons
+7. **Render 2 zodiac charts** side-by-side (reuse `build_circular_layout`)
+8. **POST /muhurta/scan**: scanner backend (loop dates, score, sort)
+9. **Scanner UI**: range picker + result list
+10. **Template Tab 2**: ผูกดวง + เทียบกับฤกษ์ + transit aspects + Vargottama
+11. Polish + verify + bump version + push
+
+## Cache version (เมื่อทำ)
+`v=20260606x` (a/b/c... ตามลำดับ)
+
+---
+
+# ===== Feature 🌟 หาฤกษ์ (Muhurta) — Session 2026-06-07 (Progress) =====
+
+## สถานะ
+**Phase 1 (Foundation) เสร็จ** — backend ครบ + Tab 1 + Scanner UI ใช้งานได้
+**Phase 2 (Tab 2 + 2 zodiac SVG) ยังไม่ทำ** — รอ session ถัดไป
+
+## ที่ทำเสร็จในรอบนี้
+### Backend (`thai_astro/`)
+- **`kalayok.py`** — Port Devtino Kalayok ครบ 4 เกณฑ์
+  (Thongchai / Athibodi / Ubat / Lokawinat). ใช้ 1-based remainder
+  สำหรับ Wan/Yarm/Roek; 0-based modulo สำหรับ Rasi/Dithi
+- **`nakshatra.py`** — 27 นักษัตร + 9 ฤกษ์กลุ่ม (ทลิทโท/มหัทธโน/...)
+  + `compute_from_moon_position(arcmin)` คืน NakshatraPosition
+  + Vimshottari lord cycle (เกตุ→ศุกร์→อา→จ→อ→ราหู→พฤ→ส→พุธ ×3)
+- **`navamsa.py`** — Parashara formula
+  (movable=self, fixed=+8, dual=+4) + `chart_to_navamsa_view`
+  + Vargottama detection
+- **`muhurta_criteria.py`** — 3 เกณฑ์พิเศษ MVP + 9 pre-set events
+  + `event_score(chart, event_key)` ให้คะแนนตาม favored_planets/bhavas
+  + planet_house_from_lakkana helper
+- **`muhurta.py`** — orchestrator + verdict mapping
+  + `compute_muhurta(when, province, event_key)` → MuhurtaResult
+  + `scan_range(start, end, ...)` → List[ScanHit] ใช้ใน /muhurta/scan
+  + วาร/ดิถี quality tables (auspicious/inauspicious)
+
+### Webapp
+- **`server.py`** เพิ่ม 3 routes:
+  - `GET  /muhurta` — form + result
+  - `POST /muhurta` — compute single moment
+  - `POST /muhurta/scan` — JSON API สำหรับ scanner
+- **`templates/muhurta.html`** ★ ใหม่:
+  - 2 tabs: 🌅 ฤกษ์ประจำวัน / 🔍 ค้นหาฤกษ์ดี
+  - Tab 1: form + verdict banner + 4 factor table (วาร/ดิถี/นักษัตร/ลัคนา)
+    + กาลโยค 4×6 table + เกณฑ์พิเศษ + planet grid (Vargottama ✨)
+    + suggestions / cautions
+  - Tab 2: scanner AJAX (start/end date + event + step + จังหวัด)
+    → /muhurta/scan → list 10 อันดับ + 🏆🥈🥉 badges
+  - 9 event chips (auto-set dropdown)
+  - inline CSS (กัน styles.css bloat) — ใช้ thai gold theme
+- **Nav links** เพิ่ม "🌟 หาฤกษ์" ในทั้ง 4 templates เดิม
+  (index, horathaynu, calendar, about)
+
+### Tests (`tests/test_muhurta.py`)
+- 25 tests ใหม่ — 7 ครอบ Kalayok (port verification),
+  5 Nakshatra, 5 Navamsa, 4 Muhurta orchestrator,
+  2 Scan, 1 Events, 1 SpecialCriteria
+- รวม 106/106 tests ผ่าน (ยังไม่ break เก่า)
+
+## ที่ยังไม่ทำ (Phase 2 — รอ session ถัดไป)
+1. **Tab 2 — ฤกษ์เฉพาะบุคคล**:
+   - ผูกดวงเจ้าชะตา + เทียบฤกษ์กับลัคนา (kendra/trikona/dusthana)
+   - reuse `transit_prophecy.py` แสดงดาวจรกระทบดาวเดิม
+   - reuse `taksa.py` ทักษาจรขณะนั้น
+2. **SVG zodiac 2 วง side-by-side**:
+   - วง A: rashi chakra (reuse `build_circular_layout`)
+   - วง B: navamsa chakra (12 ช่อง, ดาวลงตาม nav_rashi)
+   - Vargottama marker ✨
+3. **เกณฑ์พิเศษ — refine ตามตำราจริง**:
+   ปัจจุบันเป็น MVP อิงหลักการกว้างๆ (จันทร์+ศุกร์ราศีหญิง,
+   พฤหัส/อังคารราศีจร, จันทร์กุมราหู) — ต้องค้น horapayakorn.com
+   id=539993303 + ตำราจริงเพื่อทำให้ตรง
+4. **คำทำนายกิจกรรมรายรายการ**: ตอนนี้แค่ score notes
+   — อาจเพิ่ม narrative ของ "ฤกษ์แต่งงานวันนี้ดีเพราะ..."
+5. **Cache bump** — ทุกครั้งที่แก้ muhurta.html ใช้ `v=20260607x`
+   (ปัจจุบัน a)
+
+## หมายเหตุที่ต้องจำ
+1. **Kalayok 1-based remainder**: Wan/Yarm/Roek ถ้า mod=0 → คืน divisor
+   (port จาก C# Criterion getter) — ใช้ `_one_based(value, divisor)`
+2. **Nakshatra lord cycle เริ่มที่เกตุ** ไม่ใช่อาทิตย์ (Vimshottari)
+3. **Navamsa rule**: movable→self, fixed→+8, dual→+4 (Parashara)
+4. **compute_muhurta ใช้ Chart.calculate ที่ใช้ sunrise=6:00**
+5. **scan_range_multi_events จำกัด 90 วัน** (default max_days=90)
+6. **event_score คืน {score, favored_hits, avoid_hits, notes}**
+7. **Vargottama detection**: เทียบ rashi เดิม vs nav_rashi — ตรงกัน = แรง
+8. **Routes** ใน server.py ต่อท้าย `main()` ก่อนสุด
+
+---
+
+# ===== Session 2026-06-07 (รอบ 2) — Muhurta UX Polish =====
+# Commit: pending
+
+## เป้าหมาย
+ปรับ flow หาฤกษ์ให้คนทั่วไปใช้งานง่าย ลด confusion จากตัวเลือกซับซ้อน
+
+## โครงสร้างใหม่ของหน้า /muhurta
+
+### Form 4-step (top)
+1. **Mode** — 3 ปุ่ม: ทั่วไป (active) / เฉพาะบุคคล (disabled, "เร็วๆ นี้") / โหร (disabled)
+2. **Events** — 24 กิจกรรม 7 หมวด (chip checkbox) — multi-select
+3. **Range** — 30/60/90 วัน + วันที่ + จังหวัด
+4. **Birth** — hidden (สำหรับ mode 2/3 ในอนาคต)
+
+### Result (เมื่อมี)
+- header: "พบฤกษ์ดี X กิจกรรม (จาก Y)"
+- accordion ทีละกิจกรรม (เปิด 2 ตัวแรก default)
+- **Tally bar** ในแต่ละ panel: "🌅 เช้า (06-09) 6 ฤกษ์" × 6 ช่วง — กดเพื่อกรอง multi-select + ปุ่ม "ล้างกรอง"
+- **Hit-card** แต่ละฤกษ์: border-left สีตามช่วงเวลา + background tint + rank ribbon (🏆🥈🥉) + วันเวลาใหญ่ + ⭐ stars + grade label
+- เวลาแสดงเป็น "09:00 น. (ใช้ได้ 09:00–10:00)" เพราะ scan ทุก 60 นาที
+- ปุ่มทอง-น้ำตาลใหญ่ "💡 คะแนนและเกรดฤกษ์คำนวณจากอะไร?" → modal popup
+
+### Check section (ใต้ผลลัพธ์)
+- กล่องทองเด่น "🔍 ตรวจสอบฤกษ์ที่ได้มาจากที่อื่น"
+- กรอก วัน/เวลา/กิจกรรม → AJAX `/muhurta/check` → render hit-card ใต้ฟอร์ม
+
+### Modal "หลักการคำนวณคะแนน"
+- อธิบาย 6 ปัจจัย แต่ละข้อมี:
+  - ตารางคะแนน (สีทอง/เขียว/เทา/แดง)
+  - กล่อง 📌 ตัวอย่าง
+- ตารางเกรดฤกษ์ (12+ ดีเยี่ยม → <0 ระวัง) — แถวดีเยี่ยม highlight
+- ปิดได้ด้วยปุ่ม ✕ / คลิกพื้นหลัง / กด Esc
+
+## หลักสำคัญที่เปลี่ยน
+
+### Scan algorithm — fast + correct subset
+**ปัญหาเดิม:** step ต่างกันตาม range (30=60min, 60=120min, 90=180min) → 30-day result ไม่ใช่ subset ของ 60/90
+**แก้:** step=60min ทุก range → subset property: 30 ⊆ 60 ⊆ 90 ✓
+
+### scan_range_multi_events
+- คำนวณ Chart ครั้งเดียวต่อ moment แล้ว evaluate ทุก event ที่จุดเดียวกัน
+- ลดจาก N×Charts เป็น 1 Chart per moment → เร็วขึ้น N เท่า
+- max_per_day=2 (กระจายวัน)
+- threshold: `min_score=12` ("ดีเยี่ยม" เท่านั้น) — top_n=999 (ไม่ cap จำนวน)
+
+### ผลลัพธ์เชิงปริมาณ (housewarming, BKK)
+| ช่วง | ฤกษ์ดีเยี่ยม | เวลา |
+|---|---|---|
+| 30 วัน | 22-23 | 0.6s |
+| 60 วัน | 32-33 | 1.0s |
+| 90 วัน | 43-46 | 1.5s |
+
+## Mobile responsive
+เพิ่ม `@media (max-width: 600px)` ครบ:
+- ลด font/padding ทุก step + hit-card + tally + modal
+- ปุ่ม touch >= 36px
+- modal: title 22→18px, table 13→11px
+
+## ไฟล์ที่แก้/เพิ่ม (รอบ 2)
+
+```
+thai_astro/muhurta.py            — scan_range_multi_events + max_per_day + period
+thai_astro/muhurta_criteria.py   — 24 events × 7 categories
+webapp/server.py                 — POST /muhurta v2 (mode/events/range)
+                                  + POST /muhurta/check (single moment)
+                                  + GET /muhurta/detail (oracle accordion data)
+                                  + _score_to_grade + _PERIOD_INFO
+webapp/templates/muhurta.html    — rewrite ครบ + score modal + toast + check section
+webapp/templates/_muhurta_hit_row.html — period badge + time range
+webapp/changelog.py              — entry 2026.06.07 ภาษาคนทั่วไป
+```
+
+## Cache version
+`?v=20260607y` (a-y ตามลำดับใน session นี้)
+
+## Pending / Backlog
+- โหมด "หาฤกษ์เฉพาะบุคคล" — backend พร้อม (มี mode='personal' route) แต่ disable UI ไว้
+- โหมด "สำหรับโหราจารย์" — backend พร้อม (oracle) + accordion AJAX + SVG charts แต่ disable UI
+- ลด threshold `min_score` ถ้าผู้ใช้อยากเห็นฤกษ์ "ดีมาก" หรือ "ดี" ด้วย (config ตัวเดียว)
+- กิจกรรมเพิ่มเติม (ตัดผม, ทำหมัน, รับขวัญ ฯลฯ — ตอนนี้มี 24)
+
+## ที่ต้องเช็คก่อนเขียน
+- ไฟล์ `kalayok/` มีอะไรอยู่บ้าง (จะ reuse ได้แค่ไหน) — เห็นว่ามี `Thongchai.cs / Ubat.cs / Athibodi.cs / Criterion.cs / Lokawinat.cs / KalayokManager.cs` ใน Devtino.Astrology (C# reference)
+- ผูกดวง form ใน `index.html` reuse code ได้ไหม (sunrise mode, parse_thai_date ฯลฯ)
+

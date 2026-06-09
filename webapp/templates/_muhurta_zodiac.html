@@ -1,0 +1,56 @@
+<svg class="m-svg" viewBox="0 0 {{ view.size }} {{ view.size }}" xmlns="http://www.w3.org/2000/svg">
+  {# วงนอกสุด (นักษัตร) ถ้ามี #}
+  {% if view.show_nakshatra %}
+    <circle cx="{{ view.center }}" cy="{{ view.center }}" r="{{ view.r_nak_out }}" class="m-rim" />
+    <circle cx="{{ view.center }}" cy="{{ view.center }}" r="{{ view.r_nak_in }}" class="m-rim" />
+  {% endif %}
+  <circle cx="{{ view.center }}" cy="{{ view.center }}" r="{{ view.r_outer }}" class="m-rim" />
+  <circle cx="{{ view.center }}" cy="{{ view.center }}" r="{{ view.r_inner }}" class="m-rim" />
+
+  {# เส้นแบ่ง 12 ราศี #}
+  {% for d in view.dividers %}
+    <line x1="{{ view.center + d.x1 }}" y1="{{ view.center - d.y1 }}"
+          x2="{{ view.center + d.x2 }}" y2="{{ view.center - d.y2 }}" class="m-divider" />
+  {% endfor %}
+
+  {# เส้นแบ่งตรียางค์ 24 เส้น #}
+  {% for d in view.triyangka_dividers %}
+    <line x1="{{ view.center + d.x1 }}" y1="{{ view.center - d.y1 }}"
+          x2="{{ view.center + d.x2 }}" y2="{{ view.center - d.y2 }}" class="m-tri-divider" />
+  {% endfor %}
+
+  {# วงนักษัตร: 27 เส้นแบ่ง + label #}
+  {% for n in view.nakshatra_cells %}
+    <line x1="{{ view.center + n.div_x1 }}" y1="{{ view.center - n.div_y1 }}"
+          x2="{{ view.center + n.div_x2 }}" y2="{{ view.center - n.div_y2 }}" class="m-nak-divider" />
+    {# เลข (วงนอก) #}
+    <text x="{{ view.center + n.num_x }}" y="{{ view.center - n.num_y }}"
+          class="m-nak-num {% if n.highlight %}active{% endif %}"
+          transform="rotate({{ n.label_rotation }} {{ view.center + n.num_x }} {{ view.center - n.num_y }})">
+      <title>ฤกษ์ที่ {{ n.number }} — {{ n.name }}</title>{{ n.number_th }}</text>
+    {# ชื่อ (วงใน) #}
+    <text x="{{ view.center + n.name_x }}" y="{{ view.center - n.name_y }}"
+          class="m-nak-label {% if n.highlight %}active{% endif %}"
+          transform="rotate({{ n.label_rotation }} {{ view.center + n.name_x }} {{ view.center - n.name_y }})">
+      <title>ฤกษ์ที่ {{ n.number }} — {{ n.name }}</title>{{ n.name }}</text>
+  {% endfor %}
+
+  {# ชื่อราศี + ดาว #}
+  {% for r in view.rasis %}
+    <text x="{{ view.center + r.label_x }}" y="{{ view.center - r.label_y }}" class="m-rasi-label">{{ r.name }}</text>
+    {% for c in r.chips %}
+      <circle cx="{{ view.center + c.x }}" cy="{{ view.center - c.y }}" r="13"
+              class="m-chip {{ c.color_class }} {% if c.varg %}varg{% endif %}">
+        <title>{{ c.name }}{% if c.varg %} — ดาวอยู่ราศีเดียวกันทั้งสองวง (กำลังแข็ง){% endif %}</title>
+      </circle>
+      <text x="{{ view.center + c.x }}" y="{{ view.center - c.y }}"
+            class="m-chip-text {% if c.color_class == 'planet-moon' %}on-moon{% endif %}">{{ c.abbr }}</text>
+    {% endfor %}
+  {% endfor %}
+
+  {# ลัคนา #}
+  {% if view.lagna %}
+    <circle cx="{{ view.center + view.lagna.x }}" cy="{{ view.center - view.lagna.y }}" r="12" class="m-lagna" />
+    <text x="{{ view.center + view.lagna.x }}" y="{{ view.center - view.lagna.y }}" class="m-lagna-text">ลั</text>
+  {% endif %}
+</svg>

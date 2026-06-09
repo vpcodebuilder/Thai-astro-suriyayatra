@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌟 หาฤกษ์ — โหราศาสตร์ไทย</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/static/styles.css?v=20260607y" />
+  <style>
+    .muhurta-wrap { max-width: 1100px; margin: 0 auto; padding: 16px; color: #3a2a00; }
+    .step { background: #fffbf0; border: 1.5px solid #b78b3a; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+    .step h3 { margin: 0 0 8px; color: #6d4c00; font-size: 16px; }
+    .step-num { display: inline-block; width: 24px; height: 24px; line-height: 24px; text-align: center; background: #b78b3a; color: #fff; border-radius: 50%; font-weight: 700; margin-right: 6px; }
+    .step-hint { font-size: 12px; color: #777; font-weight: 400; }
+
+    /* Mode selector */
+    .mode-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    @media (max-width: 700px) { .mode-row { grid-template-columns: 1fr; } }
+    .mode-btn { background: #fff; border: 2px solid #d8b870; border-radius: 10px; padding: 10px 12px; cursor: pointer; text-align: left; transition: all 0.15s; }
+    .mode-btn:hover { border-color: #b78b3a; }
+    .mode-btn.active { background: #b78b3a; color: #fff; border-color: #6d4c00; }
+    .mode-btn .mode-title { font-weight: 700; font-size: 15px; display: block; }
+    .mode-btn .mode-desc { font-size: 12px; opacity: 0.85; display: block; margin-top: 2px; }
+    .mode-btn.disabled { opacity: 0.55; cursor: not-allowed; background: #f4f0e4; }
+    .mode-btn.disabled:hover { border-color: #d8b870; }
+    .mode-btn .coming-soon-badge { display: inline-block; background: #d4a017; color: #fff; padding: 1px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; margin-left: 4px; }
+
+    /* Event chips (multi-select) */
+    .cat-block { margin-bottom: 10px; }
+    .cat-block .cat-label { font-size: 13px; color: #6d4c00; font-weight: 600; margin: 6px 0 4px; }
+    .event-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .event-chip { padding: 6px 12px; border-radius: 16px; border: 1.5px solid #b78b3a; background: #fffbf0; cursor: pointer; font-size: 13px; color: #3a2a00; font-family: inherit; position: relative; padding-left: 26px; }
+    .event-chip:hover { background: #fff3d2; }
+    .event-chip.active { background: #b78b3a; color: #fff; border-color: #6d4c00; }
+    .event-chip::before { content: '○'; position: absolute; left: 8px; font-weight: 700; font-size: 14px; }
+    .event-chip.active::before { content: '✓'; }
+    .event-count { color: #b78b3a; font-weight: 700; font-size: 14px; }
+
+    /* Range */
+    .range-row { display: flex; gap: 6px; margin-bottom: 8px; }
+    .range-btn { flex: 1; padding: 8px; background: #fff; border: 1.5px solid #b78b3a; border-radius: 8px; cursor: pointer; font-weight: 600; color: #6d4c00; font-family: inherit; }
+    .range-btn.active { background: #b78b3a; color: #fff; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
+    .form-cell label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 3px; color: #6d4c00; }
+    .form-cell input, .form-cell select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #b8924a; font-family: inherit; font-size: 14px; color: #3a2a00; }
+
+    .birth-block { background: linear-gradient(135deg, #fff8e1, #fff3d2); padding: 10px; border-radius: 10px; border: 1px dashed #b78b3a; margin-top: 8px; }
+    .birth-block h4 { margin: 0 0 6px; color: #6d4c00; font-size: 14px; }
+
+    .btn-primary { background: linear-gradient(135deg, #d4a017, #b78b3a); color: #fff; padding: 14px 24px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 17px; font-family: inherit; width: 100%; box-shadow: 0 2px 6px rgba(183, 139, 58, 0.4); }
+    .btn-primary:hover { background: linear-gradient(135deg, #c0900f, #9a7330); transform: translateY(-1px); }
+
+    .error { background: #fdecea; color: #b71c1c; padding: 10px; border-radius: 8px; border: 1px solid #d32f2f; margin: 10px 0; }
+    .hide { display: none !important; }
+
+    /* ===== Loading overlay ===== */
+    .loading-overlay { position: fixed; inset: 0; background: rgba(45, 30, 0, 0.85); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
+    .loading-overlay.active { display: flex; }
+    .loading-box { background: linear-gradient(135deg, #fff8e1, #ffe9a8); padding: 32px 40px; border-radius: 20px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.4); border: 2px solid #b78b3a; max-width: 400px; }
+    .loading-icon { font-size: 48px; animation: spin 2s linear infinite; display: inline-block; }
+    @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+    .loading-title { color: #6d4c00; font-size: 22px; font-weight: 700; margin: 12px 0 6px; }
+    .loading-message { color: #5d3a00; font-size: 14px; min-height: 22px; transition: opacity 0.3s; }
+    .loading-bar { background: rgba(183, 139, 58, 0.2); border-radius: 10px; height: 6px; margin-top: 16px; overflow: hidden; }
+    .loading-bar-fill { background: linear-gradient(90deg, #d4a017, #b78b3a, #d4a017); height: 100%; width: 30%; border-radius: 10px; animation: barSlide 1.2s ease-in-out infinite; }
+    @keyframes barSlide {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(400%); }
+    }
+
+    /* ===== Results ===== */
+    .result-section { margin-top: 20px; }
+    .result-header { background: linear-gradient(135deg, #6d4c00, #b78b3a); color: #fff; border-radius: 12px; padding: 14px 18px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(109, 76, 0, 0.3); }
+    .result-header h2 { margin: 0; font-size: 20px; }
+    .result-header p { margin: 4px 0 0; font-size: 14px; opacity: 0.95; }
+
+    /* Collapsible event panel */
+    .event-panel { background: #fffbf0; border: 2px solid #d8b870; border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+    .event-panel summary { padding: 12px 16px; cursor: pointer; font-weight: 700; color: #6d4c00; display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #fff3d2, #ffe9a8); list-style: none; user-select: none; }
+    .event-panel summary::-webkit-details-marker { display: none; }
+    .event-panel summary::before { content: '▶'; font-size: 12px; color: #b78b3a; transition: transform 0.2s; }
+    .event-panel[open] summary::before { transform: rotate(90deg); }
+    .event-panel summary .event-icon { font-size: 22px; }
+    .event-panel summary .event-title-text { flex: 1; }
+    .event-panel summary .event-count-badge { background: #b78b3a; color: #fff; padding: 2px 10px; border-radius: 10px; font-size: 12px; }
+    .event-panel-body { padding: 12px 16px; }
+    .event-desc { font-size: 13px; color: #555; margin-bottom: 10px; font-style: italic; }
+
+    /* ===== Premium hit card ===== */
+    .hit-card {
+      background: linear-gradient(180deg, #fff 0%, #fffbf0 100%);
+      border: 1.5px solid #d8b870;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      position: relative;
+      transition: transform 0.15s, box-shadow 0.15s;
+      cursor: default;
+    }
+    .hit-card.tier-best  { background: linear-gradient(135deg, #fff8e1, #ffe9a8); border-color: #d4a017; box-shadow: 0 2px 12px rgba(212, 160, 23, 0.25); }
+    .hit-card.tier-great { background: linear-gradient(135deg, #fffbf0, #fff3d2); border-color: #b78b3a; }
+    .hit-card.tier-good  { background: linear-gradient(180deg, #fff, #fffbf0); border-color: #c9a227; }
+    .hit-card.tier-fair  { border-color: #d8b870; }
+    .hit-card.tier-neutral { border-color: #ccc; opacity: 0.95; }
+    .hit-card.tier-warning { background: #fff5ee; border-color: #ef6c00; }
+    .hit-card.tier-bad     { background: #fdecea; border-color: #d32f2f; }
+
+    /* Period accent: แถบสีซ้าย + tint แยกแต่ละช่วงเวลา (เห็นชัดจากการเหลือบตา) */
+    .hit-card { border-left-width: 8px; padding-left: 14px; }
+
+    .hit-card[data-period="morning"]      { border-left-color: #f9c74f; background-image: linear-gradient(90deg, rgba(255, 224, 130, 0.45), transparent 30%); }
+    .hit-card[data-period="late_morning"] { border-left-color: #ffb703; background-image: linear-gradient(90deg, rgba(255, 213, 79, 0.45), transparent 30%); }
+    .hit-card[data-period="noon"]         { border-left-color: #fb8500; background-image: linear-gradient(90deg, rgba(255, 167, 38, 0.40), transparent 30%); }
+    .hit-card[data-period="evening"]      { border-left-color: #e76f51; background-image: linear-gradient(90deg, rgba(255, 138, 101, 0.40), transparent 30%); }
+    .hit-card[data-period="dusk"]         { border-left-color: #8e44ad; background-image: linear-gradient(90deg, rgba(186, 104, 200, 0.35), transparent 30%); }
+    .hit-card[data-period="night"]        { border-left-color: #1a237e; background-image: linear-gradient(90deg, rgba(63, 81, 181, 0.45), rgba(63, 81, 181, 0.08) 30%, transparent 60%); }
+
+    /* night cards: ตัวอักษรเข้มขึ้นเล็กน้อยเพื่ออ่านง่ายบน tint น้ำเงิน */
+    .hit-card[data-period="night"] .hit-date-big { color: #1a237e; }
+    .hit-card[data-period="night"] .hit-time-big { color: #1a237e; }
+
+    /* period chip badge สีจางตามช่วง */
+    .hit-card[data-period="morning"] .period-badge      { color: #c98a04; }
+    .hit-card[data-period="late_morning"] .period-badge { color: #b87300; }
+    .hit-card[data-period="noon"] .period-badge         { color: #c75000; }
+    .hit-card[data-period="evening"] .period-badge      { color: #b3380e; }
+    .hit-card[data-period="dusk"] .period-badge         { color: #6a1b9a; }
+    .hit-card[data-period="night"] .period-badge        { color: #1a237e; }
+
+    .rank-ribbon { position: absolute; top: -10px; left: 12px; padding: 3px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .rank-ribbon.best   { background: linear-gradient(135deg, #d4a017, #8b6914); }
+    .rank-ribbon.silver { background: linear-gradient(135deg, #9e9e9e, #616161); }
+    .rank-ribbon.bronze { background: linear-gradient(135deg, #bf6c2c, #8b4a17); }
+
+    .hit-main { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .hit-datetime { flex: 0 0 auto; min-width: 130px; }
+    .hit-date-big { font-size: 18px; font-weight: 700; color: #3a2a00; font-family: 'Kanit', sans-serif; }
+    .hit-time-big { font-size: 22px; font-weight: 700; color: #b78b3a; font-family: 'Kanit', sans-serif; }
+    .period-badge { font-size: 14px; margin-left: 4px; }
+    .period-label-small { font-size: 11px; color: #777; margin-top: 2px; }
+
+    /* Period tally bar */
+    .period-tally { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; padding: 10px 12px; background: #fffbf0; border: 1px dashed #b78b3a; border-radius: 8px; font-size: 13px; align-items: center; }
+    .period-tally-item { padding: 4px 10px; border-radius: 14px; background: #fff; border: 1.5px solid #d8b870; color: #6d4c00; cursor: pointer; font-family: inherit; font-size: 13px; transition: all 0.15s; }
+    .period-tally-item:hover:not(:disabled) { background: #fff3d2; border-color: #b78b3a; }
+    .period-tally-item.active { background: #b78b3a; color: #fff; border-color: #6d4c00; }
+    .period-tally-item:disabled, .period-tally-item.zero { opacity: 0.4; cursor: not-allowed; }
+    .period-tally-title { font-weight: 600; color: #6d4c00; margin-right: 4px; width: 100%; }
+    @media (min-width: 700px) { .period-tally-title { width: auto; } }
+    .period-tally-clear { padding: 4px 10px; border-radius: 14px; background: #fff; border: 1.5px solid #d32f2f; color: #d32f2f; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; }
+
+    /* ===== ตรวจสอบฤกษ์ที่ได้มา (check section) ===== */
+    .check-section { margin-top: 30px; background: linear-gradient(135deg, #fff8e1, #ffe9a8); border: 2px solid #d4a017; border-radius: 16px; padding: 20px 22px; box-shadow: 0 4px 16px rgba(212, 160, 23, 0.25); }
+    .check-header { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; }
+    .check-icon { font-size: 40px; line-height: 1; flex-shrink: 0; }
+    .check-header h2 { margin: 0; color: #6d4c00; font-size: 20px; font-family: 'Kanit', sans-serif; }
+    .check-header p { margin: 4px 0 0; font-size: 13px; color: #5d3a00; }
+    .check-body { background: rgba(255, 255, 255, 0.6); padding: 14px; border-radius: 10px; }
+    .btn-check { width: 100%; margin-top: 10px; padding: 12px 18px; background: linear-gradient(135deg, #d4a017, #b78b3a); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; box-shadow: 0 2px 6px rgba(212, 160, 23, 0.4); }
+    .btn-check:hover { background: linear-gradient(135deg, #b88e0a, #9a7330); transform: translateY(-1px); }
+    #check-result { margin-top: 12px; }
+
+    /* ===== Toast notification (replace native alert) ===== */
+    .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, #d32f2f, #8b1010); color: #fff; padding: 14px 22px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); z-index: 10000; font-weight: 700; font-size: 15px; opacity: 0; transition: all 0.3s ease-out; pointer-events: none; max-width: 90%; text-align: center; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast::before { content: '⚠️ '; }
+
+    /* Score info button + modal */
+    .score-info-btn { margin-top: 20px; width: 100%; padding: 14px 20px; background: linear-gradient(135deg, #6d4c00, #b78b3a); color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(109, 76, 0, 0.3); font-family: inherit; transition: all 0.15s; }
+    .score-info-btn:hover { background: linear-gradient(135deg, #5a3f00, #9a7330); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(109, 76, 0, 0.4); }
+
+    .score-modal-bg { position: fixed; inset: 0; background: rgba(45, 30, 0, 0.7); backdrop-filter: blur(4px); z-index: 9998; display: none; align-items: flex-start; justify-content: center; padding: 30px 16px; overflow-y: auto; }
+    .score-modal-bg.active { display: flex; }
+    .score-modal { background: linear-gradient(180deg, #fffbf0 0%, #fff 100%); border: 2px solid #b78b3a; border-radius: 16px; padding: 28px 28px 20px; max-width: 720px; width: 100%; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); position: relative; color: #3a2a00; }
+    .score-modal-close { position: absolute; top: 12px; right: 14px; width: 36px; height: 36px; border-radius: 50%; background: #b78b3a; color: #fff; border: none; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .score-modal-close:hover { background: #6d4c00; }
+    .score-modal-title { margin: 0 0 8px; color: #6d4c00; font-size: 22px; font-family: 'Kanit', sans-serif; padding-right: 40px; }
+    .score-modal-intro { font-size: 14px; color: #5d3a00; margin-bottom: 18px; padding: 10px 12px; background: #fff8e1; border-radius: 8px; border-left: 4px solid #b78b3a; }
+
+    .score-factor { margin-bottom: 18px; padding: 12px 14px; background: #fffbf0; border: 1px solid #d8b870; border-radius: 10px; }
+    .score-factor h3 { margin: 0 0 6px; color: #6d4c00; font-size: 16px; font-family: 'Kanit', sans-serif; }
+    .score-factor p { margin: 0 0 8px; font-size: 13px; color: #555; }
+    .score-tbl { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; border-radius: 6px; overflow: hidden; }
+    .score-tbl th { background: #fff3d2; color: #6d4c00; padding: 6px 10px; text-align: left; font-weight: 700; }
+    .score-tbl td { padding: 6px 10px; border-top: 1px solid #f1ecd9; }
+    .sc-best { color: #d4a017; font-weight: 700; }
+    .sc-good { color: #2e7d32; font-weight: 700; }
+    .sc-mid  { color: #777; font-weight: 600; }
+    .sc-bad  { color: #b71c1c; font-weight: 700; }
+    .score-example { margin-top: 8px; padding: 8px 12px; background: #fff8e1; border-left: 4px solid #d4a017; border-radius: 6px; font-size: 13px; color: #6d4c00; }
+    .score-grading { margin-top: 18px; padding: 14px; background: linear-gradient(135deg, #fff3d2, #ffe9a8); border: 2px solid #b78b3a; border-radius: 10px; }
+    .score-grading h3 { margin: 0 0 8px; color: #6d4c00; font-size: 16px; font-family: 'Kanit', sans-serif; }
+    .score-grading .grade-row-best td { background: linear-gradient(135deg, #fff8e1, #ffe9a8); font-weight: 700; color: #6d4c00; }
+    .score-note { margin-top: 14px; font-size: 12px; color: #777; text-align: center; font-style: italic; }
+    @media (max-width: 700px) {
+      .score-modal { padding: 18px 14px 14px; }
+      .score-tbl { font-size: 12px; }
+      .score-tbl th, .score-tbl td { padding: 4px 6px; }
+    }
+
+    /* Hidden by filter */
+    .hit-card.period-hidden, .hit-detail.period-hidden { display: none; }
+
+    .hit-grade-block { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: 1; justify-content: flex-end; }
+    .grade-stars { font-size: 20px; letter-spacing: 1px; }
+    .grade-stars .star.full  { color: #d4a017; text-shadow: 0 0 4px rgba(212, 160, 23, 0.4); }
+    .grade-stars .star.half  { color: #d4a017; }
+    .grade-stars .star.empty { color: #d8b870; opacity: 0.4; }
+    .grade-label { padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 15px; }
+    .grade-label.tier-best   { background: linear-gradient(135deg, #d4a017, #8b6914); color: #fff; }
+    .grade-label.tier-great  { background: linear-gradient(135deg, #2e7d32, #1b5e20); color: #fff; }
+    .grade-label.tier-good   { background: #66bb6a; color: #fff; }
+    .grade-label.tier-fair   { background: #fff3d2; color: #6d4c00; }
+    .grade-label.tier-neutral { background: #f1ecd9; color: #555; }
+    .grade-label.tier-warning { background: #ef6c00; color: #fff; }
+    .grade-label.tier-bad     { background: #d32f2f; color: #fff; }
+    .grade-score { font-size: 12px; color: #777; cursor: help; }
+
+    .hit-summary-text { font-size: 13px; color: #555; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #d8b870; }
+
+    .hit-extras { font-size: 13px; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .extra-tag { padding: 3px 8px; border-radius: 6px; font-weight: 600; font-size: 12px; }
+    .extra-good { background: #e8f5e9; color: #1b5e20; }
+    .extra-warn { background: #fde7d8; color: #b05a00; }
+    .extra-neutral { background: #f1ecd9; color: #555; }
+    .extra-special { background: linear-gradient(135deg, #fff3d2, #ffe9a8); color: #6d4c00; border: 1px solid #b78b3a; }
+
+    .hit-expand-row { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #d8b870; }
+    .hit-expand { color: #b78b3a; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+    .hit-detail { padding: 14px; background: #fffbf0; border: 2px dashed #b78b3a; border-radius: 10px; display: none; margin-bottom: 10px; margin-top: -6px; }
+    .hit-detail.open { display: block; }
+    .detail-loading { color: #6d4c00; font-style: italic; text-align: center; padding: 20px; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 700px) { .detail-grid { grid-template-columns: 1fr; } }
+    .factor-mini { font-size: 13px; padding: 5px 0; border-bottom: 1px dashed #d8b870; }
+    .planet-mini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 4px; margin-top: 6px; }
+    .planet-mini { padding: 4px 6px; border-radius: 6px; background: #fff; border: 1px solid #d8b870; font-size: 12px; }
+
+    /* SVG */
+    .chart-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+    @media (max-width: 700px) { .chart-pair { grid-template-columns: 1fr; } }
+    .chart-cell { background: #fff; border: 1px solid #d8b870; border-radius: 8px; padding: 6px; text-align: center; }
+    .chart-cell h4 { margin: 4px 0 6px; color: #6d4c00; font-size: 14px; }
+    .m-svg { width: 100%; height: auto; max-width: 420px; }
+    .m-divider { stroke: #b78b3a; stroke-width: 1; opacity: 0.5; }
+    .m-tri-divider { stroke: #b78b3a; stroke-width: 0.6; opacity: 0.25; stroke-dasharray: 2,2; }
+    .m-nak-divider { stroke: #8b5a00; stroke-width: 0.5; opacity: 0.5; }
+    .m-nak-label { font-family: 'Sarabun', sans-serif; font-size: 9.5px; fill: #6d4c00; text-anchor: middle; dominant-baseline: middle; font-weight: 600; }
+    .m-nak-label.active { fill: #b71c1c; font-weight: 700; font-size: 10.5px; }
+    .m-nak-num { font-family: 'Sarabun', sans-serif; font-size: 9px; fill: #8b5a00; text-anchor: middle; dominant-baseline: middle; font-weight: 700; opacity: 0.85; }
+    .m-nak-num.active { fill: #b71c1c; opacity: 1; font-size: 10px; }
+    .m-rim { stroke: #b78b3a; stroke-width: 1.5; fill: none; }
+    .m-rasi-label { font-family: 'Mali', serif; font-size: 14px; fill: #6d4c00; text-anchor: middle; dominant-baseline: middle; }
+    .m-chip { fill: #fff3d2; stroke: #b78b3a; stroke-width: 1.5; }
+    .m-chip.varg { stroke: #8b5a00; stroke-width: 3; }
+    .m-chip.planet-sun     { fill: #d24a13; }
+    .m-chip.planet-moon    { fill: #d4b34c; }
+    .m-chip.planet-mars    { fill: #b71c1c; }
+    .m-chip.planet-mercury { fill: #2e7d32; }
+    .m-chip.planet-jupiter { fill: #e65100; }
+    .m-chip.planet-venus   { fill: #1976d2; }
+    .m-chip.planet-saturn  { fill: #3e2723; }
+    .m-chip.planet-rahu    { fill: #424242; }
+    .m-chip.planet-ketu    { fill: #6a1b9a; }
+    .m-chip.planet-uranus  { fill: #0d47a1; }
+    .m-chip-text { font-family: 'Sarabun', sans-serif; font-size: 13px; font-weight: 700; fill: #fff; text-anchor: middle; dominant-baseline: middle; }
+    .m-chip-text.on-moon { fill: #4a3500; }
+    .m-lagna { fill: #c0392b; stroke: #fff; stroke-width: 2; }
+    .m-lagna-text { font-family: 'Mali', serif; font-size: 11px; fill: #fff; text-anchor: middle; dominant-baseline: middle; font-weight: 700; }
+
+    /* ===== Mobile (<= 600px) responsive fine-tune ===== */
+    @media (max-width: 600px) {
+      .muhurta-wrap { padding: 10px; }
+      .step { padding: 10px 12px; }
+      .step h3 { font-size: 15px; }
+      .step-num { width: 20px; height: 20px; line-height: 20px; font-size: 12px; }
+      .mode-btn { padding: 8px 10px; }
+      .mode-btn .mode-title { font-size: 14px; }
+      .mode-btn .mode-desc { font-size: 11px; }
+      .event-chip { padding: 6px 10px 6px 24px; font-size: 12px; }
+      .event-chip::before { left: 7px; font-size: 12px; }
+      .range-btn { padding: 7px 4px; font-size: 13px; }
+      .form-cell input, .form-cell select { padding: 7px; font-size: 14px; }
+      .btn-primary { padding: 12px 18px; font-size: 15px; }
+
+      .result-header { padding: 12px 14px; }
+      .result-header h2 { font-size: 17px; }
+      .event-panel summary { padding: 10px 12px; font-size: 14px; gap: 6px; }
+      .event-panel summary .event-icon { font-size: 18px; }
+      .event-panel-body { padding: 10px 12px; }
+      .event-desc { font-size: 12px; }
+
+      .period-tally { padding: 8px; font-size: 12px; gap: 4px; }
+      .period-tally-item { padding: 3px 7px; font-size: 11px; }
+      .period-tally-title { font-size: 12px; }
+      .period-tally-clear { padding: 3px 8px; font-size: 11px; }
+
+      .hit-card { padding: 10px 12px; padding-left: 16px; border-left-width: 6px; }
+      .hit-datetime { min-width: 100px; }
+      .hit-date-big { font-size: 15px; }
+      .hit-time-big { font-size: 19px; }
+      .period-label-small { font-size: 10px; }
+      .hit-main { gap: 10px; }
+      .grade-stars { font-size: 17px; }
+      .grade-label { padding: 3px 10px; font-size: 13px; }
+      .grade-score { font-size: 11px; }
+      .hit-summary-text { font-size: 12px; }
+      .extra-tag { font-size: 11px; }
+      .rank-ribbon { font-size: 11px; padding: 2px 9px; top: -8px; }
+
+      .check-section { padding: 14px; margin-top: 20px; }
+      .check-header { gap: 10px; }
+      .check-icon { font-size: 32px; }
+      .check-header h2 { font-size: 17px; }
+      .check-header p { font-size: 12px; }
+      .check-body { padding: 10px; }
+      .btn-check { padding: 10px 14px; font-size: 14px; }
+
+      .score-info-btn { padding: 12px 16px; font-size: 14px; }
+      .score-modal-bg { padding: 16px 8px; }
+      .score-modal { padding: 16px 12px 12px; border-radius: 12px; }
+      .score-modal-title { font-size: 18px; padding-right: 36px; }
+      .score-modal-close { width: 32px; height: 32px; font-size: 14px; top: 10px; right: 10px; }
+      .score-modal-intro { font-size: 12px; padding: 8px 10px; }
+      .score-factor { padding: 10px 12px; margin-bottom: 12px; }
+      .score-factor h3 { font-size: 14px; }
+      .score-factor p { font-size: 12px; }
+      .score-tbl th, .score-tbl td { padding: 4px 6px; font-size: 11px; }
+      .score-example { font-size: 11px; padding: 6px 10px; }
+      .score-grading h3 { font-size: 14px; }
+      .score-note { font-size: 11px; }
+
+      .toast { font-size: 13px; padding: 12px 18px; top: 70px; }
+      .loading-box { padding: 24px 20px; max-width: 90%; }
+      .loading-title { font-size: 18px; }
+      .loading-message { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="ornament">❀</div>
+    <h1>🌟 หาฤกษ์</h1>
+    <p class="subtitle">ฤกษ์มงคล — ตามตำราโหราศาสตร์ไทย</p>
+    <div class="ornament">❀</div>
+  </header>
+
+  <nav class="nav-links">
+    <a href="/">ผูกดวงสุริยยาตร์</a>
+    <a href="/horathaynu">โหรทายหนู</a>
+    <a href="/muhurta" class="active">🌟 หาฤกษ์</a>
+    <a href="/calendar">เทียบปฏิทิน</a>
+    <a href="/about">เกี่ยวกับ{% if latest_version %} <span class="version-badge">v{{ latest_version }}</span>{% endif %}</a>
+  </nav>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-box">
+      <div class="loading-icon">🌟</div>
+      <div class="loading-title">กำลังหาฤกษ์ดี…</div>
+      <div class="loading-message" id="loading-message">กำลังคำนวณดวงดาวสุริยยาตร์…</div>
+      <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+    </div>
+  </div>
+
+  <main class="muhurta-wrap">
+
+    {% if error %}<div class="error">⚠️ {{ error }}</div>{% endif %}
+
+    <form method="post" action="/muhurta" id="muhurta-form">
+
+      <!-- Step 1: Mode -->
+      <div class="step">
+        <h3><span class="step-num">1</span>เลือกระดับการหาฤกษ์</h3>
+        <div class="mode-row">
+          <label class="mode-btn {% if form.mode == 'general' %}active{% endif %}" data-mode="general">
+            <input type="radio" name="mode" value="general" {% if form.mode == 'general' %}checked{% endif %} style="display:none">
+            <span class="mode-title">👤 หาฤกษ์ทั่วไป</span>
+            <span class="mode-desc">ดูฤกษ์ดีตามดาวจร — ไม่ต้องใส่วันเกิด</span>
+          </label>
+          <label class="mode-btn disabled" data-mode="personal" title="ฟีเจอร์นี้กำลังพัฒนา จะเปิดในอนาคต">
+            <span class="mode-title">💑 หาฤกษ์เฉพาะบุคคล <span class="coming-soon-badge">เร็วๆ นี้</span></span>
+            <span class="mode-desc">เทียบกับดวงเจ้าชะตา + เกณฑ์พิเศษ (กำลังพัฒนา)</span>
+          </label>
+          <label class="mode-btn disabled" data-mode="oracle" title="ฟีเจอร์นี้กำลังพัฒนา จะเปิดในอนาคต">
+            <span class="mode-title">🔬 สำหรับโหราจารย์ <span class="coming-soon-badge">เร็วๆ นี้</span></span>
+            <span class="mode-desc">ดวงราศีจักร์ + นวางค์จักร์ + การคำนวณ (กำลังพัฒนา)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Step 2: Events (multi-select) -->
+      <div class="step">
+        <h3>
+          <span class="step-num">2</span>เลือกกิจกรรม
+          <span class="step-hint">(กดเลือกได้หลายอย่าง — ผลลัพธ์จะแยก section)</span>
+          <span class="event-count" id="event-count">เลือกแล้ว 0</span>
+        </h3>
+        {% for cat in events_by_cat %}
+          <div class="cat-block">
+            <div class="cat-label">{{ cat.label }}</div>
+            <div class="event-chip-row">
+              {% for ev in cat.events %}
+                <label class="event-chip {% if ev.key in form.event_keys %}active{% endif %}" data-event="{{ ev.key }}" title="{{ ev.description }}">
+                  <input type="checkbox" name="event_keys" value="{{ ev.key }}" {% if ev.key in form.event_keys %}checked{% endif %} style="display:none">
+                  {{ ev.icon }} {{ ev.label }}
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Step 3: Range + Time of day -->
+      <div class="step">
+        <h3><span class="step-num">3</span>ช่วงเวลา + จังหวัด</h3>
+
+        <div class="range-row">
+          <button type="button" class="range-btn {% if form.range_days == '30' %}active{% endif %}" data-range="30">30 วัน</button>
+          <button type="button" class="range-btn {% if form.range_days == '60' %}active{% endif %}" data-range="60">60 วัน</button>
+          <button type="button" class="range-btn {% if form.range_days == '90' %}active{% endif %}" data-range="90">90 วัน</button>
+        </div>
+        <input type="hidden" name="range_days" id="range-days-hidden" value="{{ form.range_days }}">
+        <div class="form-grid">
+          <div class="form-cell">
+            <label>วันเริ่ม (พ.ศ.)</label>
+            <input type="text" name="start_date" id="start-date" value="{{ form.start_date }}" placeholder="DD/MM/YYYY" required>
+          </div>
+          <div class="form-cell">
+            <label>วันสิ้นสุด (พ.ศ.)</label>
+            <input type="text" name="end_date" id="end-date" value="{{ form.end_date }}" placeholder="DD/MM/YYYY" required>
+          </div>
+          <div class="form-cell">
+            <label>จังหวัด</label>
+            <select name="province">
+              {% for p in provinces %}
+                <option value="{{ p }}" {% if p == form.province %}selected{% endif %}>{{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Birth (hidden — for future personal/oracle modes) -->
+      <div class="step birth-block hide" id="birth-step" style="display:none;">
+        <input type="hidden" name="birth_date_th" value="">
+        <input type="hidden" name="birth_time" value="">
+        <input type="hidden" name="birth_province" value="กรุงเทพมหานคร">
+      </div>
+
+      <button type="submit" class="btn-primary">🔍 ค้นหาฤกษ์ดี</button>
+    </form>
+
+    <!-- ===== Results ===== -->
+    {% if result %}
+      <div class="result-section">
+        <div class="result-header">
+          <h2>📋 ผลการหาฤกษ์</h2>
+          <p>พบฤกษ์ดี <strong>{{ result.total_events }}</strong> กิจกรรม (จากที่เลือก {{ result.total_requested }})
+            {% if result.total_events < result.total_requested %}
+              <span style="opacity:0.85">— กิจกรรมอื่นไม่มีฤกษ์ดีในช่วงเวลานี้</span>
+            {% endif %}
+          </p>
+          {% if result.natal_info %}
+            <p>👤 ดวงเจ้าชะตา: {{ result.natal_info.date }} {{ result.natal_info.time }} — ลัคนา{{ result.natal_info.asc_rasi }} {{ result.natal_info.asc_deg }}°{{ result.natal_info.asc_min }}′</p>
+          {% endif %}
+        </div>
+
+        {% for group in result.groups %}
+          <details class="event-panel" {% if loop.index <= 2 %}open{% endif %}>
+            <summary>
+              <span class="event-icon">{{ group.event_icon }}</span>
+              <span class="event-title-text">{{ group.event_label }}</span>
+              <span class="event-count-badge">{{ group.hits|length }} ฤกษ์</span>
+            </summary>
+            <div class="event-panel-body">
+              <div class="event-desc">{{ group.event_description }}</div>
+
+              {# Period tally — แสดงจำนวนฤกษ์แต่ละช่วง + กดเพื่อกรอง #}
+              {% set tally = {'morning':0,'late_morning':0,'noon':0,'evening':0,'dusk':0,'night':0} %}
+              {% for h in group.hits %}{% if tally.update({h.period: tally[h.period]+1}) %}{% endif %}{% endfor %}
+              {% set tally_labels = [('morning','🌅','เช้า','06-09'),('late_morning','☀️','สาย','09-12'),('noon','🌞','บ่าย','12-15'),('evening','🌇','เย็น','15-18'),('dusk','🌆','ค่ำ','18-21'),('night','🌙','กลางคืน','21-06')] %}
+              <div class="period-tally">
+                <span class="period-tally-title">📊 ทั้งหมด {{ group.hits|length }} ฤกษ์ — กดเพื่อกรอง:</span>
+                {% for tp_key, tp_icon, tp_label, tp_range in tally_labels %}
+                  <button type="button" class="period-tally-item {% if tally[tp_key] == 0 %}zero{% endif %}" data-tally-period="{{ tp_key }}" {% if tally[tp_key] == 0 %}disabled{% endif %}>
+                    {{ tp_icon }} {{ tp_label }} ({{ tp_range }}) <strong>{{ tally[tp_key] }} ฤกษ์</strong>
+                  </button>
+                {% endfor %}
+                <button type="button" class="period-tally-clear" style="margin-left:auto;display:none;">ล้างกรอง</button>
+              </div>
+
+              {% for h in group.hits %}
+                {% with rank=loop.index %}{% include "_muhurta_hit_row.html" %}{% endwith %}
+              {% endfor %}
+              {% if not group.hits %}
+                <p style="text-align:center;color:#777;padding:10px;">ไม่พบฤกษ์ดีสำหรับกิจกรรมนี้ในช่วงเวลานี้</p>
+              {% endif %}
+            </div>
+          </details>
+        {% endfor %}
+
+        {% if not result.groups %}
+          <div style="text-align:center;padding:30px;background:#fff8e1;border-radius:12px;border:1px dashed #b78b3a;">
+            <div style="font-size:48px;">🤔</div>
+            <p style="color:#6d4c00;font-weight:600;margin:10px 0 4px;">ไม่พบฤกษ์ดีในช่วงเวลานี้</p>
+            <p style="color:#777;font-size:14px;">ลองขยายช่วงเวลาเป็น 60 หรือ 90 วัน หรือเลือกกิจกรรมอื่น</p>
+          </div>
+        {% endif %}
+
+        <!-- Score legend popup trigger -->
+        <button type="button" id="open-score-info" class="score-info-btn">
+          💡 คะแนนและเกรดฤกษ์คำนวณจากอะไร? <span style="opacity:0.8">— กดเพื่ออ่าน</span>
+        </button>
+      </div>
+    {% endif %}
+
+    <!-- ===== ตรวจสอบฤกษ์ที่ได้มาจากที่อื่น ===== -->
+    <div class="check-section">
+      <div class="check-header">
+        <div class="check-icon">🔍</div>
+        <div>
+          <h2>ตรวจสอบฤกษ์ที่ได้มาจากที่อื่น</h2>
+          <p>มีฤกษ์ที่อาจารย์ท่านอื่นให้มา? กรอกวันเวลาเพื่อดูคะแนนตามระบบนี้</p>
+        </div>
+      </div>
+      <div class="check-body">
+        <div class="form-grid">
+          <div class="form-cell">
+            <label>วันที่ (พ.ศ.)</label>
+            <input type="text" id="check-date" placeholder="DD/MM/YYYY">
+          </div>
+          <div class="form-cell">
+            <label>เวลา</label>
+            <input type="time" id="check-time">
+          </div>
+          <div class="form-cell">
+            <label>กิจกรรม (เลือกได้)</label>
+            <select id="check-event">
+              <option value="">— ไม่ระบุ (ฤกษ์รวม) —</option>
+              {% for ev in events_flat %}
+                <option value="{{ ev.key }}">{{ ev.icon }} {{ ev.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <button type="button" id="check-btn" class="btn-check">⭐ ตรวจสอบคะแนนฤกษ์นี้</button>
+        <div id="check-result"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== Score info modal ===== -->
+  <div class="score-modal-bg" id="score-modal-bg">
+    <div class="score-modal">
+      <button type="button" class="score-modal-close" id="close-score-modal" aria-label="ปิด">✕</button>
+      <h2 class="score-modal-title">💡 หลักการคำนวณคะแนนฤกษ์</h2>
+      <p class="score-modal-intro">ระบบรวมคะแนนจาก <strong>6 ปัจจัย</strong> ในตำราโหราศาสตร์ไทย โดย scan ทุก 1 ชั่วโมงในช่วงเวลาที่เลือก แล้วกรองเฉพาะ "<strong>ฤกษ์ดีเยี่ยม</strong>" (คะแนน ≥ 12)</p>
+
+      <div class="score-factor">
+        <h3>1️⃣ วาร (ดาวประจำวัน)</h3>
+        <p>คือดาวเจ้าของวันในสัปดาห์ที่ตรวจสอบฤกษ์</p>
+        <table class="score-tbl">
+          <tr><th>ดาว / วัน</th><th>คะแนน</th><th>เหตุผล</th></tr>
+          <tr><td>🪐 พฤหัสบดี</td><td class="sc-best">+3</td><td>ครูบาอาจารย์ — มงคลที่สุด เหมาะทุกพิธี</td></tr>
+          <tr><td>🌙 จันทร์, ☿ พุธ, ♀ ศุกร์</td><td class="sc-good">+2</td><td>ดาวศุภเคราะห์ — เหมาะการมงคล</td></tr>
+          <tr><td>☉ อาทิตย์</td><td class="sc-mid">0</td><td>กลาง เหมาะงานราชการ ตำแหน่ง</td></tr>
+          <tr><td>♂ อังคาร, ♄ เสาร์</td><td class="sc-bad">−2</td><td>ดาวบาปเคราะห์ — เลี่ยงงานมงคลทั่วไป</td></tr>
+        </table>
+        <div class="score-example">📌 ตัวอย่าง: ฤกษ์ตรงวันพฤหัสบดี = <strong>+3</strong> ทันที</div>
+      </div>
+
+      <div class="score-factor">
+        <h3>2️⃣ ดิถี (วันทางจันทรคติ)</h3>
+        <p>วันขึ้น/แรม X ค่ำ — ดูจากตำแหน่งสัมพันธ์อาทิตย์-จันทร์</p>
+        <table class="score-tbl">
+          <tr><th>ดิถี</th><th>คะแนน</th><th>เหตุผล</th></tr>
+          <tr><td>ขึ้น 15 ค่ำ (เพ็ญ)</td><td class="sc-best">+3</td><td>จันทร์เต็มดวง บริบูรณ์</td></tr>
+          <tr><td>ขึ้น 2, 3, 5, 7, 10, 11, 13</td><td class="sc-good">+2</td><td>ดิถีมงคลตามตำรา</td></tr>
+          <tr><td>ขึ้น 1, 8 / แรม 2, 3</td><td class="sc-mid">0</td><td>กลาง</td></tr>
+          <tr><td>ขึ้น 4, 9, 14 / แรม 7, 9, 12+</td><td class="sc-bad">−2</td><td>ดิถีหนัก — เลี่ยงงานเริ่มต้น</td></tr>
+        </table>
+        <div class="score-example">📌 ตัวอย่าง: ขึ้น 11 ค่ำ = <strong>+2</strong> | แรม 14 ค่ำ = <strong>−2</strong></div>
+      </div>
+
+      <div class="score-factor">
+        <h3>3️⃣ นักษัตร (ฤกษ์ที่จันทร์ตก)</h3>
+        <p>จากตำแหน่งจันทร์ในจักรราศี 27 นักษัตร — จัดกลุ่ม 9 ฤกษ์</p>
+        <table class="score-tbl">
+          <tr><th>ฤกษ์</th><th>คะแนน</th><th>เหมาะกับ</th></tr>
+          <tr><td>มหัทธโน / ราชา / เทวี</td><td class="sc-good">+2</td><td>ทรัพย์ / ตำแหน่ง / แต่งงาน</td></tr>
+          <tr><td>ภูมิปาโล / เทศาตรี / สมโณ</td><td class="sc-good">+2</td><td>บ้าน / เดินทาง / พิธีกรรม</td></tr>
+          <tr><td>ทลิทโท / โจโร / เพชฌฆาต</td><td class="sc-bad">−2</td><td>เลี่ยงโดยเด็ดขาด</td></tr>
+        </table>
+        <div class="score-example">📌 ตัวอย่าง: จันทร์อยู่ในนักษัตร "ปุษยะ" → ราชาฤกษ์ = <strong>+2</strong></div>
+      </div>
+
+      <div class="score-factor">
+        <h3>4️⃣ กาลโยค (เกณฑ์ประจำปี จ.ศ.)</h3>
+        <p>4 เกณฑ์ใหญ่ของปี — ตรงวัน/ราศี/ดิถี/ฤกษ์ที่กำหนดในเกณฑ์ = ได้ผล</p>
+        <table class="score-tbl">
+          <tr><th>เกณฑ์</th><th>คะแนน</th><th>คุณภาพ</th></tr>
+          <tr><td>🏳️ ธงชัย</td><td class="sc-good">+2 ต่อข้อ</td><td>มงคลสูงสุด</td></tr>
+          <tr><td>👑 อธิบดี</td><td class="sc-good">+1 ต่อข้อ</td><td>มงคล (ผู้ใหญ่/ตำแหน่ง)</td></tr>
+          <tr><td>⚠️ อุบาทว์</td><td class="sc-bad">−2 ต่อข้อ</td><td>อัปมงคล</td></tr>
+          <tr><td>💀 โลกาวินาศ</td><td class="sc-bad">−3 ต่อข้อ</td><td>อันตราย — เลี่ยงเด็ดขาด</td></tr>
+        </table>
+        <div class="score-example">📌 ตัวอย่าง: ฤกษ์ตรงทั้งวัน-ราศี-ฤกษ์ของธงชัย = <strong>+6</strong></div>
+      </div>
+
+      <div class="score-factor">
+        <h3>5️⃣ เกณฑ์พิเศษ</h3>
+        <p>3 เกณฑ์ตามตำรา horapayakorn — ใช้เฉพาะกิจกรรม</p>
+        <table class="score-tbl">
+          <tr><th>เกณฑ์</th><th>คะแนน</th><th>เหมาะกับ</th></tr>
+          <tr><td>👰 กนกนารี (จันทร์+ศุกร์ในราศีหญิง)</td><td class="sc-good">+2</td><td>แต่งงาน หมั้น</td></tr>
+          <tr><td>🐘 กนกกุญชร (พฤหัส/อังคารราศีจร)</td><td class="sc-good">+2</td><td>เดินทาง ออกรถ ขนย้าย</td></tr>
+          <tr><td>👁️ จักขุมายา (จันทร์กุมราหู/เกตุ)</td><td class="sc-bad">−3</td><td>ระวัง! เลี่ยงเซ็นสัญญา</td></tr>
+        </table>
+        <div class="score-example">📌 ตัวอย่าง: ฤกษ์แต่งงานเข้า "กนกนารี" = <strong>+2</strong></div>
+      </div>
+
+      <div class="score-factor">
+        <h3>6️⃣ คะแนนกิจกรรม</h3>
+        <p>คะแนนเพิ่ม-ลด เฉพาะกิจกรรมที่เลือก (เช่น แต่งงาน / ขึ้นบ้านใหม่)</p>
+        <table class="score-tbl">
+          <tr><th>เงื่อนไข</th><th>คะแนน</th><th>ตัวอย่าง</th></tr>
+          <tr><td>ดาวที่เหมาะตกภพดี</td><td class="sc-good">+2 ต่อข้อ</td><td>แต่งงาน: ศุกร์ตกภพ 7 (คู่ครอง)</td></tr>
+          <tr><td>จันทร์กุมดาวห้าม</td><td class="sc-bad">−2 ต่อข้อ</td><td>แต่งงาน: จันทร์กุมเสาร์</td></tr>
+        </table>
+      </div>
+
+      <div class="score-grading">
+        <h3>🌟 เกรดฤกษ์ — แปลคะแนนรวมเป็นดาว</h3>
+        <table class="score-tbl">
+          <tr><th>คะแนน</th><th>เกรด</th><th>คำอธิบาย</th></tr>
+          <tr class="grade-row-best"><td>12+</td><td>⭐⭐⭐⭐⭐ ดีเยี่ยม</td><td>เหมาะที่สุด — ระบบจะแสดงเฉพาะเกรดนี้</td></tr>
+          <tr><td>8 – 11</td><td>⭐⭐⭐⭐½ ดีมาก</td><td>องค์ประกอบเอื้ออำนวยส่วนใหญ่</td></tr>
+          <tr><td>5 – 7</td><td>⭐⭐⭐⭐ ดี</td><td>เหมาะการเริ่มกิจมงคล</td></tr>
+          <tr><td>2 – 4</td><td>⭐⭐⭐ พอใช้</td><td>ดีกว่าวันธรรมดา</td></tr>
+          <tr><td>0 – 1</td><td>⭐⭐½ กลาง</td><td>ไม่ดีไม่ร้าย</td></tr>
+          <tr><td>&lt; 0</td><td>⭐⭐ ระวัง</td><td>ไม่เหมาะ — มีปัจจัยขัด</td></tr>
+        </table>
+      </div>
+
+      <p class="score-note">หมายเหตุ: ระบบนี้ scan ทุก 1 ชั่วโมงในช่วงที่เลือก จำกัด <strong>สูงสุด 2 ฤกษ์/วัน</strong> เพื่อกระจายไม่ให้กระจุก</p>
+    </div>
+  </div>
+
+  <script>
+    // ===== Toast notification =====
+    const toastEl = document.getElementById('toast');
+    let toastTimer = null;
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3500);
+    }
+
+    // ===== Mode selector =====
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        if (btn.classList.contains('disabled')) {
+          e.preventDefault();
+          showToast('ฟีเจอร์นี้กำลังพัฒนา จะเปิดให้ใช้ในอนาคต');
+          return;
+        }
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    // ===== Event chips + Time-period chips (multi-select via checkboxes) =====
+    const eventCountEl = document.getElementById('event-count');
+    function updateEventCount() {
+      // นับเฉพาะ chips ที่มี data-event (ไม่นับ time-period)
+      const n = document.querySelectorAll('.event-chip.active[data-event]').length;
+      eventCountEl.textContent = n === 0 ? '⚠️ ยังไม่ได้เลือก' : `เลือกแล้ว ${n}`;
+      eventCountEl.style.color = n === 0 ? '#b71c1c' : '#b78b3a';
+    }
+    document.querySelectorAll('.event-chip').forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        e.preventDefault();
+        const cb = chip.querySelector('input[type=checkbox]');
+        if (cb) {
+          cb.checked = !cb.checked;
+          chip.classList.toggle('active', cb.checked);
+          updateEventCount();
+        }
+      });
+    });
+    updateEventCount();
+
+    // ===== Score info modal =====
+    const scoreBtn = document.getElementById('open-score-info');
+    const scoreBg = document.getElementById('score-modal-bg');
+    const scoreClose = document.getElementById('close-score-modal');
+    if (scoreBtn) {
+      scoreBtn.addEventListener('click', () => scoreBg.classList.add('active'));
+      scoreClose.addEventListener('click', () => scoreBg.classList.remove('active'));
+      scoreBg.addEventListener('click', (e) => { if (e.target === scoreBg) scoreBg.classList.remove('active'); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') scoreBg.classList.remove('active'); });
+    }
+
+    // ===== Period tally filter (อยู่ในผลลัพธ์) =====
+    // หมายเหตุ: ปุ่ม period-tally-item แชร์ filter ระหว่างทุก event panel (ฟิลเตอร์รวม)
+    document.querySelectorAll('.period-tally-item').forEach(item => {
+      item.addEventListener('click', () => {
+        if (item.disabled || item.classList.contains('zero')) return;
+        // sync active state ไปทุก panel (ทุก tally bar)
+        const period = item.dataset.tallyPeriod;
+        const wasActive = item.classList.contains('active');
+        document.querySelectorAll('.period-tally-item[data-tally-period="' + period + '"]').forEach(el => {
+          el.classList.toggle('active', !wasActive);
+        });
+        applyPeriodFilter();
+      });
+    });
+    document.querySelectorAll('.period-tally-clear').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.period-tally-item.active').forEach(el => el.classList.remove('active'));
+        applyPeriodFilter();
+      });
+    });
+
+    function applyPeriodFilter() {
+      const activeSet = new Set(
+        Array.from(document.querySelectorAll('.period-tally-item.active'))
+          .map(c => c.dataset.tallyPeriod)
+      );
+      const activePeriods = Array.from(activeSet);
+      const filterOn = activePeriods.length > 0;
+      // โชว์/ซ่อนปุ่ม "ล้างกรอง"
+      document.querySelectorAll('.period-tally-clear').forEach(btn => {
+        btn.style.display = filterOn ? '' : 'none';
+      });
+      // กรอง card แต่ละ event panel
+      document.querySelectorAll('.event-panel').forEach(panel => {
+        let shown = 0;
+        panel.querySelectorAll('.hit-card').forEach(card => {
+          const match = !filterOn || activePeriods.includes(card.dataset.period);
+          card.classList.toggle('period-hidden', !match);
+          // fallback inline style (กัน CSS เก่า cache อยู่)
+          card.style.display = match ? '' : 'none';
+          if (match) shown++;
+          const detail = card.nextElementSibling;
+          if (detail && detail.classList.contains('hit-detail')) {
+            detail.classList.toggle('period-hidden', !match);
+            detail.style.display = match ? '' : 'none';
+          }
+        });
+        // อัปเดต badge ที่ summary ของ panel
+        const badge = panel.querySelector('.event-count-badge');
+        if (badge) badge.textContent = shown + ' ฤกษ์' + (filterOn ? ' (กรอง)' : '');
+        // ถ้ากรองแล้วเหลือ 0 → แสดงข้อความเปล่า
+        const body = panel.querySelector('.event-panel-body');
+        let emptyMsg = body.querySelector('.filter-empty-msg');
+        if (filterOn && shown === 0) {
+          if (!emptyMsg) {
+            emptyMsg = document.createElement('p');
+            emptyMsg.className = 'filter-empty-msg';
+            emptyMsg.style.cssText = 'text-align:center;color:#777;padding:14px;';
+            emptyMsg.textContent = 'ไม่มีฤกษ์ใน 15 อันดับที่อยู่ในช่วงเวลาที่เลือก';
+            body.appendChild(emptyMsg);
+          }
+        } else if (emptyMsg) {
+          emptyMsg.remove();
+        }
+      });
+    }
+
+    // ===== Range buttons =====
+    const startInput = document.getElementById('start-date');
+    const endInput = document.getElementById('end-date');
+    const rangeHidden = document.getElementById('range-days-hidden');
+    function parseBe(s) { const p = s.split('/'); return p.length === 3 ? {d:+p[0],m:+p[1],be:+p[2]} : null; }
+    function fmtBe(dt) { return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()+543}`; }
+    document.querySelectorAll('.range-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const days = +btn.dataset.range;
+        rangeHidden.value = btn.dataset.range;
+        const sd = parseBe(startInput.value);
+        if (sd) { const dt = new Date(sd.be-543, sd.m-1, sd.d); dt.setDate(dt.getDate()+days); endInput.value = fmtBe(dt); }
+      });
+    });
+    startInput.addEventListener('change', () => {
+      const days = +rangeHidden.value;
+      const sd = parseBe(startInput.value);
+      if (sd) { const dt = new Date(sd.be-543, sd.m-1, sd.d); dt.setDate(dt.getDate()+days); endInput.value = fmtBe(dt); }
+    });
+
+    // ===== Loading overlay (เดินหน้าทีละขั้น ไม่วน) =====
+    const LOADING_STAGES = [
+      '🌞 กำลังคำนวณตำแหน่งดวงอาทิตย์…',
+      '🌙 กำลังคำนวณดิถีและจันทรคติ…',
+      '✨ กำลังหา 27 นักษัตรที่จันทร์ตก…',
+      '⚖️ กำลังเทียบกาลโยค (ธงชัย / อธิบดี / อุบาทว์ / โลกาวินาศ)…',
+      '🎯 กำลังตรวจเกณฑ์พิเศษ (กนกนารี / กนกกุญชร / จักขุมายา)…',
+      '📊 กำลังให้คะแนนและจัดอันดับฤกษ์ดี…',
+      '🌟 ใกล้เสร็จแล้ว…',
+    ];
+    const overlay = document.getElementById('loading-overlay');
+    const msgEl = document.getElementById('loading-message');
+    let stageTimer = null;
+    function startLoading() {
+      overlay.classList.add('active');
+      let i = 0;
+      msgEl.textContent = LOADING_STAGES[0];
+      // เปลี่ยนข้อความทีละขั้น เดินไปข้างหน้า ไม่วนกลับ
+      // ช่วงเวลาเร็วช้าตาม events × days (ประเมินจาก response 1-3 วินาที)
+      const nEvents = document.querySelectorAll('.event-chip.active[data-event]').length;
+      const days = +rangeHidden.value;
+      const estimated = Math.max(800, Math.min(3000, (nEvents * days * 6))); // ms
+      const stepMs = estimated / LOADING_STAGES.length;
+      stageTimer = setInterval(() => {
+        i++;
+        if (i >= LOADING_STAGES.length) {
+          clearInterval(stageTimer);
+          return;
+        }
+        msgEl.style.opacity = '0';
+        setTimeout(() => {
+          msgEl.textContent = LOADING_STAGES[i];
+          msgEl.style.opacity = '1';
+        }, 200);
+      }, stepMs);
+    }
+    document.getElementById('muhurta-form').addEventListener('submit', (e) => {
+      const checked = document.querySelectorAll('.event-chip.active[data-event]').length;
+      if (checked === 0) {
+        e.preventDefault();
+        showToast('กรุณาเลือกกิจกรรมอย่างน้อย 1 อย่าง');
+        // scroll ไปหา event section
+        document.querySelector('[data-event]').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      startLoading();
+    });
+
+    // ===== ตรวจสอบฤกษ์ของฉัน =====
+    document.getElementById('check-btn').addEventListener('click', async () => {
+      const date = document.getElementById('check-date').value;
+      const time = document.getElementById('check-time').value;
+      const event = document.getElementById('check-event').value;
+      const result = document.getElementById('check-result');
+      if (!date || !time) {
+        result.innerHTML = '<p style="color:#b71c1c">⚠️ กรุณากรอกวันที่และเวลา</p>';
+        return;
+      }
+      result.innerHTML = '<p style="color:#6d4c00;text-align:center;padding:14px;">⏳ กำลังคำนวณ...</p>';
+      const fd = new FormData();
+      fd.append('check_date', date);
+      fd.append('check_time', time);
+      fd.append('check_province', document.querySelector('select[name=province]').value);
+      fd.append('check_event_key', event);
+      const birthDate = document.querySelector('input[name=birth_date_th]').value;
+      const birthTime = document.querySelector('input[name=birth_time]').value;
+      const birthProv = document.querySelector('select[name=birth_province]').value;
+      if (birthDate && birthTime) {
+        fd.append('birth_date_th', birthDate);
+        fd.append('birth_time', birthTime);
+        fd.append('birth_province', birthProv);
+      }
+      try {
+        const res = await fetch('/muhurta/check', { method: 'POST', body: fd });
+        const d = await res.json();
+        if (d.error) { result.innerHTML = `<p style="color:#b71c1c">❌ ${d.error}</p>`; return; }
+        result.innerHTML = renderCheckResult(d);
+      } catch (err) {
+        result.innerHTML = `<p style="color:#b71c1c">❌ ${err.message}</p>`;
+      }
+    });
+
+    function renderCheckResult(d) {
+      // ใช้ hit-card style เหมือนผลลัพธ์หลัก
+      let stars = '';
+      for (let i = 0; i < 5; i++) {
+        if (d.stars >= i + 1) stars += '<span class="star full">★</span>';
+        else if (d.stars >= i + 0.5) stars += '<span class="star half">⯨</span>';
+        else stars += '<span class="star empty">☆</span>';
+      }
+      let html = `<div class="hit-card tier-${d.tier}" style="cursor:default;">
+        <div class="hit-main">
+          <div class="hit-datetime">
+            <div class="hit-date-big">${d.be_date}</div>
+            <div class="hit-time-big">${d.time} น.</div>
+          </div>
+          <div class="hit-grade-block">
+            <div class="grade-stars">${stars}</div>
+            <div class="grade-label tier-${d.tier}">${d.grade}</div>
+            <div class="grade-score">${d.score} คะแนน</div>
+          </div>
+        </div>
+        <div class="hit-summary-text">
+          วัน${d.wan_planet} (${d.wan_quality}) • ${d.lunar} • ${d.roek_name} (${d.nakshatra_number}. ${d.nakshatra_name})
+        </div>`;
+      if (d.event_label) {
+        html += `<div class="hit-summary-text">🎯 กิจกรรม: <strong>${d.event_label}</strong> (คะแนนกิจกรรม ${d.event_extra_score >= 0 ? '+' : ''}${d.event_extra_score})</div>`;
+      }
+      if (d.personal_bhava) {
+        html += `<div class="hit-extras"><span class="extra-tag extra-${d.personal_bhava.tone}">🎯 ตกภพ ${d.personal_bhava.bhava} ของดวงเจ้าชะตา — ${d.personal_bhava.quality}</span></div>`;
+      }
+      const matched = d.specials.filter(s => s.matched);
+      if (matched.length) {
+        html += '<div class="hit-extras">';
+        matched.forEach(s => {
+          const cls = s.tone === 'good' ? 'extra-good' : 'extra-warn';
+          html += `<span class="extra-tag ${cls}">${s.tone==='good'?'✓':'⚠'} ${s.name}</span>`;
+        });
+        html += '</div>';
+      }
+      // grade summary
+      html += `<div class="hit-summary-text"><strong>${d.grade_summary}</strong></div>`;
+      if (d.suggestions && d.suggestions.length) {
+        html += '<div class="hit-summary-text" style="color:#1b5e20;">✅ ' + d.suggestions.slice(0, 3).join(' · ') + '</div>';
+      }
+      if (d.cautions && d.cautions.length) {
+        html += '<div class="hit-summary-text" style="color:#b05a00;">⚠️ ' + d.cautions.slice(0, 3).join(' · ') + '</div>';
+      }
+      html += '</div>';
+      return html;
+    }
+
+    // ===== Accordion (oracle mode) =====
+    document.querySelectorAll('.hit-card').forEach(card => {
+      card.addEventListener('click', async (e) => {
+        if (e.target.tagName === 'A' || e.target.tagName === 'INPUT') return;
+        const detail = card.nextElementSibling;
+        if (!detail || !detail.classList.contains('hit-detail')) return;
+        if (detail.classList.contains('open')) { detail.classList.remove('open'); return; }
+        detail.classList.add('open');
+        if (detail.dataset.loaded) return;
+        detail.innerHTML = '<div class="detail-loading">⏳ กำลังโหลดรายละเอียดดวงราศีจักร์ + นวางค์จักร์…</div>';
+        const params = new URLSearchParams({
+          iso: card.dataset.iso,
+          province: card.dataset.province,
+          event_key: card.dataset.eventKey || '',
+        });
+        const birthDate = document.querySelector('input[name=birth_date_th]').value;
+        const birthTime = document.querySelector('input[name=birth_time]').value;
+        const birthProv = document.querySelector('select[name=birth_province]').value;
+        if (birthDate && birthTime) {
+          params.append('birth_date_th', birthDate);
+          params.append('birth_time', birthTime);
+          params.append('birth_province', birthProv);
+        }
+        try {
+          const res = await fetch('/muhurta/detail?' + params.toString());
+          const data = await res.json();
+          if (data.error) { detail.innerHTML = '<p style="color:#b71c1c">❌ ' + data.error + '</p>'; return; }
+          detail.innerHTML = renderDetail(data);
+          detail.dataset.loaded = '1';
+        } catch (err) {
+          detail.innerHTML = '<p style="color:#b71c1c">❌ ' + err.message + '</p>';
+        }
+      });
+    });
+
+    function renderDetail(d) {
+      let html = '<div class="detail-grid"><div>';
+      html += '<h4 style="color:#6d4c00;margin-top:0">องค์ประกอบฤกษ์</h4>';
+      html += `<div class="factor-mini"><strong>วาร:</strong> ${d.wan_planet} (${d.wan_quality})</div>`;
+      html += `<div class="factor-mini"><strong>ดิถี:</strong> ${d.lunar_short} (${d.tithi_quality})</div>`;
+      html += `<div class="factor-mini"><strong>นักษัตร:</strong> ${d.nakshatra.number}. ${d.nakshatra.name} (${d.nakshatra.roek_name})</div>`;
+      html += `<div class="factor-mini"><strong>ลัคนา:</strong> ${d.ascendant.rasi_name} ${d.ascendant.degree}°${d.ascendant.arcminute}′</div>`;
+      html += '<h4 style="color:#6d4c00;margin-top:10px">กาลโยค จ.ศ. ' + d.kalayok.cs_year + '</h4>';
+      ['thongchai','athibodi','ubat','lokawinat'].forEach(k => {
+        const label = {thongchai:'ธงชัย',athibodi:'อธิบดี',ubat:'อุบาทว์',lokawinat:'โลกาวินาศ'}[k];
+        const e = d.kalayok[k]; const wanHit = d.kalayok_matches.wan[k] ? ' ✓' : '';
+        html += `<div class="factor-mini">${label}: วัน${e.wan_name}${wanHit}, ราศี ${e.rasi}, ดิถี ${e.dithi}, ฤกษ์ ${e.roek}</div>`;
+      });
+      html += '<h4 style="color:#6d4c00;margin-top:10px">เกณฑ์พิเศษ</h4>';
+      d.specials.forEach(s => {
+        const cls = s.matched ? (s.tone === 'good' ? 'extra-good' : 'extra-warn') : 'extra-neutral';
+        html += `<div class="factor-mini"><span class="extra-tag ${cls}">${s.matched ? (s.tone==='good'?'✓':'⚠') : '—'} ${s.name}</span> ${s.detail}</div>`;
+      });
+      html += '</div><div>';
+      html += '<h4 style="color:#6d4c00;margin-top:0">ตำแหน่งดาว 10 ดวง</h4>';
+      html += '<div class="planet-mini-grid">';
+      d.planets.forEach(p => {
+        const varg = d.vargottama.indexOf(p.name) >= 0;
+        html += `<div class="planet-mini">${varg?'✨ ':''}<strong>${p.name}</strong><br>${p.rasi_name} ${p.degree}°${p.arcminute}′</div>`;
+      });
+      html += '</div>';
+      if (d.natal) {
+        html += '<h4 style="color:#6d4c00;margin-top:10px">👤 สมพงษ์เจ้าชะตา</h4>';
+        html += `<div class="factor-mini">ลัคนาเจ้าชะตา: ${d.natal.natal_asc_rasi_name} ${d.natal.natal_asc_degree}°${d.natal.natal_asc_arcminute}′</div>`;
+        html += `<div class="factor-mini">ลัคนาฤกษ์ตก <strong>ภพ ${d.natal.target_bhava}</strong> — ${d.natal.bhava_quality}</div>`;
+        if (d.natal.summary_headline) html += `<p style="font-style:italic;color:#6d4c00;margin-top:6px">"${d.natal.summary_headline}"</p>`;
+        if (d.natal.aspects && d.natal.aspects.length) {
+          html += '<h5 style="margin:8px 0 4px">ดาวจรกระทบดาวเดิม</h5>';
+          d.natal.aspects.forEach(a => {
+            html += `<div class="factor-mini"><strong>${a.kind}</strong>: ${a.transit} (${a.rasi}) → ${a.natal}<br><span style="color:#555;font-size:12px">${a.text}</span></div>`;
+          });
+        }
+      }
+      html += '</div></div>';
+      html += '<div class="chart-pair" style="margin-top:14px">';
+      html += '<div class="chart-cell"><h4>🎯 ราศีจักร์</h4>' + renderSvgChart(d.svg_rashi) + '</div>';
+      html += '<div class="chart-cell"><h4>🔬 นวางค์จักร์</h4>' + renderSvgChart(d.svg_navamsa) + '</div>';
+      html += '</div>';
+      return html;
+    }
+
+    function renderSvgChart(v) {
+      const c = v.center;
+      let s = `<svg class="m-svg" viewBox="0 0 ${v.size} ${v.size}" xmlns="http://www.w3.org/2000/svg">`;
+      if (v.show_nakshatra) { s += `<circle cx="${c}" cy="${c}" r="${v.r_nak_out}" class="m-rim"/><circle cx="${c}" cy="${c}" r="${v.r_nak_in}" class="m-rim"/>`; }
+      s += `<circle cx="${c}" cy="${c}" r="${v.r_outer}" class="m-rim"/><circle cx="${c}" cy="${c}" r="${v.r_inner}" class="m-rim"/>`;
+      v.dividers.forEach(d => s += `<line x1="${c+d.x1}" y1="${c-d.y1}" x2="${c+d.x2}" y2="${c-d.y2}" class="m-divider"/>`);
+      (v.triyangka_dividers || []).forEach(d => s += `<line x1="${c+d.x1}" y1="${c-d.y1}" x2="${c+d.x2}" y2="${c-d.y2}" class="m-tri-divider"/>`);
+      (v.nakshatra_cells || []).forEach(n => {
+        s += `<line x1="${c+n.div_x1}" y1="${c-n.div_y1}" x2="${c+n.div_x2}" y2="${c-n.div_y2}" class="m-nak-divider"/>`;
+        const cls = n.highlight ? 'active' : '';
+        s += `<text x="${c+n.num_x}" y="${c-n.num_y}" class="m-nak-num ${cls}" transform="rotate(${n.label_rotation} ${c+n.num_x} ${c-n.num_y})">${n.number_th}</text>`;
+        s += `<text x="${c+n.name_x}" y="${c-n.name_y}" class="m-nak-label ${cls}" transform="rotate(${n.label_rotation} ${c+n.name_x} ${c-n.name_y})">${n.name}</text>`;
+      });
+      v.rasis.forEach(r => {
+        s += `<text x="${c+r.label_x}" y="${c-r.label_y}" class="m-rasi-label">${r.name}</text>`;
+        r.chips.forEach(ch => {
+          const vargCls = ch.varg ? 'varg' : '';
+          s += `<circle cx="${c+ch.x}" cy="${c-ch.y}" r="13" class="m-chip ${ch.color_class} ${vargCls}"><title>${ch.name}${ch.varg?' (วรโคตม)':''}</title></circle>`;
+          const tcls = ch.color_class === 'planet-moon' ? 'on-moon' : '';
+          s += `<text x="${c+ch.x}" y="${c-ch.y}" class="m-chip-text ${tcls}">${ch.abbr}</text>`;
+        });
+      });
+      if (v.lagna) { s += `<circle cx="${c+v.lagna.x}" cy="${c-v.lagna.y}" r="12" class="m-lagna"/><text x="${c+v.lagna.x}" y="${c-v.lagna.y}" class="m-lagna-text">ลั</text>`; }
+      s += '</svg>';
+      return s;
+    }
+  </script>
+</body>
+</html>

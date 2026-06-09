@@ -1,0 +1,57 @@
+{# กล่อง 1 ฤกษ์ #}
+{# ตัวแปร: h, rank, result, form #}
+<div class="hit-card tier-{{ h.tier }} {% if rank == 1 %}top{% endif %}"
+     data-iso="{{ h.iso }}"
+     data-province="{{ form.province }}"
+     data-event-key="{{ h.event_label and (result.event_keys[0] if result.event_keys|length == 1 else '') or '' }}"
+     data-period="{{ h.period }}">
+
+  {# Rank ribbon #}
+  {% if rank == 1 %}<div class="rank-ribbon best">🏆 อันดับ 1</div>
+  {% elif rank == 2 %}<div class="rank-ribbon silver">🥈 อันดับ 2</div>
+  {% elif rank == 3 %}<div class="rank-ribbon bronze">🥉 อันดับ 3</div>{% endif %}
+
+  <div class="hit-main">
+    <div class="hit-datetime">
+      <div class="hit-date-big">{{ h.be_date }}</div>
+      <div class="hit-time-big">{{ h.time }} น. <span class="period-badge" title="ช่วง{{ h.period_label }}">{{ h.period_icon }}</span></div>
+      <div class="period-label-small" title="ฤกษ์มีคุณภาพเท่ากันตลอดช่วงนี้">⏱ ใช้ได้ {{ h.time }}–{{ h.time_end }} น.</div>
+    </div>
+
+    <div class="hit-grade-block">
+      <div class="grade-stars" title="{{ h.grade_summary }} — คะแนน {{ h.score }} จาก ~20">
+        {% for i in range(5) %}
+          {% if h.stars >= i + 1 %}<span class="star full">★</span>
+          {% elif h.stars >= i + 0.5 %}<span class="star half">⯨</span>
+          {% else %}<span class="star empty">☆</span>{% endif %}
+        {% endfor %}
+      </div>
+      <div class="grade-label tier-{{ h.tier }}">{{ h.grade }}</div>
+      <div class="grade-score" title="คะแนนรวมจากวาร+ดิถี+นักษัตร+กาลโยค+เกณฑ์พิเศษ+กิจกรรม">{{ h.score }} คะแนน</div>
+    </div>
+  </div>
+
+  <div class="hit-summary-text">{{ h.summary }}</div>
+
+  {% if h.personal_bhava or h.matched_criteria %}
+    <div class="hit-extras">
+      {% if h.personal_bhava %}
+        <span class="extra-tag extra-{{ h.personal_bhava_tone }}">
+          🎯 ตกภพ {{ h.personal_bhava }} ของดวงเจ้าชะตา — {{ h.personal_bhava_quality }}
+        </span>
+      {% endif %}
+      {% for cr in h.matched_criteria %}
+        <span class="extra-tag extra-special">★ {{ cr }}</span>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if result.mode == 'oracle' %}
+    <div class="hit-expand-row">
+      <span class="hit-expand">▾ คลิกเพื่อดูดวงราศีจักร์ / นวางค์จักร์ / รายละเอียดการคำนวณ</span>
+    </div>
+  {% endif %}
+</div>
+{% if result.mode == 'oracle' %}
+  <div class="hit-detail"></div>
+{% endif %}

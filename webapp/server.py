@@ -2085,6 +2085,751 @@ async def horathaynu_ask(
     })
 
 
+# ============================================================
+# /muhurta — หาฤกษ์ (Muhurta)
+# ============================================================
+from thai_astro.muhurta import (
+    compute_muhurta as _compute_muhurta,
+    scan_range as _scan_range,
+    scan_range_grouped as _scan_range_grouped,
+    scan_range_multi_events as _scan_multi,
+)
+from thai_astro.muhurta_criteria import (
+    list_events as _list_events,
+    EVENTS as _MUHURTA_EVENTS,
+    EVENT_CATEGORIES as _MUHURTA_CATEGORIES,
+)
+from thai_astro.navamsa import compute_navamsa as _compute_navamsa
+
+
+# ----- Muhurta SVG dimensions (smaller — 2 charts side-by-side) -----
+M_SVG_SIZE = 440
+M_CENTER = M_SVG_SIZE / 2
+M_R_INNER = 60
+M_R_OUTER = 170                # ขอบนอกของวงราศี
+M_R_LABEL = 145                # ชื่อราศี
+M_R_CHIP = 110                 # planet chips
+M_R_LAGNA = 130                # lagna marker
+# Triyangka (decanate) dividers — เส้นแบ่ง 10°/20° ในแต่ละราศี
+M_R_TRI_INNER = M_R_INNER
+M_R_TRI_OUTER = M_R_OUTER - 6  # สั้นกว่าเส้นราศี (กันสับสน)
+# Nakshatra ring (วงนอก) — 27 ฤกษ์
+M_R_NAK_RING_IN = 175
+M_R_NAK_RING_OUT = 218
+M_R_NAK_LABEL_NAME = 184    # ชื่อนักษัตร (ใกล้ขอบใน)
+M_R_NAK_LABEL_NUM = 205     # เลข (ใกล้ขอบนอก)
+
+# planet abbreviation (เลขอารบิก) สำหรับ chip ฤกษ์
+_MUHURTA_PLANET_ABBR = {
+    "อาทิตย์": "1", "จันทร์": "2", "อังคาร": "3", "พุธ": "4",
+    "พฤหัสบดี": "5", "ศุกร์": "6", "เสาร์": "7",
+    "ราหู": "8", "เกตุ": "9", "มฤตยู": "0",
+}
+# planet color class (ตรงกับหน้าผูกดวงสุริยยาตร์)
+_MUHURTA_PLANET_CLASS = {
+    "อาทิตย์": "planet-sun", "จันทร์": "planet-moon", "อังคาร": "planet-mars",
+    "พุธ": "planet-mercury", "พฤหัสบดี": "planet-jupiter", "ศุกร์": "planet-venus",
+    "เสาร์": "planet-saturn", "ราหู": "planet-rahu", "เกตุ": "planet-ketu",
+    "มฤตยู": "planet-uranus",
+}
+
+
+def _muhurta_polar(angle_deg: float, radius: float) -> tuple[float, float]:
+    """เหมือน _polar_to_xy แต่คืนค่าเป็น offset จาก center (ไม่บวก SVG_CENTER)
+    เพื่อใช้กับ canvas ขนาดอื่น (เช่น ผังหาฤกษ์ 380px)
+    template ต้องบวก view.center เอง
+    """
+    rad = math.radians(angle_deg)
+    return (radius * math.cos(rad), radius * math.sin(rad))
+
+
+def _muhurta_svg_view(planets_by_rashi: dict, ascendant: Optional[dict] = None,
+                      vargottama: Optional[set] = None,
+                      show_triyangka: bool = False,
+                      show_nakshatra: bool = False,
+                      highlight_nakshatra_index: Optional[int] = None) -> dict:
+    """SVG view สำหรับวงจักรราศีฤกษ์
+    show_triyangka: วาดเส้นตรียางค์ 24 เส้น (10°/20° ในแต่ละราศี)
+    show_nakshatra: วาดวงนอก + 27 ฤกษ์
+    highlight_nakshatra_index: index 0-26 ของฤกษ์ที่จันทร์ตก
+    ใช้พิกัด offset-from-center; template + view.center / - view.y
+    """
+    from thai_astro.nakshatra import NAKSHATRA_NAMES
+    vargottama = vargottama or set()
+    dividers = []
+    r_outer_max = M_R_NAK_RING_OUT if show_nakshatra else M_R_OUTER
+    for i in range(12):
+        angle = 75 + 30 * i
+        x1, y1 = _muhurta_polar(angle, M_R_INNER)
+        x2, y2 = _muhurta_polar(angle, r_outer_max)
+        dividers.append({"x1": x1, "y1": y1, "x2": x2, "y2": y2})
+
+    # ตรียางค์ — 24 เส้น (10° และ 20° ในแต่ละราศี)
+    triyangka_dividers = []
+    if show_triyangka:
+        for i in range(12):
+            for sub in (1, 2):
+                angle = 75 + 30 * i + 10 * sub
+                tx1, ty1 = _muhurta_polar(angle, M_R_TRI_INNER)
+                tx2, ty2 = _muhurta_polar(angle, M_R_TRI_OUTER)
+                triyangka_dividers.append({"x1": tx1, "y1": ty1, "x2": tx2, "y2": ty2})
+
+    # นักษัตร — 27 cell
+    nakshatra_cells = []
+    if show_nakshatra:
+        STEP = 360.0 / 27
+        # เลขไทย ๑-๒๗
+        THAI_DIGITS = ["๐", "๑", "๒", "๓", "๔", "๕", "๖", "๗", "๘", "๙"]
+        def _to_thai(n: int) -> str:
+            return "".join(THAI_DIGITS[int(d)] for d in str(n))
+        for j in range(27):
+            cell_start = 75 + j * STEP
+            cell_center = (cell_start + STEP / 2) % 360
+            # divider ระหว่าง cell
+            div_x1, div_y1 = _muhurta_polar(cell_start, M_R_NAK_RING_IN)
+            div_x2, div_y2 = _muhurta_polar(cell_start, M_R_NAK_RING_OUT)
+            # 2 ตำแหน่ง: เลข (วงนอก) + ชื่อ (วงใน)
+            num_x, num_y = _muhurta_polar(cell_center, M_R_NAK_LABEL_NUM)
+            name_x, name_y = _muhurta_polar(cell_center, M_R_NAK_LABEL_NAME)
+            # ถ้า flip → ต้องสลับตำแหน่งเลขและชื่อให้ "เลขอยู่บน-ชื่ออยู่ล่าง" จากมุมมองคนอ่าน
+            if 180 < cell_center < 360:
+                num_x, name_x = name_x, num_x
+                num_y, name_y = name_y, num_y
+            # rotation: text ปกติเรียงในทิศพุ่งออกจากศูนย์กลาง (radial, อ่านจากในออกนอก)
+            # rotation = 90 - cell_center
+            # แต่ถ้า cell อยู่ครึ่งล่าง (SVG 180-360) text จะหัวลง — flip 180° เพื่ออ่านได้
+            base_rot = 90 - cell_center
+            need_flip = 180 < cell_center < 360
+            label_rot = base_rot + 180 if need_flip else base_rot
+            nakshatra_cells.append({
+                "index": j,
+                "number": j + 1,
+                "number_th": _to_thai(j + 1),
+                "name": NAKSHATRA_NAMES[j],
+                "div_x1": div_x1, "div_y1": div_y1,
+                "div_x2": div_x2, "div_y2": div_y2,
+                "num_x": num_x, "num_y": num_y,
+                "name_x": name_x, "name_y": name_y,
+                "angle": cell_center,
+                "label_rotation": label_rot,
+                "highlight": (j == highlight_nakshatra_index),
+            })
+
+    rasis = []
+    for ri in range(12):
+        center_angle = 90 + 30 * ri
+        label_x, label_y = _muhurta_polar(center_angle, M_R_LABEL)
+
+        planet_names = planets_by_rashi.get(ri, [])
+        chips = []
+        n = len(planet_names)
+        if n == 0:
+            pass
+        elif n == 1:
+            cx, cy = _muhurta_polar(center_angle, M_R_CHIP)
+            chips.append({"name": planet_names[0],
+                          "abbr": _MUHURTA_PLANET_ABBR.get(planet_names[0], "?"),
+                          "color_class": _MUHURTA_PLANET_CLASS.get(planet_names[0], ""),
+                          "x": cx, "y": cy,
+                          "varg": planet_names[0] in vargottama})
+        else:
+            # spread around center_angle
+            spread = min(20, 5 * n)
+            for i, pname in enumerate(planet_names):
+                t = i / max(1, n - 1)
+                ang = center_angle - spread / 2 + spread * t
+                cx, cy = _muhurta_polar(ang, M_R_CHIP)
+                chips.append({"name": pname,
+                              "abbr": _MUHURTA_PLANET_ABBR.get(pname, "?"),
+                              "color_class": _MUHURTA_PLANET_CLASS.get(pname, ""),
+                              "x": cx, "y": cy,
+                              "varg": pname in vargottama})
+
+        rasis.append({
+            "index": ri,
+            "name": RASI_NAMES_TH[ri],
+            "label_x": label_x, "label_y": label_y,
+            "center_angle": center_angle,
+            "chips": chips,
+        })
+
+    lagna = None
+    if ascendant:
+        asc_rasi = ascendant["rasi"]
+        asc_deg = ascendant["degree"] + ascendant.get("arcminute", 0) / 60.0
+        asc_angle = 75 + 30 * asc_rasi + asc_deg
+        lx, ly = _muhurta_polar(asc_angle, M_R_LAGNA)
+        lagna = {"x": lx, "y": ly, "angle": asc_angle}
+
+    return {
+        "size": M_SVG_SIZE, "center": M_CENTER,
+        "r_inner": M_R_INNER, "r_outer": M_R_OUTER,
+        "r_nak_in": M_R_NAK_RING_IN, "r_nak_out": M_R_NAK_RING_OUT,
+        "dividers": dividers,
+        "triyangka_dividers": triyangka_dividers,
+        "nakshatra_cells": nakshatra_cells,
+        "show_nakshatra": show_nakshatra,
+        "rasis": rasis, "lagna": lagna,
+    }
+
+
+def _planets_by_rashi_from_chart(chart) -> dict:
+    out: dict = {i: [] for i in range(12)}
+    for name, p in chart.planets.items():
+        out[p.zodiac.rasi].append(name)
+    return out
+
+
+def _planets_by_navamsa_rashi(chart) -> dict:
+    """แต่ละดาวลงในวงนวางค์ตามตำแหน่ง nav_rashi"""
+    out: dict = {i: [] for i in range(12)}
+    for name, p in chart.planets.items():
+        z = p.zodiac
+        nv = _compute_navamsa(z.rasi, z.degree, z.arcminute)
+        out[nv.nav_rashi].append(name)
+    return out
+
+
+def _muhurta_default_form() -> dict:
+    """default = วันนี้ – +30 วัน, กรุงเทพฯ"""
+    now = datetime.now(THAI_TZ).replace(tzinfo=None)
+    end = now + timedelta(days=30)
+    be1 = now.year + 543
+    be2 = end.year + 543
+    return {
+        "mode": "general",
+        "event_key": "",
+        "start_date": f"{now.day:02d}/{now.month:02d}/{be1}",
+        "end_date": f"{end.day:02d}/{end.month:02d}/{be2}",
+        "range_days": "30",
+        "province": "กรุงเทพมหานคร",
+        "birth_date_th": "",
+        "birth_time": "",
+        "birth_province": "กรุงเทพมหานคร",
+        "time_periods": [],
+    }
+
+
+def _muhurta_events_by_category() -> list:
+    """list ของ {key, label, events: [EventCriteria]} ตามลำดับ EVENT_CATEGORIES"""
+    grouped = {cat_key: [] for cat_key, _ in _MUHURTA_CATEGORIES}
+    for ev in _MUHURTA_EVENTS.values():
+        if ev.category in grouped:
+            grouped[ev.category].append(ev)
+    out = []
+    for cat_key, cat_label in _MUHURTA_CATEGORIES:
+        evs = grouped.get(cat_key, [])
+        if evs:
+            out.append({"key": cat_key, "label": cat_label, "events": evs})
+    return out
+
+
+def _score_to_grade(score: int) -> dict:
+    """แปลงคะแนนเป็น grade + จำนวนดาว (0-5) + class CSS
+    คะแนนสูงสุด ~18-20 (วาร 3 + ดิถี 3 + นักษัตร 2 + กาลโยค 6 + เกณฑ์พิเศษ 4 + กิจกรรม 6)
+    """
+    if score >= 12:
+        return {"grade": "ดีเยี่ยม", "stars": 5, "tier": "best",
+                "summary": "ฤกษ์ดีเยี่ยม เหมาะที่สุดสำหรับงานสำคัญ"}
+    if score >= 8:
+        return {"grade": "ดีมาก", "stars": 4.5, "tier": "great",
+                "summary": "ฤกษ์ดีมาก องค์ประกอบเอื้ออำนวยส่วนใหญ่"}
+    if score >= 5:
+        return {"grade": "ดี", "stars": 4, "tier": "good",
+                "summary": "ฤกษ์ดี เหมาะการเริ่มกิจมงคล"}
+    if score >= 2:
+        return {"grade": "พอใช้", "stars": 3, "tier": "fair",
+                "summary": "ฤกษ์พอใช้ ดีกว่าวันธรรมดา"}
+    if score >= 0:
+        return {"grade": "กลาง", "stars": 2.5, "tier": "neutral",
+                "summary": "ฤกษ์กลาง ไม่ดีไม่ร้าย"}
+    if score >= -3:
+        return {"grade": "ระวัง", "stars": 2, "tier": "warning",
+                "summary": "ระวัง องค์ประกอบบางอย่างไม่เอื้อ"}
+    return {"grade": "ไม่เหมาะ", "stars": 1, "tier": "bad",
+            "summary": "ไม่เหมาะ มีปัจจัยขัดข้องหลายอย่าง"}
+
+
+_PERIOD_INFO = {
+    "morning":      ("🌅", "เช้า"),
+    "late_morning": ("☀️", "สาย"),
+    "noon":         ("🌞", "บ่าย"),
+    "evening":      ("🌇", "เย็น"),
+    "dusk":         ("🌆", "ค่ำ"),
+    "night":        ("🌙", "กลางคืน"),
+}
+
+
+def _serialize_hit(h, event_label: Optional[str] = None) -> dict:
+    grade = _score_to_grade(h.score)
+    period_icon, period_label = _PERIOD_INFO.get(h.period or "", ("", ""))
+    # ฤกษ์ใช้ได้ในช่วง 1 ชั่วโมง (เพราะ scan ทุก 60 นาที — ลัคนาเดียวกัน)
+    end_time = (h.when + timedelta(hours=1)).strftime("%H:%M")
+    return {
+        "when": h.when.strftime("%d/%m/%Y %H:%M"),
+        "be_date": f"{h.when.day:02d}/{h.when.month:02d}/{h.when.year + 543}",
+        "iso": h.when.strftime("%Y-%m-%dT%H:%M"),
+        "time": h.when.strftime("%H:%M"),
+        "time_end": end_time,
+        "score": h.score,
+        "verdict": h.verdict,
+        "grade": grade["grade"],
+        "stars": grade["stars"],
+        "tier": grade["tier"],
+        "grade_summary": grade["summary"],
+        "summary": h.summary,
+        "event_label": event_label,
+        "period": h.period,
+        "period_icon": period_icon,
+        "period_label": period_label,
+        "personal_bhava": h.personal_bhava,
+        "personal_bhava_quality": h.personal_bhava_quality,
+        "personal_bhava_tone": h.personal_bhava_tone,
+        "matched_criteria": h.matched_criteria or [],
+    }
+
+
+def _serialize_muhurta(mr, natal_extra: Optional[dict] = None) -> dict:
+    """Convert MuhurtaResult → dict for template
+
+    natal_extra: optional dict from _compute_personal_extras()
+    """
+    varg_set = set(mr.vargottama_planets)
+    rashi_view = _muhurta_svg_view(
+        _planets_by_rashi_from_chart(mr.chart),
+        ascendant={
+            "rasi": mr.chart.ascendant.zodiac.rasi,
+            "degree": mr.chart.ascendant.zodiac.degree,
+            "arcminute": mr.chart.ascendant.zodiac.arcminute,
+        },
+        vargottama=varg_set,
+        show_triyangka=True,
+        show_nakshatra=True,
+        highlight_nakshatra_index=mr.nakshatra.index,
+    )
+    navamsa_view = _muhurta_svg_view(
+        _planets_by_navamsa_rashi(mr.chart),
+        vargottama=varg_set,
+    )
+    base = {
+        "when_str": mr.when.strftime("%d/%m/%Y %H:%M"),
+        "province": mr.province,
+        "verdict": mr.verdict,
+        "score": mr.score,
+        "wan": mr.wan,
+        "wan_planet": mr.wan_planet,
+        "wan_quality": mr.wan_quality,
+        "wan_remark": mr.wan_remark,
+        "lunar_pretty": mr.lunar.pretty,
+        "lunar_short": mr.lunar.pretty_short,
+        "tithi_quality": mr.tithi_quality,
+        "nakshatra": {
+            "number": mr.nakshatra.number,
+            "name": mr.nakshatra.name,
+            "pada": mr.nakshatra.pada,
+            "lord": mr.nakshatra.lord,
+            "roek_name": mr.nakshatra.roek_name,
+            "is_auspicious": mr.nakshatra.is_auspicious,
+            "meaning": mr.nakshatra.meaning,
+        },
+        "kalayok": {
+            "cs_year": mr.kalayok.cs_year,
+            "thongchai": {
+                "wan_name": mr.kalayok.thongchai.wan_name,
+                "yarm": mr.kalayok.thongchai.yarm,
+                "rasi": mr.kalayok.thongchai.rasi,
+                "dithi": mr.kalayok.thongchai.dithi,
+                "roek": mr.kalayok.thongchai.roek,
+            },
+            "athibodi": {
+                "wan_name": mr.kalayok.athibodi.wan_name,
+                "yarm": mr.kalayok.athibodi.yarm,
+                "rasi": mr.kalayok.athibodi.rasi,
+                "dithi": mr.kalayok.athibodi.dithi,
+                "roek": mr.kalayok.athibodi.roek,
+            },
+            "ubat": {
+                "wan_name": mr.kalayok.ubat.wan_name,
+                "yarm": mr.kalayok.ubat.yarm,
+                "rasi": mr.kalayok.ubat.rasi,
+                "dithi": mr.kalayok.ubat.dithi,
+                "roek": mr.kalayok.ubat.roek,
+            },
+            "lokawinat": {
+                "wan_name": mr.kalayok.lokawinat.wan_name,
+                "yarm": mr.kalayok.lokawinat.yarm,
+                "rasi": mr.kalayok.lokawinat.rasi,
+                "dithi": mr.kalayok.lokawinat.dithi,
+                "roek": mr.kalayok.lokawinat.roek,
+            },
+        },
+        "kalayok_matches": mr.kalayok_matches,
+        "specials": [
+            {"name": s.name, "matched": s.matched, "tone": s.tone, "detail": s.detail}
+            for s in mr.special_criteria
+        ],
+        "vargottama": mr.vargottama_planets,
+        "suggestions": mr.activity_suggestions,
+        "cautions": mr.cautions,
+        "event_key": mr.event_key,
+        "event_score": mr.event_score,
+        "planets": [
+            {
+                "name": name,
+                "rasi_name": p.zodiac.rasi_name,
+                "degree": p.zodiac.degree,
+                "arcminute": p.zodiac.arcminute,
+            }
+            for name, p in mr.chart.planets.items()
+        ],
+        "ascendant": {
+            "rasi_name": mr.chart.ascendant.zodiac.rasi_name,
+            "degree": mr.chart.ascendant.zodiac.degree,
+            "arcminute": mr.chart.ascendant.zodiac.arcminute,
+        },
+        "svg_rashi": rashi_view,
+        "svg_navamsa": navamsa_view,
+    }
+    if natal_extra:
+        base["natal"] = natal_extra
+    return base
+
+
+def _compute_personal_extras(birth_date_th: str, birth_time: str, birth_province: str,
+                              muhurta_chart) -> dict:
+    """ผูกดวงเจ้าชะตา + เทียบฤกษ์กับลัคนาเดิม + transit_prophecy"""
+    y, m, d = parse_thai_date(birth_date_th)
+    hh, mm = (birth_time.strip().split(":") + ["0"])[:2]
+    natal_chart = Chart.calculate(y, m, d, int(hh), int(mm), province=birth_province)
+
+    # ลัคนาเดิม
+    natal_asc_rasi = natal_chart.ascendant.zodiac.rasi
+
+    # ฤกษ์ตกภพไหนของลัคนาเดิม
+    # ลัคนา ณ ขณะหาฤกษ์ → ภพ (1-12) นับจากลัคนาเดิม
+    asc_now_rasi = muhurta_chart.ascendant.zodiac.rasi
+    target_bhava = ((asc_now_rasi - natal_asc_rasi) % 12) + 1
+
+    KENDRA = {1, 4, 7, 10}
+    TRIKONA = {1, 5, 9}
+    DUSTHANA = {6, 8, 12}
+    if target_bhava in KENDRA and target_bhava in TRIKONA:
+        bhava_quality = "ดีเยี่ยม (เป็นทั้งภพหลักและภพแห่งบุญ)"
+        bhava_tone = "good"
+    elif target_bhava in KENDRA:
+        bhava_quality = "ดี (ภพหลัก — มั่นคง)"
+        bhava_tone = "good"
+    elif target_bhava in TRIKONA:
+        bhava_quality = "ดี (ภพแห่งบุญ — โชคลาภ)"
+        bhava_tone = "good"
+    elif target_bhava in DUSTHANA:
+        bhava_quality = "ระวัง (ภพแห่งทุกข์ — เลี่ยงงานสำคัญ)"
+        bhava_tone = "warning"
+    else:
+        bhava_quality = "กลาง"
+        bhava_tone = "neutral"
+
+    # transit aspects (ดาวจร = ดาว ณ ขณะหาฤกษ์)
+    aspects = find_transit_aspects(natal_chart.planets, muhurta_chart.planets)
+    summary = generate_summary(aspects)
+
+    # serialize aspects (top 5)
+    asp_out = []
+    for a in aspects[:5]:
+        asp_out.append({
+            "transit": a.transit_planet,
+            "natal": a.natal_planet,
+            "kind": a.aspect_type,
+            "rasi": a.transit_rasi,
+            "text": a.prediction,
+            "severity": a.severity,
+        })
+
+    return {
+        "birth_date": birth_date_th,
+        "birth_time": birth_time,
+        "birth_province": birth_province,
+        "natal_asc_rasi_name": natal_chart.ascendant.zodiac.rasi_name,
+        "natal_asc_degree": natal_chart.ascendant.zodiac.degree,
+        "natal_asc_arcminute": natal_chart.ascendant.zodiac.arcminute,
+        "target_bhava": target_bhava,
+        "bhava_quality": bhava_quality,
+        "bhava_tone": bhava_tone,
+        "aspects": asp_out,
+        "summary_headline": summary.get("headline", ""),
+        "summary_conclusion": summary.get("conclusion", ""),
+    }
+
+
+@app.get("/muhurta", response_class=HTMLResponse)
+async def muhurta_form(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "muhurta.html",
+        {
+            "request": request,
+            "provinces": PROVINCES,
+            "events_by_cat": _muhurta_events_by_category(),
+            "events_flat": _list_events(),
+            "form": _muhurta_default_form(),
+            "result": None,
+            "error": None,
+            "latest_version": _latest_version(),
+        },
+    )
+
+
+@app.post("/muhurta", response_class=HTMLResponse)
+async def muhurta_calculate(
+    request: Request,
+    mode: str = Form(default="general"),
+    event_keys: list[str] = Form(default=[]),
+    time_periods: list[str] = Form(default=[]),
+    start_date: str = Form(default=""),
+    end_date: str = Form(default=""),
+    range_days: str = Form(default="30"),
+    province: str = Form(default="กรุงเทพมหานคร"),
+    birth_date_th: str = Form(default=""),
+    birth_time: str = Form(default=""),
+    birth_province: str = Form(default=""),
+) -> HTMLResponse:
+    # filter เฉพาะ key ที่มีจริง
+    selected_keys = [k for k in event_keys if k in _MUHURTA_EVENTS]
+    valid_periods = {"morning", "late_morning", "noon", "evening", "dusk", "night"}
+    selected_periods = [p for p in time_periods if p in valid_periods]
+    form = {
+        "mode": mode, "event_keys": selected_keys,
+        "time_periods": selected_periods,
+        "start_date": start_date, "end_date": end_date,
+        "range_days": range_days, "province": province,
+        "birth_date_th": birth_date_th, "birth_time": birth_time,
+        "birth_province": birth_province or "กรุงเทพมหานคร",
+    }
+    error = None
+    result = None
+    try:
+        if not selected_keys:
+            raise ValueError("กรุณาเลือกกิจกรรมอย่างน้อย 1 อย่าง")
+
+        y1, m1, d1 = parse_thai_date(start_date)
+        y2, m2, d2 = parse_thai_date(end_date)
+        start = datetime(y1, m1, d1, 6, 0)
+        end = datetime(y2, m2, d2, 22, 0)
+        if end < start:
+            raise ValueError("วันสิ้นสุดต้องหลังวันเริ่ม")
+        max_days = int(range_days) if range_days in ("30", "60", "90") else 30
+        if (end - start).days > max_days:
+            raise ValueError(f"ช่วงเกิน {max_days} วัน")
+
+        # ใช้ step 60 นาทีเท่ากันทุก range เพื่อให้ผลลัพธ์เป็น subset
+        # (30 วัน ⊆ 60 วัน ⊆ 90 วัน เสมอ)
+        step_min = 60
+
+        birth_dt = None
+        bprov = None
+        if mode in ("personal", "oracle"):
+            if not (birth_date_th.strip() and birth_time.strip()):
+                raise ValueError("โหมดเฉพาะบุคคล/โหร ต้องกรอกวันเวลาเกิด")
+            by, bm, bd = parse_thai_date(birth_date_th)
+            bhh, bmm = (birth_time.strip().split(":") + ["0"])[:2]
+            birth_dt = datetime(by, bm, bd, int(bhh), int(bmm))
+            bprov = birth_province or "กรุงเทพมหานคร"
+
+        # FAST scan — กรอง threshold คุณภาพ ไม่ cap ด้วยจำนวน:
+        #   - คะแนน >= 5 (เกรด "ดี" ขึ้นไป)
+        #   - max 2 ฤกษ์/วัน (กระจายวัน)
+        # ปลายทาง: 30 วัน ~25, 60 วัน ~50, 90 วัน ~75
+        per_event_hits = _scan_multi(
+            start, end,
+            event_keys=selected_keys,
+            province=province,
+            step_minutes=step_min,
+            top_n_per_event=999,         # ไม่ cap ด้วยจำนวน
+            min_score=12,                 # cap ด้วยคุณภาพ (เกรด "ดีเยี่ยม" ขึ้นไป)
+            birth_datetime=birth_dt, birth_province=bprov,
+            max_days=max_days,
+            time_periods=None,
+            max_per_day=2,
+        )
+
+        groups = []
+        for ek in selected_keys:
+            ev = _MUHURTA_EVENTS[ek]
+            hits = per_event_hits.get(ek, [])
+            shown = hits  # filter ทำใน scan แล้ว
+            if not shown:
+                continue
+            groups.append({
+                "event_key": ek,
+                "event_label": ev.label,
+                "event_icon": ev.icon,
+                "event_category": ev.category,
+                "event_description": ev.description,
+                "hits": [_serialize_hit(h, ev.label) for h in shown],
+                "total_found": len(shown),
+            })
+
+        result = {
+            "mode": mode,
+            "event_keys": selected_keys,
+            "groups": groups,
+            "total_events": len(groups),
+            "total_requested": len(selected_keys),
+        }
+
+        if birth_dt:
+            from thai_astro.chart import Chart as _Chart
+            nc = _Chart.calculate(birth_dt.year, birth_dt.month, birth_dt.day,
+                                   birth_dt.hour, birth_dt.minute, province=bprov)
+            result["natal_info"] = {
+                "date": birth_date_th,
+                "time": birth_time,
+                "province": bprov,
+                "asc_rasi": nc.ascendant.zodiac.rasi_name,
+                "asc_deg": nc.ascendant.zodiac.degree,
+                "asc_min": nc.ascendant.zodiac.arcminute,
+            }
+
+    except ValueError as e:
+        error = str(e)
+    except Exception as e:
+        error = f"คำนวณไม่ได้: {e}"
+
+    return templates.TemplateResponse(
+        request,
+        "muhurta.html",
+        {
+            "request": request,
+            "provinces": PROVINCES,
+            "events_by_cat": _muhurta_events_by_category(),
+            "events_flat": _list_events(),
+            "form": form,
+            "result": result,
+            "error": error,
+            "latest_version": _latest_version(),
+        },
+    )
+
+
+@app.post("/muhurta/check")
+async def muhurta_check(
+    check_date: str = Form(default=""),
+    check_time: str = Form(default=""),
+    check_province: str = Form(default="กรุงเทพมหานคร"),
+    check_event_key: str = Form(default=""),
+    birth_date_th: str = Form(default=""),
+    birth_time: str = Form(default=""),
+    birth_province: str = Form(default=""),
+) -> JSONResponse:
+    """ตรวจสอบฤกษ์ของจุดเวลาเดียว (สำหรับฟอร์ม 'ตรวจสอบฤกษ์ของฉัน')"""
+    try:
+        y, m, d = parse_thai_date(check_date)
+        hh, mm = (check_time.strip().split(":") + ["0"])[:2]
+        when = datetime(y, m, d, int(hh), int(mm))
+        ek = check_event_key if check_event_key in _MUHURTA_EVENTS else None
+        mr = _compute_muhurta(when, check_province, ek)
+
+        natal_extra = None
+        if birth_date_th.strip() and birth_time.strip():
+            try:
+                natal_extra = _compute_personal_extras(
+                    birth_date_th, birth_time,
+                    birth_province or "กรุงเทพมหานคร",
+                    mr.chart,
+                )
+            except Exception:
+                pass
+
+        # ใช้ score เดียวกับ scan: ถ้ามี natal → +bhava modifier; ถ้ามี event → +event_score
+        final_score = mr.score
+        bhava_info = None
+        if natal_extra:
+            bt = natal_extra["bhava_tone"]
+            if bt == "good": final_score += 2
+            elif bt == "warning": final_score -= 2
+            bhava_info = {
+                "bhava": natal_extra["target_bhava"],
+                "quality": natal_extra["bhava_quality"],
+                "tone": bt,
+            }
+        event_extra_score = 0
+        if ek:
+            from thai_astro.muhurta_criteria import event_score as _es
+            ee = _es(mr.chart, ek)
+            event_extra_score = ee["score"]
+            final_score += event_extra_score
+
+        grade = _score_to_grade(final_score)
+        return JSONResponse({
+            "when": when.strftime("%d/%m/%Y %H:%M"),
+            "be_date": f"{when.day:02d}/{when.month:02d}/{when.year + 543}",
+            "time": when.strftime("%H:%M"),
+            "wan_planet": mr.wan_planet,
+            "wan_quality": mr.wan_quality,
+            "lunar": mr.lunar.pretty,
+            "tithi_quality": mr.tithi_quality,
+            "nakshatra_name": mr.nakshatra.name,
+            "nakshatra_number": mr.nakshatra.number,
+            "roek_name": mr.nakshatra.roek_name,
+            "nakshatra_auspicious": mr.nakshatra.is_auspicious,
+            "specials": [
+                {"name": s.name, "matched": s.matched, "tone": s.tone, "detail": s.detail}
+                for s in mr.special_criteria
+            ],
+            "vargottama": mr.vargottama_planets,
+            "score": final_score,
+            "base_score": mr.score,
+            "event_extra_score": event_extra_score,
+            "event_key": ek,
+            "event_label": _MUHURTA_EVENTS[ek].label if ek else None,
+            "grade": grade["grade"],
+            "stars": grade["stars"],
+            "tier": grade["tier"],
+            "grade_summary": grade["summary"],
+            "suggestions": mr.activity_suggestions,
+            "cautions": mr.cautions,
+            "personal_bhava": bhava_info,
+        })
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception as e:
+        return JSONResponse({"error": f"ผิดพลาด: {e}"}, status_code=500)
+
+
+@app.get("/muhurta/detail")
+async def muhurta_detail(
+    iso: str,
+    province: str = "กรุงเทพมหานคร",
+    event_key: str = "",
+    birth_date_th: str = "",
+    birth_time: str = "",
+    birth_province: str = "",
+) -> JSONResponse:
+    """รายละเอียดฤกษ์ 1 จุดเวลา (สำหรับ accordion โหร)"""
+    try:
+        when = datetime.strptime(iso, "%Y-%m-%dT%H:%M")
+        ek = event_key if event_key in _MUHURTA_EVENTS else None
+        mr = _compute_muhurta(when, province, ek)
+
+        natal_extra = None
+        if birth_date_th.strip() and birth_time.strip():
+            try:
+                natal_extra = _compute_personal_extras(
+                    birth_date_th, birth_time,
+                    birth_province or "กรุงเทพมหานคร",
+                    mr.chart,
+                )
+            except Exception:
+                pass
+
+        view = _serialize_muhurta(mr, natal_extra=natal_extra)
+        return JSONResponse(view)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception as e:
+        return JSONResponse({"error": f"ผิดพลาด: {e}"}, status_code=500)
+
+
 def main() -> None:
     import uvicorn
     uvicorn.run(
