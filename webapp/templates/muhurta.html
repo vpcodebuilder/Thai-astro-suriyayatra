@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260607y" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260607z" />
   <style>
     .muhurta-wrap { max-width: 1100px; margin: 0 auto; padding: 16px; color: #3a2a00; }
     .step { background: #fffbf0; border: 1.5px solid #b78b3a; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
@@ -56,6 +56,8 @@
 
     .btn-primary { background: linear-gradient(135deg, #d4a017, #b78b3a); color: #fff; padding: 14px 24px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 17px; font-family: inherit; width: 100%; box-shadow: 0 2px 6px rgba(183, 139, 58, 0.4); }
     .btn-primary:hover { background: linear-gradient(135deg, #c0900f, #9a7330); transform: translateY(-1px); }
+    .usage-stat-muhurta { text-align: center; font-size: 13px; color: #6d4c00; margin-top: 12px; padding: 8px 12px; background: #fff8e1; border-radius: 8px; border: 1px dashed #b78b3a; }
+    .usage-stat-muhurta b { color: #d4a017; font-weight: 700; }
 
     .error { background: #fdecea; color: #b71c1c; padding: 10px; border-radius: 8px; border: 1px solid #d32f2f; margin: 10px 0; }
     .hide { display: none !important; }
@@ -460,6 +462,16 @@
       </div>
 
       <button type="submit" class="btn-primary">🔍 ค้นหาฤกษ์ดี</button>
+      {% if usage_counts and usage_counts.get('muhurta_search') %}
+        <p class="usage-stat-muhurta">
+          ✦ มีผู้ใช้ค้นหาฤกษ์มงคลแล้ว
+          <b>{{ "{:,}".format(usage_counts.get('muhurta_search', 0)) }}</b>
+          ครั้ง
+          {% if usage_counts.get('muhurta_check') %}
+            · ตรวจสอบฤกษ์ที่ได้มา <b>{{ "{:,}".format(usage_counts.get('muhurta_check', 0)) }}</b> ครั้ง
+          {% endif %}
+        </p>
+      {% endif %}
     </form>
 
     <!-- ===== Results ===== -->
@@ -867,9 +879,12 @@
       fd.append('check_time', time);
       fd.append('check_province', document.querySelector('select[name=province]').value);
       fd.append('check_event_key', event);
-      const birthDate = document.querySelector('input[name=birth_date_th]').value;
-      const birthTime = document.querySelector('input[name=birth_time]').value;
-      const birthProv = document.querySelector('select[name=birth_province]').value;
+      const birthDateEl = document.querySelector('input[name=birth_date_th]');
+      const birthTimeEl = document.querySelector('input[name=birth_time]');
+      const birthProvEl = document.querySelector('[name=birth_province]');
+      const birthDate = birthDateEl ? birthDateEl.value : '';
+      const birthTime = birthTimeEl ? birthTimeEl.value : '';
+      const birthProv = birthProvEl ? birthProvEl.value : '';
       if (birthDate && birthTime) {
         fd.append('birth_date_th', birthDate);
         fd.append('birth_time', birthTime);
@@ -950,9 +965,12 @@
           province: card.dataset.province,
           event_key: card.dataset.eventKey || '',
         });
-        const birthDate = document.querySelector('input[name=birth_date_th]').value;
-        const birthTime = document.querySelector('input[name=birth_time]').value;
-        const birthProv = document.querySelector('select[name=birth_province]').value;
+        const birthDateEl = document.querySelector('input[name=birth_date_th]');
+        const birthTimeEl = document.querySelector('input[name=birth_time]');
+        const birthProvEl = document.querySelector('[name=birth_province]');
+        const birthDate = birthDateEl ? birthDateEl.value : '';
+        const birthTime = birthTimeEl ? birthTimeEl.value : '';
+        const birthProv = birthProvEl ? birthProvEl.value : '';
         if (birthDate && birthTime) {
           params.append('birth_date_th', birthDate);
           params.append('birth_time', birthTime);

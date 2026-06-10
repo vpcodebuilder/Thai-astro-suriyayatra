@@ -19,6 +19,8 @@ from webapp.models import UsageStat
 FEATURE_SURIYAYATRA = "suriyayatra_chart"   # กดผูกดวงสุริยยาตร์
 FEATURE_HORATHAYNU_SET = "horathaynu_chart"  # กดตั้งดวงโหรทายหนู
 FEATURE_HORATHAYNU_ASK = "horathaynu_ask"    # กดถามคำถามโหรทายหนู
+FEATURE_MUHURTA = "muhurta_search"           # กดค้นหาฤกษ์
+FEATURE_MUHURTA_CHECK = "muhurta_check"      # กดตรวจสอบฤกษ์ของตน
 
 
 def increment(feature: str) -> None:

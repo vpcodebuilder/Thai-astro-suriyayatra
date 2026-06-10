@@ -1345,6 +1345,7 @@ from webapp.usage import (
     increment as _stat_increment,
     get_counts as _stat_get_counts,
     FEATURE_SURIYAYATRA, FEATURE_HORATHAYNU_SET, FEATURE_HORATHAYNU_ASK,
+    FEATURE_MUHURTA, FEATURE_MUHURTA_CHECK,
 )
 
 
@@ -2575,6 +2576,7 @@ async def muhurta_form(request: Request) -> HTMLResponse:
             "result": None,
             "error": None,
             "latest_version": _latest_version(),
+            "usage_counts": _stat_get_counts(),
         },
     )
 
@@ -2695,6 +2697,13 @@ async def muhurta_calculate(
     except Exception as e:
         error = f"คำนวณไม่ได้: {e}"
 
+    # นับการใช้งาน (ถ้าคำนวณสำเร็จ)
+    if result is not None:
+        try:
+            _stat_increment(FEATURE_MUHURTA)
+        except Exception:
+            pass
+
     return templates.TemplateResponse(
         request,
         "muhurta.html",
@@ -2707,6 +2716,7 @@ async def muhurta_calculate(
             "result": result,
             "error": error,
             "latest_version": _latest_version(),
+            "usage_counts": _stat_get_counts(),
         },
     )
 
@@ -2760,6 +2770,10 @@ async def muhurta_check(
             final_score += event_extra_score
 
         grade = _score_to_grade(final_score)
+        try:
+            _stat_increment(FEATURE_MUHURTA_CHECK)
+        except Exception:
+            pass
         return JSONResponse({
             "when": when.strftime("%d/%m/%Y %H:%M"),
             "be_date": f"{when.day:02d}/{when.month:02d}/{when.year + 543}",
