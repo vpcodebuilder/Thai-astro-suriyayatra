@@ -213,20 +213,23 @@ def compute_muhurta(
         score -= 2
         cautions.append(f"{nak.roek_name} ({nak.name}): {nak.meaning}")
 
-    # กาลโยค: ถ้าตก ธงชัย/อธิบดี = ดี; อุบาทว์/โลกาวินาศ = ระวัง
-    for comp, hits in kalayok_matches.items():
-        if hits["thongchai"]:
-            score += 2
-            suggestions.append(f"ตรงกาลโยค ธงชัย ({comp}) — มงคล")
-        if hits["athibodi"]:
-            score += 1
-            suggestions.append(f"ตรงกาลโยค อธิบดี ({comp}) — มงคล")
-        if hits["ubat"]:
-            score -= 2
-            cautions.append(f"ตรงกาลโยค อุบาทว์ ({comp}) — เลี่ยง")
-        if hits["lokawinat"]:
-            score -= 3
-            cautions.append(f"ตรงกาลโยค โลกาวินาศ ({comp}) — อันตราย")
+    # กาลโยค: ใช้เฉพาะ WAN match (วันธงชัย/วันอธิบดี/วันอุบาทว์/วันโลกาวินาศ)
+    # ที่ทุกตำราเห็นตรงกัน — drop match ของ dithi/yarm/rasi/roek
+    # เพราะค่าจาก Kalayok formula (mod N) ไม่ใช่ "ดิถีอุบาทว์/ฤกษ์อุบาทว์" จริงตามตำรา
+    # (ดิถีจริงต้องใช้ตาราง วาร × ขึ้น/แรม ค่ำ — รอ implement)
+    wan_hits = kalayok_matches.get("wan", {})
+    if wan_hits.get("thongchai"):
+        score += 2
+        suggestions.append("วันนี้เป็น \"วันธงชัย\" ของปี — มงคลสูงสุด")
+    if wan_hits.get("athibodi"):
+        score += 1
+        suggestions.append("วันนี้เป็น \"วันอธิบดี\" ของปี — มงคล")
+    if wan_hits.get("ubat"):
+        score -= 2
+        cautions.append("วันนี้เป็น \"วันอุบาทว์\" ของปี — เลี่ยงงานมงคล")
+    if wan_hits.get("lokawinat"):
+        score -= 3
+        cautions.append("วันนี้เป็น \"วันโลกาวินาศ\" ของปี — อันตราย")
 
     # เกณฑ์พิเศษ
     for sc in specials:

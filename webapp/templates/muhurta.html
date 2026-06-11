@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260607z" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260608a" />
   <style>
     .muhurta-wrap { max-width: 1100px; margin: 0 auto; padding: 16px; color: #3a2a00; }
     .step { background: #fffbf0; border: 1.5px solid #b78b3a; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
@@ -620,15 +620,16 @@
 
       <div class="score-factor">
         <h3>4️⃣ กาลโยค (เกณฑ์ประจำปี จ.ศ.)</h3>
-        <p>4 เกณฑ์ใหญ่ของปี — ตรงวัน/ราศี/ดิถี/ฤกษ์ที่กำหนดในเกณฑ์ = ได้ผล</p>
+        <p>4 เกณฑ์ใหญ่ของปี — ระบบใช้เฉพาะ <strong>"วาร" (วันในสัปดาห์)</strong> ที่ตรงกับเกณฑ์</p>
         <table class="score-tbl">
           <tr><th>เกณฑ์</th><th>คะแนน</th><th>คุณภาพ</th></tr>
-          <tr><td>🏳️ ธงชัย</td><td class="sc-good">+2 ต่อข้อ</td><td>มงคลสูงสุด</td></tr>
-          <tr><td>👑 อธิบดี</td><td class="sc-good">+1 ต่อข้อ</td><td>มงคล (ผู้ใหญ่/ตำแหน่ง)</td></tr>
-          <tr><td>⚠️ อุบาทว์</td><td class="sc-bad">−2 ต่อข้อ</td><td>อัปมงคล</td></tr>
-          <tr><td>💀 โลกาวินาศ</td><td class="sc-bad">−3 ต่อข้อ</td><td>อันตราย — เลี่ยงเด็ดขาด</td></tr>
+          <tr><td>🏳️ วันธงชัย</td><td class="sc-good">+2</td><td>มงคลสูงสุด</td></tr>
+          <tr><td>👑 วันอธิบดี</td><td class="sc-good">+1</td><td>มงคล (ผู้ใหญ่/ตำแหน่ง)</td></tr>
+          <tr><td>⚠️ วันอุบาทว์</td><td class="sc-bad">−2</td><td>อัปมงคล</td></tr>
+          <tr><td>💀 วันโลกาวินาศ</td><td class="sc-bad">−3</td><td>อันตราย — เลี่ยงเด็ดขาด</td></tr>
         </table>
-        <div class="score-example">📌 ตัวอย่าง: ฤกษ์ตรงทั้งวัน-ราศี-ฤกษ์ของธงชัย = <strong>+6</strong></div>
+        <div class="score-example">📌 ตัวอย่าง: จ.ศ. 1387 วันธงชัย = ศุกร์ → ฤกษ์ตรงวันศุกร์ = <strong>+2</strong></div>
+        <div class="score-example" style="background:#fff;border-left-color:#777">ℹ️ <em>ระบบยังไม่นับ "ดิถี/ราศี/ฤกษ์อุบาทว์" จากตำราจริง (เช่น ดิถีมหาสูญ ดิถีอัคนิโรธ) — รอ implement ในรุ่นถัดไป</em></div>
       </div>
 
       <div class="score-factor">
