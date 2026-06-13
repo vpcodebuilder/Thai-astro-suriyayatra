@@ -2412,7 +2412,8 @@ def _serialize_dithi(h, event_label: Optional[str] = None) -> list:
         elif is_universal_bad:
             relevance = "universal_bad"
         elif event_category and is_relevant_for(dc, event_category, event_key=event_key):
-            relevance = "specific_match"   # ตรงกิจกรรม
+            # ตรงกิจกรรม — แต่ต้องดูว่าเป็นดี/ร้าย
+            relevance = "specific_match" if dc.is_auspicious else "specific_bad_match"
         else:
             relevance = "specific_other"   # ดี/ร้าย แต่เหมาะกับงานอื่น
         out.append({

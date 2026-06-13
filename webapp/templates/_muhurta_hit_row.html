@@ -1,6 +1,10 @@
 {# กล่อง 1 ฤกษ์ #}
 {# ตัวแปร: h, rank, result, form #}
-{% set has_bad = h.dithi_classifications|selectattr('relevance', 'in', ['universal_bad', 'specific_match'])|rejectattr('is_auspicious')|list %}
+{% set bad_dithis = h.dithi_classifications|selectattr('relevance', 'in', ['universal_bad', 'specific_bad_match'])|list %}
+{% set bad_roek = h.roek and not h.roek.is_auspicious %}
+{% set bad_criteria = h.matched_criteria_details|selectattr('tone', 'ne', 'good')|list %}
+{% set has_bad = bad_dithis or bad_roek or bad_criteria %}
+{% set bad_count = (bad_dithis|length) + (1 if bad_roek else 0) + (bad_criteria|length) %}
 <div class="hit-card tier-{{ h.tier }} period-bg-{{ h.period }} {% if rank == 1 %}top{% endif %} {% if has_bad %}has-warning{% endif %}"
      data-iso="{{ h.iso }}"
      data-province="{{ form.province }}"
@@ -21,7 +25,7 @@
   {# Warning banner เมื่อมีดิถีร้าย/ห้ามที่ตรงกิจกรรม #}
   {% if has_bad %}
     <div class="warning-banner">
-      ⚠️ มี{{ has_bad|length }} เกณฑ์ห้ามตามตำราโบราณ — พิจารณาด้วยความระมัดระวัง
+      ⚠️ มี {{ bad_count }} เกณฑ์ห้ามตามตำราโบราณ — พิจารณาด้วยความระมัดระวัง
     </div>
   {% endif %}
 
@@ -54,7 +58,12 @@
   {% if h.roek or h.matched_criteria_details %}
     <div class="hit-extra-tags">
       {% if h.roek %}
-        {% set roek_rel = 'specific_match' if h.roek.is_match else ('universal_good' if h.roek.is_auspicious else 'universal_bad') %}
+        {# logic: bad+match → specific_bad_match (แดง+ติ๊ก) ; bad+no-match → universal_bad (แดง) ;
+           good+match → specific_match (เขียว+ติ๊ก) ; good+no-match → universal_good (เขียวอ่อน) #}
+        {% set roek_rel = (
+          ('specific_bad_match' if h.roek.is_match else 'universal_bad') if not h.roek.is_auspicious else
+          ('specific_match' if h.roek.is_match else 'universal_good')
+        ) %}
         <button type="button"
                 class="dithi-tag dithi-tag-{{ roek_rel }}"
                 data-name="{{ h.roek.name }} ({{ h.roek.nakshatra_number }}. {{ h.roek.nakshatra_name }})"
@@ -68,7 +77,10 @@
         </button>
       {% endif %}
       {% for c in h.matched_criteria_details %}
-        {% set c_rel = 'specific_match' if c.is_match else ('universal_good' if c.tone == 'good' else 'universal_bad') %}
+        {% set c_rel = (
+          ('specific_bad_match' if c.is_match else 'universal_bad') if c.tone != 'good' else
+          ('specific_match' if c.is_match else 'universal_good')
+        ) %}
         <button type="button"
                 class="dithi-tag dithi-tag-{{ c_rel }}"
                 data-name="เกณฑ์ {{ c.name }}"
@@ -90,9 +102,10 @@
       {% for dc in h.dithi_classifications %}
         {% set icon = '📅' if dc.relevance == 'neutral' else (
                       '🚫' if dc.relevance == 'universal_bad' else (
+                      '⛔' if dc.relevance == 'specific_bad_match' else (
                       '✅' if dc.relevance == 'specific_match' else (
                       '💡' if dc.relevance == 'specific_other' else (
-                      '✨' if dc.is_auspicious else '⚠️')))) %}
+                      '✨' if dc.is_auspicious else '⚠️'))))) %}
         <button type="button"
                 class="dithi-tag dithi-tag-{{ dc.relevance }}"
                 data-name="{{ dc.name }}"
@@ -108,16 +121,12 @@
     </div>
   {% endif %}
 
-  {% if h.personal_bhava or h.matched_criteria %}
+  {# personal_bhava only — criteria แสดงอยู่ใน extra-tags บนแล้ว (ไม่ซ้ำ) #}
+  {% if h.personal_bhava %}
     <div class="hit-extras">
-      {% if h.personal_bhava %}
-        <span class="extra-tag extra-{{ h.personal_bhava_tone }}">
-          🎯 ตกภพ {{ h.personal_bhava }} ของดวงเจ้าชะตา — {{ h.personal_bhava_quality }}
-        </span>
-      {% endif %}
-      {% for cr in h.matched_criteria %}
-        <span class="extra-tag extra-special">★ {{ cr }}</span>
-      {% endfor %}
+      <span class="extra-tag extra-{{ h.personal_bhava_tone }}">
+        🎯 ตกภพ {{ h.personal_bhava }} ของดวงเจ้าชะตา — {{ h.personal_bhava_quality }}
+      </span>
     </div>
   {% endif %}
 

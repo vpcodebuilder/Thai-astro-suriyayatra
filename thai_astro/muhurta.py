@@ -212,12 +212,14 @@ def compute_muhurta(
     elif t_q == "ระวัง":
         score -= 2
 
-    # นักษัตร
+    # นักษัตร — ฤกษ์ใหญ่
+    # มงคล (มหัทธโน/ราชา/เทวี/ฯลฯ): +2
+    # อัปมงคล (ทลิทโท/โจโร/เพชฌฆาต): -4 (×2 เพื่อให้ฤกษ์ที่ติดอาจไม่ผ่าน threshold 60%)
     if nak.is_auspicious:
         score += 2
         suggestions.append(f"{nak.roek_name} ({nak.name}): {nak.meaning}")
     else:
-        score -= 2
+        score -= 4
         cautions.append(f"{nak.roek_name} ({nak.name}): {nak.meaning}")
 
     # กาลโยค: ใช้เฉพาะ WAN match (วันธงชัย/วันอธิบดี/วันอุบาทว์/วันโลกาวินาศ)

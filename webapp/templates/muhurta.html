@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260608l" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260608m" />
   <style>
     .muhurta-wrap { max-width: 1100px; margin: 0 auto; padding: 16px; color: #3a2a00; }
     .step { background: #fffbf0; border: 1.5px solid #b78b3a; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
@@ -245,7 +245,9 @@
     .hit-summary-text { font-size: 13px; color: #555; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #d8b870; }
 
     /* Extra tags row (ฤกษ์ใหญ่ + เกณฑ์พิเศษ) */
-    .hit-extra-tags { margin-top: 6px; padding-top: 6px; border-top: 1px dashed #d8b870; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+    .hit-extra-tags { margin-top: 6px; padding-top: 6px; padding-left: 16px; padding-right: 16px; border-top: 1px dashed #d8b870; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+    .hit-dithi-tags { padding-left: 16px; padding-right: 16px; }
+    .hit-extras { padding-left: 16px; padding-right: 16px; }
 
     /* Dithi tags (chip-style) */
     .hit-dithi-tags { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #d8b870; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
@@ -258,6 +260,8 @@
     .dithi-tag-universal_good { background: #e8f5e9; border-color: #66bb6a; color: #1b5e20; }
     .dithi-tag-universal_bad  { background: #fde7d8; border-color: #d32f2f; color: #b71c1c; border-width: 2px; }
     .dithi-tag-specific_match { background: #c8e6c9; border-color: #2e7d32; color: #1b5e20; border-width: 2px; }
+    .dithi-tag-specific_bad_match { background: #ffcdd2; border-color: #b71c1c; color: #b71c1c; border-width: 2px; }
+    .dithi-tag-specific_bad_match .dithi-tag-badge { background: rgba(255,255,255,0.85); color: #b71c1c; }
     .dithi-tag-specific_other { background: #faf3d4; border-color: #b8a070; color: #6d4c00; opacity: 0.78; }
     .dithi-tag-neutral { background: #f1ecd9; border-color: #d8b870; color: #6d4c00; }
 
