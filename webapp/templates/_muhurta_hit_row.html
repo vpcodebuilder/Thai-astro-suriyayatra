@@ -1,21 +1,34 @@
 {# กล่อง 1 ฤกษ์ #}
 {# ตัวแปร: h, rank, result, form #}
-<div class="hit-card tier-{{ h.tier }} {% if rank == 1 %}top{% endif %}"
+{% set has_bad = h.dithi_classifications|selectattr('relevance', 'in', ['universal_bad', 'specific_match'])|rejectattr('is_auspicious')|list %}
+<div class="hit-card tier-{{ h.tier }} period-bg-{{ h.period }} {% if rank == 1 %}top{% endif %} {% if has_bad %}has-warning{% endif %}"
      data-iso="{{ h.iso }}"
      data-province="{{ form.province }}"
      data-event-key="{{ h.event_label and (result.event_keys[0] if result.event_keys|length == 1 else '') or '' }}"
      data-period="{{ h.period }}">
 
-  {# Rank ribbon #}
-  {% if rank == 1 %}<div class="rank-ribbon best">🏆 อันดับ 1</div>
-  {% elif rank == 2 %}<div class="rank-ribbon silver">🥈 อันดับ 2</div>
-  {% elif rank == 3 %}<div class="rank-ribbon bronze">🥉 อันดับ 3</div>{% endif %}
+  {# Period stripe — แถบบนแสดงช่วงเวลาเด่นชัด #}
+  <div class="period-stripe period-stripe-{{ h.period }}">
+    <span class="period-stripe-icon">{{ h.period_icon }}</span>
+    <span class="period-stripe-label">ช่วง{{ h.period_label }}</span>
+    <span class="period-stripe-time">{{ h.time }}–{{ h.time_end }} น.</span>
+    {% if rank == 1 %}<span class="period-stripe-rank">🏆 อันดับ 1</span>
+    {% elif rank == 2 %}<span class="period-stripe-rank">🥈 อันดับ 2</span>
+    {% elif rank == 3 %}<span class="period-stripe-rank">🥉 อันดับ 3</span>
+    {% endif %}
+  </div>
+
+  {# Warning banner เมื่อมีดิถีร้าย/ห้ามที่ตรงกิจกรรม #}
+  {% if has_bad %}
+    <div class="warning-banner">
+      ⚠️ มี{{ has_bad|length }} เกณฑ์ห้ามตามตำราโบราณ — พิจารณาด้วยความระมัดระวัง
+    </div>
+  {% endif %}
 
   <div class="hit-main">
     <div class="hit-datetime">
       <div class="hit-date-big">{{ h.be_date }}</div>
-      <div class="hit-time-big">{{ h.time }} น. <span class="period-badge" title="ช่วง{{ h.period_label }}">{{ h.period_icon }}</span></div>
-      <div class="period-label-small" title="ฤกษ์มีคุณภาพเท่ากันตลอดช่วงนี้">⏱ ใช้ได้ {{ h.time }}–{{ h.time_end }} น.</div>
+      <div class="hit-time-big">{{ h.time }} น.</div>
     </div>
 
     <div class="hit-grade-block">
@@ -27,11 +40,73 @@
         {% endfor %}
       </div>
       <div class="grade-label tier-{{ h.tier }}">{{ h.grade }}</div>
-      <div class="grade-score" title="คะแนนรวมจากวาร+ดิถี+นักษัตร+กาลโยค+เกณฑ์พิเศษ+กิจกรรม">{{ h.score }} คะแนน</div>
+      <div class="grade-percent" title="คะแนนรวม {{ h.score }} จากเต็ม {{ h.score_max }} (วาร+ดิถี+นักษัตร+กาลโยค+เกณฑ์พิเศษ+กิจกรรม)">
+        <span class="grade-percent-num">{{ "%.2f"|format(h.score_percent) }}%</span>
+        <div class="grade-percent-bar"><div class="grade-percent-fill tier-{{ h.tier }}" style="width: {{ h.score_percent }}%"></div></div>
+        <span class="grade-percent-raw">{{ h.score }}/{{ h.score_max }}</span>
+      </div>
     </div>
   </div>
 
   <div class="hit-summary-text">{{ h.summary }}</div>
+
+  {# ฤกษ์ใหญ่ (Roek) + เกณฑ์พิเศษ (Special criteria) เป็น tag #}
+  {% if h.roek or h.matched_criteria_details %}
+    <div class="hit-extra-tags">
+      {% if h.roek %}
+        {% set roek_rel = 'specific_match' if h.roek.is_match else ('universal_good' if h.roek.is_auspicious else 'universal_bad') %}
+        <button type="button"
+                class="dithi-tag dithi-tag-{{ roek_rel }}"
+                data-name="{{ h.roek.name }} ({{ h.roek.nakshatra_number }}. {{ h.roek.nakshatra_name }})"
+                data-icon="{{ '🌟' if h.roek.is_auspicious else '☄️' }}"
+                data-short="{{ h.roek.suitable_for }}"
+                data-long="{{ h.roek.long_desc }}"
+                data-suitable="{{ h.roek.suitable_for }}"
+                data-relevance="{{ roek_rel }}"
+                title="ฤกษ์ใหญ่ — กดดูรายละเอียด">
+          <span class="dithi-tag-icon">{{ '🌟' if h.roek.is_auspicious else '☄️' }}</span><span class="dithi-tag-name">{{ h.roek.name }}</span>{% if h.roek.is_match %}<span class="dithi-tag-badge">✓</span>{% endif %}
+        </button>
+      {% endif %}
+      {% for c in h.matched_criteria_details %}
+        {% set c_rel = 'specific_match' if c.is_match else ('universal_good' if c.tone == 'good' else 'universal_bad') %}
+        <button type="button"
+                class="dithi-tag dithi-tag-{{ c_rel }}"
+                data-name="เกณฑ์ {{ c.name }}"
+                data-icon="{{ '★' if c.tone == 'good' else '⚠️' }}"
+                data-short="{{ c.suitable_for }}"
+                data-long="{{ c.long_desc }}"
+                data-suitable="{{ c.suitable_for }}"
+                data-relevance="{{ c_rel }}"
+                title="เกณฑ์พิเศษ — กดดูรายละเอียด">
+          <span class="dithi-tag-icon">{{ '★' if c.tone == 'good' else '⚠️' }}</span><span class="dithi-tag-name">{{ c.name }}</span>{% if c.is_match %}<span class="dithi-tag-badge">✓</span>{% endif %}
+        </button>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if h.dithi_classifications %}
+    <div class="hit-dithi-tags">
+      <span class="dithi-tags-title">📿 ดิถี ({{ h.lunar_pretty }}):</span>
+      {% for dc in h.dithi_classifications %}
+        {% set icon = '📅' if dc.relevance == 'neutral' else (
+                      '🚫' if dc.relevance == 'universal_bad' else (
+                      '✅' if dc.relevance == 'specific_match' else (
+                      '💡' if dc.relevance == 'specific_other' else (
+                      '✨' if dc.is_auspicious else '⚠️')))) %}
+        <button type="button"
+                class="dithi-tag dithi-tag-{{ dc.relevance }}"
+                data-name="{{ dc.name }}"
+                data-icon="{{ icon }}"
+                data-short="{{ dc.short_desc }}"
+                data-long="{{ dc.long_desc }}"
+                data-suitable="{{ dc.suitable_for }}"
+                data-relevance="{{ dc.relevance }}"
+                title="แตะเพื่อดูรายละเอียด">
+          <span class="dithi-tag-icon">{{ icon }}</span><span class="dithi-tag-name">{{ dc.name }}</span>{% if dc.relevance == 'specific_match' %}<span class="dithi-tag-badge">✓</span>{% endif %}
+        </button>
+      {% endfor %}
+    </div>
+  {% endif %}
 
   {% if h.personal_bhava or h.matched_criteria %}
     <div class="hit-extras">

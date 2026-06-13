@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260608a" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260608l" />
   <style>
     .muhurta-wrap { max-width: 1100px; margin: 0 auto; padding: 16px; color: #3a2a00; }
     .step { background: #fffbf0; border: 1.5px solid #b78b3a; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
@@ -114,27 +114,32 @@
     .hit-card.tier-warning { background: #fff5ee; border-color: #ef6c00; }
     .hit-card.tier-bad     { background: #fdecea; border-color: #d32f2f; }
 
-    /* Period accent: แถบสีซ้าย + tint แยกแต่ละช่วงเวลา (เห็นชัดจากการเหลือบตา) */
-    .hit-card { border-left-width: 8px; padding-left: 14px; }
+    /* Period stripe — แถบบนเด่นชัด */
+    .hit-card { padding-top: 0; padding-left: 0; padding-right: 0; overflow: hidden; }
+    .hit-card > .hit-main, .hit-card > .hit-summary-text,
+    .hit-card > .hit-extras, .hit-card > .hit-dithi-tags,
+    .hit-card > .warning-banner, .hit-card > .hit-expand-row { padding-left: 16px; padding-right: 16px; }
+    .hit-card > .hit-main { padding-top: 12px; }
+    .hit-card > .hit-expand-row { padding-bottom: 12px; }
+    .period-stripe { display: flex; align-items: center; gap: 10px; padding: 6px 16px; color: #fff; font-weight: 600; font-size: 13px; font-family: 'Kanit', sans-serif; flex-wrap: wrap; }
+    .period-stripe-icon { font-size: 22px; line-height: 1; }
+    .period-stripe-label { font-weight: 700; font-size: 14px; }
+    .period-stripe-time { opacity: 0.92; font-size: 12px; }
+    .period-stripe-rank { margin-left: auto; background: rgba(255,255,255,0.25); padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; }
+    .period-stripe-morning      { background: linear-gradient(90deg, #f9c74f, #ffb703); color: #5a3a00; }
+    .period-stripe-late_morning { background: linear-gradient(90deg, #ffb703, #fb8500); color: #5a2c00; }
+    .period-stripe-noon         { background: linear-gradient(90deg, #fb8500, #e76f51); color: #fff; }
+    .period-stripe-evening      { background: linear-gradient(90deg, #e76f51, #c44536); color: #fff; }
+    .period-stripe-dusk         { background: linear-gradient(90deg, #8e44ad, #5e3370); color: #fff; }
+    .period-stripe-night        { background: linear-gradient(90deg, #1a237e, #283593); color: #fff; }
 
-    .hit-card[data-period="morning"]      { border-left-color: #f9c74f; background-image: linear-gradient(90deg, rgba(255, 224, 130, 0.45), transparent 30%); }
-    .hit-card[data-period="late_morning"] { border-left-color: #ffb703; background-image: linear-gradient(90deg, rgba(255, 213, 79, 0.45), transparent 30%); }
-    .hit-card[data-period="noon"]         { border-left-color: #fb8500; background-image: linear-gradient(90deg, rgba(255, 167, 38, 0.40), transparent 30%); }
-    .hit-card[data-period="evening"]      { border-left-color: #e76f51; background-image: linear-gradient(90deg, rgba(255, 138, 101, 0.40), transparent 30%); }
-    .hit-card[data-period="dusk"]         { border-left-color: #8e44ad; background-image: linear-gradient(90deg, rgba(186, 104, 200, 0.35), transparent 30%); }
-    .hit-card[data-period="night"]        { border-left-color: #1a237e; background-image: linear-gradient(90deg, rgba(63, 81, 181, 0.45), rgba(63, 81, 181, 0.08) 30%, transparent 60%); }
+    /* warning banner */
+    .warning-banner { background: linear-gradient(90deg, #ffe0b2, #ffccbc); border-bottom: 2px solid #d84315; color: #b71c1c; padding: 6px 16px; font-size: 13px; font-weight: 700; }
+    .hit-card.has-warning { border-color: #d84315; box-shadow: 0 2px 8px rgba(216, 67, 21, 0.2); }
 
-    /* night cards: ตัวอักษรเข้มขึ้นเล็กน้อยเพื่ออ่านง่ายบน tint น้ำเงิน */
-    .hit-card[data-period="night"] .hit-date-big { color: #1a237e; }
-    .hit-card[data-period="night"] .hit-time-big { color: #1a237e; }
-
-    /* period chip badge สีจางตามช่วง */
-    .hit-card[data-period="morning"] .period-badge      { color: #c98a04; }
-    .hit-card[data-period="late_morning"] .period-badge { color: #b87300; }
-    .hit-card[data-period="noon"] .period-badge         { color: #c75000; }
-    .hit-card[data-period="evening"] .period-badge      { color: #b3380e; }
-    .hit-card[data-period="dusk"] .period-badge         { color: #6a1b9a; }
-    .hit-card[data-period="night"] .period-badge        { color: #1a237e; }
+    /* night cards: text contrast */
+    .hit-card.period-bg-night .hit-date-big { color: #1a237e; }
+    .hit-card.period-bg-night .hit-time-big { color: #1a237e; }
 
     .rank-ribbon { position: absolute; top: -10px; left: 12px; padding: 3px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     .rank-ribbon.best   { background: linear-gradient(135deg, #d4a017, #8b6914); }
@@ -224,8 +229,53 @@
     .grade-label.tier-warning { background: #ef6c00; color: #fff; }
     .grade-label.tier-bad     { background: #d32f2f; color: #fff; }
     .grade-score { font-size: 12px; color: #777; cursor: help; }
+    .grade-percent { min-width: 92px; cursor: help; }
+    .grade-percent-num { font-size: 18px; font-weight: 700; color: #6d4c00; font-family: 'Kanit', sans-serif; }
+    .grade-percent-raw { font-size: 11px; color: #777; margin-left: 4px; }
+    .grade-percent-bar { width: 100%; height: 6px; background: #f1ecd9; border-radius: 4px; overflow: hidden; margin-top: 2px; }
+    .grade-percent-fill { height: 100%; transition: width 0.4s; }
+    .grade-percent-fill.tier-best { background: linear-gradient(90deg, #d4a017, #8b6914); }
+    .grade-percent-fill.tier-great { background: linear-gradient(90deg, #2e7d32, #1b5e20); }
+    .grade-percent-fill.tier-good { background: #66bb6a; }
+    .grade-percent-fill.tier-fair { background: #c9a227; }
+    .grade-percent-fill.tier-neutral { background: #999; }
+    .grade-percent-fill.tier-warning { background: #ef6c00; }
+    .grade-percent-fill.tier-bad { background: #d32f2f; }
 
     .hit-summary-text { font-size: 13px; color: #555; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #d8b870; }
+
+    /* Extra tags row (ฤกษ์ใหญ่ + เกณฑ์พิเศษ) */
+    .hit-extra-tags { margin-top: 6px; padding-top: 6px; border-top: 1px dashed #d8b870; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+
+    /* Dithi tags (chip-style) */
+    .hit-dithi-tags { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #d8b870; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+    .dithi-tags-title { font-size: 12px; font-weight: 700; color: #6d4c00; margin-right: 4px; width: 100%; margin-bottom: 2px; }
+    @media (min-width: 700px) { .dithi-tags-title { width: auto; margin-bottom: 0; } }
+    .dithi-tag { font-family: inherit; border: 1.5px solid; border-radius: 14px; padding: 3px 10px; cursor: pointer; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; transition: transform 0.1s; }
+    .dithi-tag:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .dithi-tag-icon { font-size: 12px; }
+    .dithi-tag-badge { background: rgba(255,255,255,0.8); padding: 0 4px; border-radius: 6px; font-size: 10px; }
+    .dithi-tag-universal_good { background: #e8f5e9; border-color: #66bb6a; color: #1b5e20; }
+    .dithi-tag-universal_bad  { background: #fde7d8; border-color: #d32f2f; color: #b71c1c; border-width: 2px; }
+    .dithi-tag-specific_match { background: #c8e6c9; border-color: #2e7d32; color: #1b5e20; border-width: 2px; }
+    .dithi-tag-specific_other { background: #faf3d4; border-color: #b8a070; color: #6d4c00; opacity: 0.78; }
+    .dithi-tag-neutral { background: #f1ecd9; border-color: #d8b870; color: #6d4c00; }
+
+    /* Dithi popover (click) */
+    .dithi-popover-bg { position: fixed; inset: 0; background: rgba(45,30,0,0.7); backdrop-filter: blur(3px); z-index: 9997; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .dithi-popover-bg.active { display: flex; }
+    .dithi-popover { background: linear-gradient(180deg, #fffbf0 0%, #fff 100%); border: 2px solid #b78b3a; border-radius: 14px; padding: 20px 22px; max-width: 480px; width: 100%; box-shadow: 0 16px 48px rgba(0,0,0,0.4); position: relative; }
+    .dithi-popover-close { position: absolute; top: 10px; right: 12px; width: 32px; height: 32px; border-radius: 50%; background: #b78b3a; color: #fff; border: none; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .dithi-popover-title { font-family: 'Kanit', sans-serif; font-size: 19px; color: #6d4c00; margin: 0 0 4px; padding-right: 36px; }
+    .dithi-popover-short { font-size: 13px; color: #5d3a00; margin-bottom: 12px; font-style: italic; }
+    .dithi-popover-long { font-size: 14px; color: #3a2a00; line-height: 1.7; padding: 10px 12px; background: #fff8e1; border-left: 4px solid #b78b3a; border-radius: 6px; }
+    .dithi-popover-suitable { margin-top: 10px; font-size: 13px; color: #6d4c00; font-weight: 600; padding: 6px 10px; background: #fff3d2; border-radius: 6px; }
+    .dithi-popover-relevance { margin-top: 8px; font-size: 12px; padding: 6px 10px; border-radius: 6px; font-weight: 600; }
+    .dithi-popover-relevance.universal_good { background: #e8f5e9; color: #1b5e20; }
+    .dithi-popover-relevance.universal_bad { background: #fde7d8; color: #b71c1c; }
+    .dithi-popover-relevance.specific_match { background: #c8e6c9; color: #1b5e20; }
+    .dithi-popover-relevance.specific_other { background: #f5f5dc; color: #6d4c00; }
+    .dithi-popover-relevance.neutral { background: #f1ecd9; color: #6d4c00; }
 
     .hit-extras { font-size: 13px; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
     .extra-tag { padding: 3px 8px; border-radius: 6px; font-weight: 600; font-size: 12px; }
@@ -573,6 +623,18 @@
     </div>
   </main>
 
+  <!-- ===== Dithi detail popover ===== -->
+  <div class="dithi-popover-bg" id="dithi-popover-bg">
+    <div class="dithi-popover">
+      <button type="button" class="dithi-popover-close" id="dithi-popover-close">✕</button>
+      <h3 class="dithi-popover-title" id="dithi-popover-title"></h3>
+      <div class="dithi-popover-short" id="dithi-popover-short"></div>
+      <div class="dithi-popover-long" id="dithi-popover-long"></div>
+      <div class="dithi-popover-suitable" id="dithi-popover-suitable"></div>
+      <div class="dithi-popover-relevance" id="dithi-popover-relevance"></div>
+    </div>
+  </div>
+
   <!-- ===== Score info modal ===== -->
   <div class="score-modal-bg" id="score-modal-bg">
     <div class="score-modal">
@@ -655,16 +717,19 @@
       </div>
 
       <div class="score-grading">
-        <h3>🌟 เกรดฤกษ์ — แปลคะแนนรวมเป็นดาว</h3>
+        <h3>🌟 เกรดฤกษ์ — แปลคะแนนรวมเป็น %, ดาว, เกรด</h3>
+        <p style="font-size:13px;margin-bottom:8px">คะแนนเต็ม <strong>17</strong> (top score จริงสุดที่พบในข้อมูล) — สูตร: <code>% = (คะแนน ÷ 17) × 100</code> (clamp ที่ 100%)</p>
         <table class="score-tbl">
-          <tr><th>คะแนน</th><th>เกรด</th><th>คำอธิบาย</th></tr>
-          <tr class="grade-row-best"><td>12+</td><td>⭐⭐⭐⭐⭐ ดีเยี่ยม</td><td>เหมาะที่สุด — ระบบจะแสดงเฉพาะเกรดนี้</td></tr>
-          <tr><td>8 – 11</td><td>⭐⭐⭐⭐½ ดีมาก</td><td>องค์ประกอบเอื้ออำนวยส่วนใหญ่</td></tr>
-          <tr><td>5 – 7</td><td>⭐⭐⭐⭐ ดี</td><td>เหมาะการเริ่มกิจมงคล</td></tr>
-          <tr><td>2 – 4</td><td>⭐⭐⭐ พอใช้</td><td>ดีกว่าวันธรรมดา</td></tr>
-          <tr><td>0 – 1</td><td>⭐⭐½ กลาง</td><td>ไม่ดีไม่ร้าย</td></tr>
-          <tr><td>&lt; 0</td><td>⭐⭐ ระวัง</td><td>ไม่เหมาะ — มีปัจจัยขัด</td></tr>
+          <tr><th>คะแนน</th><th>%</th><th>เกรด</th><th>คำอธิบาย</th></tr>
+          <tr class="grade-row-best"><td>17+</td><td>100.00%</td><td>⭐⭐⭐⭐⭐ ดีเยี่ยม</td><td>ฤกษ์สมบูรณ์แบบ — top ของระบบ</td></tr>
+          <tr><td>12 – 16</td><td>70-94%</td><td>⭐⭐⭐⭐⭐ ดีเยี่ยม</td><td>เหมาะที่สุดสำหรับงานสำคัญ</td></tr>
+          <tr><td>8 – 11</td><td>47-65%</td><td>⭐⭐⭐⭐½ ดีมาก</td><td>องค์ประกอบเอื้ออำนวยส่วนใหญ่</td></tr>
+          <tr><td>5 – 7</td><td>29-41%</td><td>⭐⭐⭐⭐ ดี</td><td>เหมาะการเริ่มกิจมงคล — เกณฑ์ขั้นต่ำที่ระบบแสดง</td></tr>
+          <tr><td>2 – 4</td><td>11-24%</td><td>⭐⭐⭐ พอใช้</td><td>ดีกว่าวันธรรมดา (ไม่แสดงในผลลัพธ์)</td></tr>
+          <tr><td>0 – 1</td><td>0-6%</td><td>⭐⭐½ กลาง</td><td>ไม่ดีไม่ร้าย</td></tr>
+          <tr><td>&lt; 0</td><td>0%</td><td>⭐⭐ ระวัง</td><td>ไม่เหมาะ — มีปัจจัยขัด</td></tr>
         </table>
+        <p style="font-size:12px;margin-top:8px;color:#777"><em>หมายเหตุ: ระบบแสดงฤกษ์ตั้งแต่ "ดี" ขึ้นไป (≥5 คะแนน) ให้คุณพิจารณาเลือกตามความเหมาะสม</em></p>
       </div>
 
       <p class="score-note">หมายเหตุ: ระบบนี้ scan ทุก 1 ชั่วโมงในช่วงที่เลือก จำกัด <strong>สูงสุด 2 ฤกษ์/วัน</strong> เพื่อกระจายไม่ให้กระจุก</p>
@@ -715,6 +780,42 @@
       });
     });
     updateEventCount();
+
+    // ===== Dithi popover =====
+    const dpBg = document.getElementById('dithi-popover-bg');
+    const dpClose = document.getElementById('dithi-popover-close');
+    const dpTitle = document.getElementById('dithi-popover-title');
+    const dpShort = document.getElementById('dithi-popover-short');
+    const dpLong = document.getElementById('dithi-popover-long');
+    const dpSuitable = document.getElementById('dithi-popover-suitable');
+    const dpRel = document.getElementById('dithi-popover-relevance');
+    const REL_LABELS = {
+      'universal_good': '✨ ดิถีมงคล (เหมาะกับทุกกิจกรรม)',
+      'universal_bad': '🚫 ดิถีร้าย (ห้ามมงคลทุกประเภท)',
+      'specific_match': '✅ เหมาะ/เกี่ยวข้องกับกิจกรรมที่เลือก',
+      'specific_other': '💡 ดิถีอื่นในวันเดียวกัน (ไม่ตรงกิจกรรมที่เลือก)',
+      'neutral': '📅 ดิถีปกติ (ไม่ส่งผลคะแนน)',
+    };
+    document.querySelectorAll('.dithi-tag').forEach(tag => {
+      tag.addEventListener('click', () => {
+        dpTitle.textContent = (tag.dataset.icon || '') + ' ' + tag.dataset.name;
+        dpShort.textContent = tag.dataset.short;
+        dpLong.textContent = tag.dataset.long;
+        if (tag.dataset.suitable) {
+          dpSuitable.textContent = '📌 ' + tag.dataset.suitable;
+          dpSuitable.style.display = '';
+        } else { dpSuitable.style.display = 'none'; }
+        const rel = tag.dataset.relevance;
+        dpRel.textContent = REL_LABELS[rel] || '';
+        dpRel.className = 'dithi-popover-relevance ' + rel;
+        dpBg.classList.add('active');
+      });
+    });
+    if (dpClose) {
+      dpClose.addEventListener('click', () => dpBg.classList.remove('active'));
+      dpBg.addEventListener('click', (e) => { if (e.target === dpBg) dpBg.classList.remove('active'); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') dpBg.classList.remove('active'); });
+    }
 
     // ===== Score info modal =====
     const scoreBtn = document.getElementById('open-score-info');
@@ -918,7 +1019,11 @@
           <div class="hit-grade-block">
             <div class="grade-stars">${stars}</div>
             <div class="grade-label tier-${d.tier}">${d.grade}</div>
-            <div class="grade-score">${d.score} คะแนน</div>
+            <div class="grade-percent">
+              <span class="grade-percent-num">${d.score_percent.toFixed(2)}%</span>
+              <div class="grade-percent-bar"><div class="grade-percent-fill tier-${d.tier}" style="width:${d.score_percent}%"></div></div>
+              <span class="grade-percent-raw">${d.score}/${d.score_max}</span>
+            </div>
           </div>
         </div>
         <div class="hit-summary-text">

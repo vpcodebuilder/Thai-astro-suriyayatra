@@ -2325,29 +2325,51 @@ def _muhurta_events_by_category() -> list:
     return out
 
 
+MUHURTA_SCORE_MAX = 17    # ใช้เป็นเกณฑ์ 100% (จากการสำรวจ top hits จริง = 17)
+
+
+def _score_to_percent(score: int) -> float:
+    """แปลงคะแนนดิบเป็น % (0.00-100.00, 2 ทศนิยม).
+    score >= MAX → 100.00, score <= 0 → 0.00
+    """
+    if score <= 0:
+        return 0.0
+    pct = score / MUHURTA_SCORE_MAX * 100
+    pct = min(100.0, max(0.0, pct))
+    return round(pct, 2)
+
+
+def _percent_to_stars(pct: float) -> float:
+    """แปลง % เป็นจำนวนดาว 0-5 (รองรับครึ่งดวง)
+    100% → 5 ดวง, 90% → 4.5, 80% → 4, ..., 10% → 0.5, 0% → 0
+    """
+    stars = round(pct / 10) / 2     # ปัดทุก 10% เป็น half-star
+    return max(0.0, min(5.0, stars))
+
+
 def _score_to_grade(score: int) -> dict:
-    """แปลงคะแนนเป็น grade + จำนวนดาว (0-5) + class CSS
-    คะแนนสูงสุด ~18-20 (วาร 3 + ดิถี 3 + นักษัตร 2 + กาลโยค 6 + เกณฑ์พิเศษ 4 + กิจกรรม 6)
+    """แปลงคะแนนเป็น grade + tier (สำหรับสี/ระดับ)
+    หมายเหตุ: ดาวคิดจาก % แล้วแยก function (_percent_to_stars)
     """
     if score >= 12:
-        return {"grade": "ดีเยี่ยม", "stars": 5, "tier": "best",
+        return {"grade": "ดีเยี่ยม", "tier": "best",
                 "summary": "ฤกษ์ดีเยี่ยม เหมาะที่สุดสำหรับงานสำคัญ"}
     if score >= 8:
-        return {"grade": "ดีมาก", "stars": 4.5, "tier": "great",
+        return {"grade": "ดีมาก", "tier": "great",
                 "summary": "ฤกษ์ดีมาก องค์ประกอบเอื้ออำนวยส่วนใหญ่"}
     if score >= 5:
-        return {"grade": "ดี", "stars": 4, "tier": "good",
+        return {"grade": "ดี", "tier": "good",
                 "summary": "ฤกษ์ดี เหมาะการเริ่มกิจมงคล"}
     if score >= 2:
-        return {"grade": "พอใช้", "stars": 3, "tier": "fair",
+        return {"grade": "พอใช้", "tier": "fair",
                 "summary": "ฤกษ์พอใช้ ดีกว่าวันธรรมดา"}
     if score >= 0:
-        return {"grade": "กลาง", "stars": 2.5, "tier": "neutral",
+        return {"grade": "กลาง", "tier": "neutral",
                 "summary": "ฤกษ์กลาง ไม่ดีไม่ร้าย"}
     if score >= -3:
-        return {"grade": "ระวัง", "stars": 2, "tier": "warning",
+        return {"grade": "ระวัง", "tier": "warning",
                 "summary": "ระวัง องค์ประกอบบางอย่างไม่เอื้อ"}
-    return {"grade": "ไม่เหมาะ", "stars": 1, "tier": "bad",
+    return {"grade": "ไม่เหมาะ", "tier": "bad",
             "summary": "ไม่เหมาะ มีปัจจัยขัดข้องหลายอย่าง"}
 
 
@@ -2361,11 +2383,106 @@ _PERIOD_INFO = {
 }
 
 
+def _serialize_dithi(h, event_label: Optional[str] = None) -> list:
+    """Serialize dithi list with relevance tag for current event"""
+    from thai_astro.dithi_classifier import is_relevant_for, should_show_for_event
+    # ดึง event category + key จาก event_label (look up จาก EVENTS)
+    event_category = None
+    event_key = None
+    if event_label:
+        for ev in _MUHURTA_EVENTS.values():
+            if ev.label == event_label:
+                event_category = ev.category
+                event_key = ev.key
+                break
+    out = []
+    for dc in (h.dithi_classifications or []):
+        # filter strict_event_only dithis ออกถ้าไม่ใช่ event ที่ตรง
+        if not should_show_for_event(dc, event_category, event_key):
+            continue
+        cats = list(dc.relevant_categories)
+        is_universal = "universal" in cats
+        is_universal_bad = "universal_bad" in cats
+        is_neutral = dc.severity == 0
+        # คิดความเหมาะสมกับ event ที่เลือก
+        if is_neutral:
+            relevance = "neutral"
+        elif is_universal:
+            relevance = "universal_good"
+        elif is_universal_bad:
+            relevance = "universal_bad"
+        elif event_category and is_relevant_for(dc, event_category, event_key=event_key):
+            relevance = "specific_match"   # ตรงกิจกรรม
+        else:
+            relevance = "specific_other"   # ดี/ร้าย แต่เหมาะกับงานอื่น
+        out.append({
+            "name": dc.name,
+            "is_auspicious": dc.is_auspicious,
+            "short_desc": dc.short_desc,
+            "long_desc": dc.long_desc,
+            "severity": dc.severity,
+            "suitable_for": dc.suitable_for,
+            "relevance": relevance,
+        })
+    return out
+
+
+def _serialize_roek(h, event_key: Optional[str]) -> Optional[dict]:
+    """Serialize roek (ฤกษ์ใหญ่) for tag with relevance"""
+    if not h.roek_name:
+        return None
+    from thai_astro.nakshatra import ROEK_INFO
+    info = ROEK_INFO.get(h.roek_name, {})
+    long_desc = info.get("long_desc", "")
+    relevant_events = info.get("relevant_events", ())
+    is_match = bool(event_key and event_key in relevant_events)
+    return {
+        "name": h.roek_name,
+        "is_auspicious": h.roek_auspicious,
+        "nakshatra_name": h.nakshatra_name,
+        "nakshatra_number": h.nakshatra_number,
+        "short_desc": h.roek_name,
+        "long_desc": long_desc,
+        "is_match": is_match,
+        "suitable_for": "เหมาะกับ " + ", ".join(
+            (_MUHURTA_EVENTS[k].label for k in relevant_events if k in _MUHURTA_EVENTS)
+        ) if relevant_events else "ไม่เฉพาะกิจกรรมใด",
+    }
+
+
+def _serialize_criteria(h, event_key: Optional[str]) -> list:
+    """Serialize matched special criteria with details"""
+    from thai_astro.muhurta_criteria import CRITERION_INFO
+    out = []
+    for name in (h.matched_criteria or []):
+        info = CRITERION_INFO.get(name, {})
+        relevant_events = info.get("relevant_events", ())
+        is_match = bool(event_key and event_key in relevant_events)
+        out.append({
+            "name": name,
+            "long_desc": info.get("long_desc", ""),
+            "tone": info.get("tone", "good"),
+            "is_match": is_match,
+            "suitable_for": "เหมาะกับ " + ", ".join(
+                (_MUHURTA_EVENTS[k].label for k in relevant_events if k in _MUHURTA_EVENTS)
+            ) if relevant_events else "",
+        })
+    return out
+
+
 def _serialize_hit(h, event_label: Optional[str] = None) -> dict:
     grade = _score_to_grade(h.score)
+    pct = _score_to_percent(h.score)
+    stars = _percent_to_stars(pct)
     period_icon, period_label = _PERIOD_INFO.get(h.period or "", ("", ""))
     # ฤกษ์ใช้ได้ในช่วง 1 ชั่วโมง (เพราะ scan ทุก 60 นาที — ลัคนาเดียวกัน)
     end_time = (h.when + timedelta(hours=1)).strftime("%H:%M")
+    # หา event_key สำหรับ filter relevance
+    event_key = None
+    for ev in _MUHURTA_EVENTS.values():
+        if ev.label == event_label:
+            event_key = ev.key
+            break
     return {
         "when": h.when.strftime("%d/%m/%Y %H:%M"),
         "be_date": f"{h.when.day:02d}/{h.when.month:02d}/{h.when.year + 543}",
@@ -2373,9 +2490,11 @@ def _serialize_hit(h, event_label: Optional[str] = None) -> dict:
         "time": h.when.strftime("%H:%M"),
         "time_end": end_time,
         "score": h.score,
+        "score_max": MUHURTA_SCORE_MAX,
+        "score_percent": pct,
         "verdict": h.verdict,
         "grade": grade["grade"],
-        "stars": grade["stars"],
+        "stars": stars,
         "tier": grade["tier"],
         "grade_summary": grade["summary"],
         "summary": h.summary,
@@ -2383,6 +2502,10 @@ def _serialize_hit(h, event_label: Optional[str] = None) -> dict:
         "period": h.period,
         "period_icon": period_icon,
         "period_label": period_label,
+        "lunar_pretty": h.lunar_pretty,
+        "dithi_classifications": _serialize_dithi(h, event_label),
+        "roek": _serialize_roek(h, event_key),
+        "matched_criteria_details": _serialize_criteria(h, event_key),
         "personal_bhava": h.personal_bhava,
         "personal_bhava_quality": h.personal_bhava_quality,
         "personal_bhava_tone": h.personal_bhava_tone,
@@ -2647,7 +2770,7 @@ async def muhurta_calculate(
             province=province,
             step_minutes=step_min,
             top_n_per_event=999,         # ไม่ cap ด้วยจำนวน
-            min_score=12,                 # cap ด้วยคุณภาพ (เกรด "ดีเยี่ยม" ขึ้นไป)
+            min_score=11,                 # >= 60% ของคะแนนเต็ม 17 (เกรด "ดีเยี่ยม cutoff")
             birth_datetime=birth_dt, birth_province=bprov,
             max_days=max_days,
             time_periods=None,
@@ -2770,12 +2893,16 @@ async def muhurta_check(
             final_score += event_extra_score
 
         grade = _score_to_grade(final_score)
+        pct = _score_to_percent(final_score)
+        stars = _percent_to_stars(pct)
         try:
             _stat_increment(FEATURE_MUHURTA_CHECK)
         except Exception:
             pass
         return JSONResponse({
             "when": when.strftime("%d/%m/%Y %H:%M"),
+            "score_max": MUHURTA_SCORE_MAX,
+            "score_percent": pct,
             "be_date": f"{when.day:02d}/{when.month:02d}/{when.year + 543}",
             "time": when.strftime("%H:%M"),
             "wan_planet": mr.wan_planet,
@@ -2797,7 +2924,7 @@ async def muhurta_check(
             "event_key": ek,
             "event_label": _MUHURTA_EVENTS[ek].label if ek else None,
             "grade": grade["grade"],
-            "stars": grade["stars"],
+            "stars": stars,
             "tier": grade["tier"],
             "grade_summary": grade["summary"],
             "suggestions": mr.activity_suggestions,

@@ -29,6 +29,7 @@ from .muhurta_criteria import (
     planet_house_from_lakkana,
 )
 from .lunar import compute_lunar_date, LunarDate
+from .dithi_classifier import classify_from_lunar, DithiClassification, is_relevant_for
 
 
 # ============================================================
@@ -109,6 +110,9 @@ class MuhurtaResult:
     navamsa: Dict                                # {planet: NavamsaPosition}
     vargottama_planets: List[str]                # ดาวที่เป็น Vargottama
 
+    # ดิถีตามตำรา
+    dithi_classifications: List[DithiClassification]
+
     # Verdict
     score: int
     verdict: str                                 # "ดีเยี่ยม"/"ดี"/"กลาง"/"ระวัง"
@@ -181,6 +185,9 @@ def compute_muhurta(
     nav_view = chart_to_navamsa_view(chart)
     vargottama = [name for name, pos in nav_view.items() if pos.is_vargottama]
 
+    # ดิถีตามตำรา (จำแนกประเภท)
+    dithi_classes = classify_from_lunar(wan, lunar)
+
     # ============================================================
     # Score & verdict
     # ============================================================
@@ -240,6 +247,24 @@ def compute_muhurta(
             score -= 3
             cautions.append(f"{sc.name}: {sc.detail}")
 
+    # ดิถีตามตำรา
+    # นับคะแนน "เฉพาะ" ดิถีที่เป็น universal (อมฤตโชค พรหมประสิทธิ์)
+    # หรือ universal_bad (อัคนิโรธ มหาสูญ)
+    # ดิถีที่เฉพาะหมวด (ชัยโชค ราชาโชค สิทธิโชค มหาสิทธิโชค) จะคิดคะแนน
+    # ต่อ event ใน scan_range_multi_events เพราะต้องรู้หมวดกิจกรรมก่อน
+    # universal_bad ใช้ multiplier ×2 — ฤกษ์ที่ติดดิถีร้ายจะลงต่ำชัดเจน
+    for dc in dithi_classes:
+        if dc.severity == 0:
+            continue
+        cats = dc.relevant_categories
+        if "universal" in cats:
+            score += dc.severity
+            suggestions.append(f"{dc.name}: {dc.short_desc}")
+        elif "universal_bad" in cats:
+            score -= dc.severity * 2     # double penalty
+            cautions.append(f"{dc.name}: {dc.short_desc}")
+        # อื่น (category-specific): ไม่นับใน base score
+
     # Vargottama: ถ้ามีดาวมงคลเป็น Vargottama → ดี
     for p in vargottama:
         if p in ("พฤหัสบดี", "ศุกร์", "พุธ", "จันทร์"):
@@ -268,6 +293,7 @@ def compute_muhurta(
         kalayok=kalayok, kalayok_matches=kalayok_matches,
         special_criteria=specials,
         navamsa=nav_view, vargottama_planets=vargottama,
+        dithi_classifications=dithi_classes,
         score=score, verdict=verdict,
         activity_suggestions=suggestions, cautions=cautions,
         event_key=event_key, event_score=ev_result,
@@ -290,6 +316,13 @@ class ScanHit:
     personal_bhava_quality: Optional[str] = None  # คำอธิบาย
     personal_bhava_tone: Optional[str] = None     # good/warning/neutral
     matched_criteria: Optional[List[str]] = None  # ชื่อเกณฑ์พิเศษที่ตก
+    dithi_classifications: Optional[List[DithiClassification]] = None  # ดิถีตามตำรา
+    lunar_pretty: Optional[str] = None           # ขึ้น/แรม X ค่ำ เดือน Y
+    # ฤกษ์ใหญ่ + นักษัตร (สำหรับ tag UI)
+    roek_name: Optional[str] = None              # เช่น "ราชาฤกษ์"
+    roek_auspicious: Optional[bool] = None
+    nakshatra_name: Optional[str] = None         # เช่น "ปุษยะ"
+    nakshatra_number: Optional[int] = None       # 1-27
 
 
 def _period_of_hour(hour: int) -> str:
@@ -398,6 +431,12 @@ def scan_range(
                     personal_bhava_quality=bhava_q,
                     personal_bhava_tone=bhava_tone,
                     matched_criteria=matched_specials or None,
+                    dithi_classifications=mr.dithi_classifications or None,
+                    lunar_pretty=mr.lunar.pretty_short,
+                    roek_name=mr.nakshatra.roek_name,
+                    roek_auspicious=mr.nakshatra.is_auspicious,
+                    nakshatra_name=mr.nakshatra.name,
+                    nakshatra_number=mr.nakshatra.number,
                 ))
         except Exception:
             pass
@@ -519,8 +558,22 @@ def scan_range_multi_events(
 
             # ให้คะแนนแต่ละ event ที่ moment นี้
             for ek in keys:
+                ev = EVENTS[ek]
                 ev_extra = _event_score(base.chart, ek)
                 final_score = base_score + ev_extra["score"]
+                # คะแนนดิถีเฉพาะหมวด (category-specific dithis)
+                # เช่น ดิถีชัยโชค +2 ถ้า event เป็นหมวด business/study
+                for dc in (base.dithi_classifications or []):
+                    if dc.severity == 0:
+                        continue
+                    cats = dc.relevant_categories
+                    if "universal" in cats or "universal_bad" in cats:
+                        continue  # คิดใน base.score แล้ว
+                    if is_relevant_for(dc, ev.category, event_key=ek):
+                        if dc.is_auspicious:
+                            final_score += dc.severity
+                        else:
+                            final_score -= dc.severity
                 if final_score < min_score:
                     continue
                 out[ek].append(ScanHit(
@@ -531,6 +584,12 @@ def scan_range_multi_events(
                     personal_bhava_quality=bhava_q,
                     personal_bhava_tone=bhava_tone,
                     matched_criteria=matched_specials or None,
+                    dithi_classifications=base.dithi_classifications or None,
+                    lunar_pretty=base.lunar.pretty_short,
+                    roek_name=base.nakshatra.roek_name,
+                    roek_auspicious=base.nakshatra.is_auspicious,
+                    nakshatra_name=base.nakshatra.name,
+                    nakshatra_number=base.nakshatra.number,
                 ))
         except Exception:
             pass
