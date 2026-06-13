@@ -5,6 +5,9 @@
 {% set bad_criteria = h.matched_criteria_details|selectattr('tone', 'ne', 'good')|list %}
 {% set has_bad = bad_dithis or bad_roek or bad_criteria %}
 {% set bad_count = (bad_dithis|length) + (1 if bad_roek else 0) + (bad_criteria|length) %}
+{# ตำราขัด: มีดิถีมงคล (severity > 0) + ดิถีร้าย ในวันเดียวกัน → ต่างเล่มไม่ตรงกัน #}
+{% set good_dithis = h.dithi_classifications|selectattr('is_auspicious')|selectattr('severity', 'gt', 0)|list %}
+{% set has_text_conflict = good_dithis and bad_dithis %}
 <div class="hit-card tier-{{ h.tier }} period-bg-{{ h.period }} {% if rank == 1 %}top{% endif %} {% if has_bad %}has-warning{% endif %}"
      data-iso="{{ h.iso }}"
      data-province="{{ form.province }}"
@@ -39,7 +42,7 @@
       <div class="grade-stars" title="{{ h.grade_summary }} — คะแนน {{ h.score }} จาก ~20">
         {% for i in range(5) %}
           {% if h.stars >= i + 1 %}<span class="star full">★</span>
-          {% elif h.stars >= i + 0.5 %}<span class="star half">⯨</span>
+          {% elif h.stars >= i + 0.5 %}<span class="star half">★</span>
           {% else %}<span class="star empty">☆</span>{% endif %}
         {% endfor %}
       </div>
@@ -99,6 +102,12 @@
   {% if h.dithi_classifications %}
     <div class="hit-dithi-tags">
       <span class="dithi-tags-title">📿 ดิถี ({{ h.lunar_pretty }}):</span>
+      {% if has_text_conflict %}
+        <span class="dithi-conflict-hint"
+              title="ตำราโบราณบางเล่มจัดเป็นมงคล อีกเล่มจัดเป็นวันร้าย เช่น พฤหัส ๕ ค่ำ (ทักทิน + ปุรณมหาเศรษฐี) หรือ เสาร์ ๙ ค่ำ (ยมขันธ์ + มิตรมหาเศรษฐี) — ผู้ใช้พิจารณาตามตำราที่ยึดถือ">
+          📚 ตำราขัดกัน
+        </span>
+      {% endif %}
       {% for dc in h.dithi_classifications %}
         {% set icon = '📅' if dc.relevance == 'neutral' else (
                       '🚫' if dc.relevance == 'universal_bad' else (

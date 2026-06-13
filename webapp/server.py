@@ -2385,7 +2385,7 @@ _PERIOD_INFO = {
 
 def _serialize_dithi(h, event_label: Optional[str] = None) -> list:
     """Serialize dithi list with relevance tag for current event"""
-    from thai_astro.dithi_classifier import is_relevant_for, should_show_for_event
+    from thai_astro.dithi_classifier import DITHI_INFO, is_relevant_for, should_show_for_event
     # ดึง event category + key จาก event_label (look up จาก EVENTS)
     event_category = None
     event_key = None
@@ -2395,11 +2395,15 @@ def _serialize_dithi(h, event_label: Optional[str] = None) -> list:
                 event_category = ev.category
                 event_key = ev.key
                 break
+    raw = list(h.dithi_classifications or [])
+    # ถ้า raw มีแต่ entries ที่เป็น strict_event_only แล้วถูก filter ออกหมด
+    # (เกิดกับวาร 3/4/7 — อ/พุธ/ส — ที่ classifier auto-เพิ่ม wan-taboo)
+    # → ใส่ "ดิถีปกติ" เป็น fallback เพื่อไม่ให้แถวดิถีหายไปทั้งแถว
+    filtered = [dc for dc in raw if should_show_for_event(dc, event_category, event_key)]
+    if raw and not filtered:
+        filtered = [DITHI_INFO["ปกติ"]]
     out = []
-    for dc in (h.dithi_classifications or []):
-        # filter strict_event_only dithis ออกถ้าไม่ใช่ event ที่ตรง
-        if not should_show_for_event(dc, event_category, event_key):
-            continue
+    for dc in filtered:
         cats = list(dc.relevant_categories)
         is_universal = "universal" in cats
         is_universal_bad = "universal_bad" in cats
@@ -2743,12 +2747,12 @@ async def muhurta_calculate(
         end = datetime(y2, m2, d2, 22, 0)
         if end < start:
             raise ValueError("วันสิ้นสุดต้องหลังวันเริ่ม")
-        max_days = int(range_days) if range_days in ("30", "60", "90") else 30
+        max_days = int(range_days) if range_days in ("15", "30", "45", "60", "90") else 30
         if (end - start).days > max_days:
             raise ValueError(f"ช่วงเกิน {max_days} วัน")
 
-        # ใช้ step 60 นาทีเท่ากันทุก range เพื่อให้ผลลัพธ์เป็น subset
-        # (30 วัน ⊆ 60 วัน ⊆ 90 วัน เสมอ)
+        # ใช้ step 60 นาทีคงที่ — ทำให้ผลลัพธ์ระหว่าง range เป็น subset
+        # (15 วัน ⊆ 30 วัน ⊆ 45 วัน ⊆ ...)
         step_min = 60
 
         birth_dt = None
@@ -2936,6 +2940,212 @@ async def muhurta_check(
         return JSONResponse({"error": str(e)}, status_code=400)
     except Exception as e:
         return JSONResponse({"error": f"ผิดพลาด: {e}"}, status_code=500)
+
+
+# ============================================================
+# Forecast 7 วัน (เมื่อวาน−2 ถึง +3) — strip บน /muhurta
+# ============================================================
+def _format_be_date_short(d: _date) -> str:
+    """13 มิ.ย."""
+    months = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+              "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
+    return f"{d.day} {months[d.month]}"
+
+
+def _wan_name_from_date(d: _date) -> str:
+    names = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"]
+    return names[d.weekday()]
+
+
+_FORECAST_MIN_SCORE = 11    # ตรงกับ cutoff ของ scan ปกติ
+_FORECAST_CACHE: Dict[tuple, dict] = {}     # (date_iso, province) → result
+
+
+def _compute_forecast_day(d: _date, province: str) -> dict:
+    """คำนวณข้อมูลฤกษ์ของวันเดียว สำหรับการ์ดใน strip
+    Returns dict with: date, wan, score_avg, percent, stars, grade, tier,
+        top_events (3), bad_alerts, hit_count, event_count
+    """
+    cache_key = (d.isoformat(), province)
+    if cache_key in _FORECAST_CACHE:
+        return _FORECAST_CACHE[cache_key]
+
+    from thai_astro.muhurta import scan_range_multi_events as _scan
+    start = datetime(d.year, d.month, d.day, 6, 0)
+    end = datetime(d.year, d.month, d.day, 22, 0)
+    event_keys = list(_MUHURTA_EVENTS.keys())
+
+    try:
+        # ใช้ max_per_day=15 ให้ตรงกับ /forecast/event-hits — count "N เวลา"
+        # บน chip จะตรงกับจำนวนฤกษ์ที่ขยายออกมาจริง
+        results = _scan(
+            start=start, end=end, event_keys=event_keys,
+            province=province, step_minutes=60,
+            top_n_per_event=15, min_score=_FORECAST_MIN_SCORE,
+            max_per_day=15,
+        )
+    except Exception:
+        results = {}
+
+    # รวมคะแนนทุก event
+    all_scores = []
+    event_stats: Dict[str, dict] = {}    # event_key → {best, count}
+    for ek, hits in results.items():
+        if not hits:
+            continue
+        scores = [h.score for h in hits]
+        event_stats[ek] = {"best": max(scores), "count": len(scores)}
+        all_scores.extend(scores)
+
+    hit_count = len(all_scores)
+    event_count = len(event_stats)
+    avg_score = (sum(all_scores) / hit_count) if hit_count else 0
+
+    # คะแนนการ์ด: เฉลี่ย hits ที่ผ่าน threshold; ถ้าไม่มี hit เลย → 0
+    card_score = avg_score
+    pct = _score_to_percent(int(round(card_score)))
+    grade_info = _score_to_grade(int(round(card_score)))
+
+    # top 3 events เรียงตาม best score
+    top_sorted = sorted(event_stats.items(), key=lambda x: -x[1]["best"])[:3]
+    top_events = []
+    for ek, stats in top_sorted:
+        ev = _MUHURTA_EVENTS[ek]
+        ev_grade = _score_to_grade(stats["best"])
+        top_events.append({
+            "key": ek,
+            "icon": ev.icon,
+            "label": ev.label,
+            "score": stats["best"],
+            "time_count": stats["count"],
+            "percent": _score_to_percent(stats["best"]),
+            "grade": ev_grade["grade"],
+            "tier": ev_grade["tier"],
+        })
+
+    # bad alerts: event taboo dithi ที่เกิดวันนี้ (strict_event_only ที่ตรง)
+    # เช็คจาก base muhurta ของวันนั้น ตอนเที่ยง
+    from thai_astro.muhurta import compute_muhurta
+    from thai_astro.dithi_classifier import is_relevant_for
+    bad_alerts = []
+    try:
+        base = compute_muhurta(
+            datetime(d.year, d.month, d.day, 12, 0), province, event_key=None,
+        )
+        for dc in (base.dithi_classifications or []):
+            if dc.strict_event_only and not dc.is_auspicious:
+                # หา event ที่ตรง relevant_events
+                for ek in (dc.relevant_events or ()):
+                    if ek in _MUHURTA_EVENTS:
+                        ev = _MUHURTA_EVENTS[ek]
+                        bad_alerts.append({
+                            "key": ek, "icon": ev.icon, "label": ev.label,
+                            "reason": dc.name,
+                        })
+    except Exception:
+        pass
+
+    out = {
+        "date": d.isoformat(),
+        "be_year": d.year + 543,
+        "be_date_short": _format_be_date_short(d),
+        "wan": _wan_name_from_date(d),
+        "score": int(round(card_score)),
+        "percent": pct,
+        "stars": _percent_to_stars(pct),
+        "grade": grade_info["grade"],
+        "tier": grade_info["tier"],
+        "summary": grade_info["summary"],
+        "hit_count": hit_count,
+        "event_count": event_count,
+        "top_events": top_events,
+        "bad_alerts": bad_alerts,
+    }
+    _FORECAST_CACHE[cache_key] = out
+    return out
+
+
+@app.get("/muhurta/forecast")
+async def muhurta_forecast(
+    province: str = "กรุงเทพมหานคร",
+    center: str = "",    # YYYY-MM-DD, default = today
+) -> JSONResponse:
+    """ฤกษ์ 7 วัน: center−3 ถึง center+3 (เมื่อวาน−2/เมื่อวาน/วันนี้/พรุ่งนี้/+1/+2/+3)"""
+    if center:
+        try:
+            base = datetime.strptime(center, "%Y-%m-%d").date()
+        except ValueError:
+            base = datetime.now().date()
+    else:
+        base = datetime.now().date()
+    # 7 การ์ด: -2, -1, 0, +1, +2, +3, +4 (อดีต 2 วัน + วันนี้ + อนาคต 4 วัน)
+    days = [base + timedelta(days=offset) for offset in range(-2, 5)]
+    forecast = []
+    for d in days:
+        info = _compute_forecast_day(d, province)
+        info["offset"] = (d - base).days
+        info["is_today"] = (d == base)
+        forecast.append(info)
+    return JSONResponse({"days": forecast, "center": base.isoformat(), "province": province})
+
+
+@app.get("/muhurta/forecast/event-hits", response_class=HTMLResponse)
+async def muhurta_forecast_event_hits(
+    request: Request,
+    date: str,            # YYYY-MM-DD
+    event: str,           # event key
+    province: str = "กรุงเทพมหานคร",
+) -> HTMLResponse:
+    """คืน HTML partial: รายการ hit-card สำหรับ event ที่เลือก ในวันที่กำหนด
+    ใช้กับ inline expand ใน forecast strip"""
+    from thai_astro.muhurta import scan_range_multi_events as _scan
+    if event not in _MUHURTA_EVENTS:
+        return HTMLResponse(
+            f'<div class="forecast-empty-msg">⚠️ ไม่รู้จักกิจกรรม: {event}</div>',
+            status_code=400,
+        )
+    try:
+        d = datetime.strptime(date, "%Y-%m-%d").date()
+    except ValueError:
+        return HTMLResponse(
+            f'<div class="forecast-empty-msg">⚠️ วันที่ไม่ถูกต้อง: {date}</div>',
+            status_code=400,
+        )
+    ev = _MUHURTA_EVENTS[event]
+    start = datetime(d.year, d.month, d.day, 6, 0)
+    end = datetime(d.year, d.month, d.day, 22, 0)
+    try:
+        results = _scan(
+            start=start, end=end, event_keys=[event],
+            province=province, step_minutes=60,
+            top_n_per_event=15, min_score=_FORECAST_MIN_SCORE,
+            max_per_day=15,    # ทั้งวันเอาหมด
+        )
+    except Exception as e:
+        return HTMLResponse(
+            f'<div class="forecast-empty-msg">⚠️ คำนวณไม่สำเร็จ: {e}</div>',
+            status_code=500,
+        )
+    hits = results.get(event, []) or []
+    if not hits:
+        return HTMLResponse(
+            f'<div class="forecast-empty-msg">— ไม่มีฤกษ์ดีของ "{ev.label}" ในวันนี้ —</div>'
+        )
+    # Sort: best score first
+    hits = sorted(hits, key=lambda h: -h.score)
+    serialized = [_serialize_hit(h, event_label=ev.label) for h in hits]
+    result_ctx = {
+        "mode": "general",
+        "event_keys": [event],
+        "events_labels": {event: f"{ev.icon} {ev.label}"},
+    }
+    form_ctx = {"province": province}
+    # render hit-card rows
+    tpl = templates.env.get_template("_muhurta_hit_row.html")
+    parts = []
+    for i, h_dict in enumerate(serialized, start=1):
+        parts.append(tpl.render(h=h_dict, rank=i, result=result_ctx, form=form_ctx))
+    return HTMLResponse("".join(parts))
 
 
 @app.get("/muhurta/detail")

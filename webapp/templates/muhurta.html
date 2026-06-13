@@ -218,8 +218,16 @@
     .hit-grade-block { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: 1; justify-content: flex-end; }
     .grade-stars { font-size: 20px; letter-spacing: 1px; }
     .grade-stars .star.full  { color: #d4a017; text-shadow: 0 0 4px rgba(212, 160, 23, 0.4); }
-    .grade-stars .star.half  { color: #d4a017; }
     .grade-stars .star.empty { color: #d8b870; opacity: 0.4; }
+    /* half-star: render full ★ (universal glyph) with right half clipped via ::after overlay.
+       Avoids U+2BE8 which falls back to a tofu box on Edge/Segoe UI Symbol. */
+    .grade-stars .star.half  { position: relative; display: inline-block; color: #d8b870; opacity: 0.4; }
+    .grade-stars .star.half::before {
+      content: "★"; position: absolute; left: 0; top: 0;
+      width: 50%; overflow: hidden;
+      color: #d4a017; opacity: 1;
+      text-shadow: 0 0 4px rgba(212, 160, 23, 0.4);
+    }
     .grade-label { padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 15px; }
     .grade-label.tier-best   { background: linear-gradient(135deg, #d4a017, #8b6914); color: #fff; }
     .grade-label.tier-great  { background: linear-gradient(135deg, #2e7d32, #1b5e20); color: #fff; }
@@ -253,6 +261,14 @@
     .hit-dithi-tags { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #d8b870; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
     .dithi-tags-title { font-size: 12px; font-weight: 700; color: #6d4c00; margin-right: 4px; width: 100%; margin-bottom: 2px; }
     @media (min-width: 700px) { .dithi-tags-title { width: auto; margin-bottom: 0; } }
+    .dithi-conflict-hint {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 11px; font-weight: 700;
+      padding: 2px 9px; border-radius: 12px;
+      background: #fff3cd; color: #6d4c00;
+      border: 1px dashed #d4a017;
+      cursor: help; user-select: none;
+    }
     .dithi-tag { font-family: inherit; border: 1.5px solid; border-radius: 14px; padding: 3px 10px; cursor: pointer; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; transition: transform 0.1s; }
     .dithi-tag:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     .dithi-tag-icon { font-size: 12px; }
@@ -399,6 +415,190 @@
       .loading-title { font-size: 18px; }
       .loading-message { font-size: 13px; }
     }
+
+    /* ============== ฤกษ์ 7 วัน strip ============== */
+    .forecast-section {
+      background: linear-gradient(135deg, #fff8e7, #f5e6c8);
+      border: 2px solid #d4a017;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      box-shadow: 0 2px 8px rgba(212, 160, 23, 0.15);
+    }
+    .forecast-header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; margin-bottom: 10px;
+    }
+    .forecast-title {
+      font-size: 16px; font-weight: 700; color: #6d1414;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .forecast-help {
+      font-size: 12px; color: #6d4c00; opacity: 0.85;
+    }
+    .forecast-strip {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+    }
+    @media (max-width: 900px) {
+      .forecast-strip {
+        display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+        gap: 8px; padding-bottom: 6px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .forecast-day { flex: 0 0 38%; scroll-snap-align: start; min-width: 130px; }
+    }
+    .forecast-day {
+      background: #fff; border: 1.5px solid #d8b870; border-radius: 10px;
+      padding: 8px 6px; cursor: pointer; text-align: center;
+      transition: transform 0.12s, box-shadow 0.12s;
+      display: flex; flex-direction: column; gap: 3px;
+      position: relative;
+    }
+    .forecast-day:hover { transform: translateY(-2px); box-shadow: 0 3px 10px rgba(0,0,0,0.12); }
+    .forecast-day.today {
+      border: 2.5px solid #d4a017; box-shadow: 0 0 0 3px rgba(212, 160, 23, 0.2);
+      background: linear-gradient(180deg, #fff, #fffaeb);
+    }
+    .forecast-day.expanded {
+      box-shadow: 0 0 0 3px rgba(109, 20, 20, 0.25);
+      border-color: #6d1414;
+    }
+    .forecast-day-label {
+      font-size: 10px; color: #8b6914; font-weight: 600; opacity: 0.85;
+    }
+    .forecast-day-wan {
+      font-size: 13px; font-weight: 700; color: #6d1414;
+    }
+    .forecast-day-date {
+      font-size: 13px; color: #2d1e00; font-weight: 600;
+    }
+    .forecast-day-stars { font-size: 14px; letter-spacing: 0.5px; margin: 2px 0; min-height: 18px; }
+    .forecast-day-stars .star.full { color: #d4a017; }
+    .forecast-day-stars .star.empty { color: #d8b870; opacity: 0.4; }
+    .forecast-day-stars .star.half {
+      position: relative; display: inline-block; color: #d8b870; opacity: 0.4;
+    }
+    .forecast-day-stars .star.half::before {
+      content: "★"; position: absolute; left: 0; top: 0;
+      width: 50%; overflow: hidden; color: #d4a017; opacity: 1;
+    }
+    .forecast-day-grade {
+      font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 10px;
+      display: inline-block; margin: 0 auto;
+    }
+    .forecast-day-grade.tier-best   { background: linear-gradient(135deg, #d4a017, #8b6914); color: #fff; }
+    .forecast-day-grade.tier-great  { background: #2e7d32; color: #fff; }
+    .forecast-day-grade.tier-good   { background: #66bb6a; color: #fff; }
+    .forecast-day-grade.tier-fair   { background: #d8b870; color: #2d1e00; }
+    .forecast-day-grade.tier-neutral{ background: #e0d6b8; color: #6d4c00; }
+    .forecast-day-grade.tier-warning{ background: #e65100; color: #fff; }
+    .forecast-day-grade.tier-bad    { background: #b71c1c; color: #fff; }
+    .forecast-day-icons {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 2px;
+      font-size: 14px; min-height: 20px;
+    }
+    .forecast-day-icons .ev-icon { line-height: 1; }
+    .forecast-day-count {
+      font-size: 10px; color: #6d4c00; opacity: 0.8;
+    }
+    .forecast-day-bad-badge {
+      position: absolute; top: 4px; right: 4px;
+      background: #b71c1c; color: #fff;
+      font-size: 10px; font-weight: 700;
+      padding: 1px 5px; border-radius: 8px;
+      line-height: 1.3;
+    }
+    .forecast-loading {
+      text-align: center; padding: 20px; color: #8b6914; font-style: italic;
+    }
+
+    /* expand inline panel */
+    .forecast-expand {
+      margin-top: 12px; padding: 14px; border-radius: 10px;
+      background: #fff; border: 1.5px solid #d8b870;
+      display: none;
+    }
+    .forecast-expand.open { display: block; }
+    .forecast-expand-header {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 10px; margin-bottom: 10px;
+      padding-bottom: 8px; border-bottom: 1px dashed #d8b870;
+    }
+    .forecast-expand-title {
+      font-size: 15px; font-weight: 700; color: #6d1414;
+    }
+    .forecast-expand-summary {
+      font-size: 12px; color: #6d4c00;
+    }
+    .forecast-expand-section {
+      margin-bottom: 10px;
+    }
+    .forecast-expand-section h5 {
+      font-size: 12px; color: #6d4c00; margin: 0 0 6px 0;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .forecast-event-list {
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .forecast-event-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 11px; border-radius: 14px;
+      font-size: 12px; font-weight: 600;
+      background: #e8f5e9; color: #1b5e20; border: 1.5px solid #66bb6a;
+      font-family: inherit;
+      cursor: pointer; transition: transform 0.1s, box-shadow 0.1s, background 0.15s;
+    }
+    .forecast-event-chip:hover {
+      background: #c8e6c9; transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(46, 125, 50, 0.2);
+    }
+    .forecast-event-chip.selected {
+      background: #2e7d32; color: #fff; border-color: #1b5e20;
+      box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.25);
+    }
+    .forecast-event-chip.selected .forecast-event-chip-grade { background: rgba(255,255,255,0.25); color: #fff; }
+    .forecast-event-chip.selected .forecast-event-chip-count { color: #e8f5e9; }
+    .forecast-event-chip.selected .forecast-event-chip-arrow { opacity: 1; transform: rotate(90deg); transition: transform 0.18s; }
+    .forecast-event-chip-arrow { display: inline-block; transition: transform 0.18s; }
+    /* inline detail panel under the chips */
+    .forecast-event-detail {
+      margin-top: 12px; padding: 0;
+      display: none;
+      border-top: 2px dashed #66bb6a;
+      padding-top: 12px;
+    }
+    .forecast-event-detail.open { display: block; }
+    /* override hit-card padding inside forecast detail (compact) */
+    .forecast-event-detail .hit-card { margin-bottom: 10px; cursor: default; }
+    .forecast-event-detail .hit-expand-row { display: none; }
+    .forecast-empty-msg {
+      color: #8b6914; font-style: italic; font-size: 13px;
+      text-align: center; padding: 10px;
+    }
+    .forecast-event-chip.bad {
+      background: #ffebee; color: #b71c1c; border-color: #ef5350;
+      cursor: default;
+    }
+    .forecast-event-chip.bad:hover {
+      transform: none; box-shadow: none; background: #ffebee;
+    }
+    .forecast-event-chip-grade {
+      background: rgba(255,255,255,0.7); padding: 1px 7px; border-radius: 8px;
+      font-size: 10px; font-weight: 700;
+    }
+    .forecast-event-chip-count {
+      font-size: 10px; opacity: 0.75; font-weight: 600;
+    }
+    .forecast-event-chip-arrow {
+      font-size: 11px; opacity: 0.6;
+    }
+    .forecast-good-hint {
+      font-size: 11px; font-weight: 500; color: #8b6914;
+      text-transform: none; letter-spacing: 0;
+    }
+    .forecast-expand-empty {
+      color: #8b6914; font-style: italic; font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -433,6 +633,33 @@
   <main class="muhurta-wrap">
 
     {% if error %}<div class="error">⚠️ {{ error }}</div>{% endif %}
+
+    <!-- ฤกษ์ 7 วัน strip -->
+    <section class="forecast-section" id="forecast-section" aria-label="ฤกษ์ 7 วัน">
+      <div class="forecast-header">
+        <span class="forecast-title">📅 ฤกษ์ 7 วัน</span>
+        <span class="forecast-help" title="ค่าเฉลี่ยจากทุกกิจกรรมที่ผ่านเกณฑ์ดีในวันนั้น คลิกการ์ดดูรายละเอียด">ⓘ คลิกการ์ดดูรายละเอียด</span>
+      </div>
+      <div class="forecast-strip" id="forecast-strip">
+        <div class="forecast-loading">กำลังคำนวณ...</div>
+      </div>
+      <div class="forecast-expand" id="forecast-expand">
+        <div class="forecast-expand-header">
+          <div>
+            <div class="forecast-expand-title" id="forecast-expand-title">—</div>
+            <div class="forecast-expand-summary" id="forecast-expand-summary">—</div>
+          </div>
+        </div>
+        <div class="forecast-expand-section" id="forecast-good-section">
+          <h5>✅ เหมาะกับกิจกรรม <span class="forecast-good-hint">(คลิกกิจกรรมเพื่อดูเวลาที่เหมาะ)</span></h5>
+          <div class="forecast-event-list" id="forecast-good-list"></div>
+        </div>
+        <div class="forecast-expand-section" id="forecast-bad-section">
+          <h5>⚠️ ห้ามตามตำราโบราณ</h5>
+          <div class="forecast-event-list" id="forecast-bad-list"></div>
+        </div>
+      </div>
+    </section>
 
     <form method="post" action="/muhurta" id="muhurta-form">
 
@@ -483,7 +710,9 @@
         <h3><span class="step-num">3</span>ช่วงเวลา + จังหวัด</h3>
 
         <div class="range-row">
+          <button type="button" class="range-btn {% if form.range_days == '15' %}active{% endif %}" data-range="15">15 วัน</button>
           <button type="button" class="range-btn {% if form.range_days == '30' %}active{% endif %}" data-range="30">30 วัน</button>
+          <button type="button" class="range-btn {% if form.range_days == '45' %}active{% endif %}" data-range="45">45 วัน</button>
           <button type="button" class="range-btn {% if form.range_days == '60' %}active{% endif %}" data-range="60">60 วัน</button>
           <button type="button" class="range-btn {% if form.range_days == '90' %}active{% endif %}" data-range="90">90 วัน</button>
         </div>
@@ -1011,7 +1240,7 @@
       let stars = '';
       for (let i = 0; i < 5; i++) {
         if (d.stars >= i + 1) stars += '<span class="star full">★</span>';
-        else if (d.stars >= i + 0.5) stars += '<span class="star half">⯨</span>';
+        else if (d.stars >= i + 0.5) stars += '<span class="star half">★</span>';
         else stars += '<span class="star empty">☆</span>';
       }
       let html = `<div class="hit-card tier-${d.tier}" style="cursor:default;">
@@ -1170,6 +1399,230 @@
       s += '</svg>';
       return s;
     }
+
+    // ============ ฤกษ์ 7 วัน strip ============
+    (function() {
+      const strip = document.getElementById('forecast-strip');
+      const expandBox = document.getElementById('forecast-expand');
+      if (!strip) return;
+
+      function renderStars(stars) {
+        let html = '';
+        for (let i = 0; i < 5; i++) {
+          if (stars >= i + 1) html += '<span class="star full">★</span>';
+          else if (stars >= i + 0.5) html += '<span class="star half">★</span>';
+          else html += '<span class="star empty">☆</span>';
+        }
+        return html;
+      }
+
+      function offsetLabel(off) {
+        // ภาษาที่ user ขอ: ใช้คำว่าวัน เริ่มนับ +N จากพรุ่งนี้
+        if (off === -2) return '−2 วัน';
+        if (off === -1) return 'เมื่อวาน';
+        if (off === 0)  return 'วันนี้';
+        if (off === 1)  return 'พรุ่งนี้';
+        if (off === 2)  return '+1 วัน';
+        if (off === 3)  return '+2 วัน';
+        if (off === 4)  return '+3 วัน';
+        return (off > 0 ? '+' : '') + off + ' วัน';
+      }
+
+      let currentDays = [];
+      let currentProvince = 'กรุงเทพมหานคร';
+
+      function renderStrip(days) {
+        currentDays = days;
+        let html = '';
+        days.forEach((d, idx) => {
+          const todayCls = d.is_today ? ' today' : '';
+          const topIcons = (d.top_events || []).slice(0, 3).map(e => `<span class="ev-icon" title="${e.label} (${e.score})">${e.icon}</span>`).join('');
+          const badBadge = (d.bad_alerts && d.bad_alerts.length) ? `<span class="forecast-day-bad-badge" title="${d.bad_alerts.length} กิจกรรมห้าม">⚠️ ${d.bad_alerts.length}</span>` : '';
+          const countText = d.hit_count
+            ? `${d.event_count} กิจกรรม`
+            : '<span style="opacity:0.6">ไม่มีฤกษ์ผ่านเกณฑ์</span>';
+          html += `<div class="forecast-day${todayCls}" data-idx="${idx}">
+            ${badBadge}
+            <div class="forecast-day-label">${offsetLabel(d.offset)}</div>
+            <div class="forecast-day-wan">วัน${d.wan}</div>
+            <div class="forecast-day-date">${d.be_date_short}</div>
+            <div class="forecast-day-stars">${renderStars(d.stars)}</div>
+            <div class="forecast-day-grade tier-${d.tier}">${d.grade}</div>
+            <div class="forecast-day-icons">${topIcons || '<span style="opacity:0.4">—</span>'}</div>
+            <div class="forecast-day-count">${countText}</div>
+          </div>`;
+        });
+        strip.innerHTML = html;
+        strip.querySelectorAll('.forecast-day').forEach(el => {
+          el.addEventListener('click', () => onCardClick(parseInt(el.dataset.idx, 10), el));
+        });
+        // auto-scroll to today on mobile
+        const today = strip.querySelector('.forecast-day.today');
+        if (today && window.innerWidth < 900) {
+          today.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' });
+        }
+      }
+
+      function onCardClick(idx, cardEl) {
+        const d = currentDays[idx];
+        if (!d) return;
+        // reset event-detail panel (ของวันก่อน) เสมอเมื่อสลับการ์ด
+        const evDetail = document.getElementById('forecast-event-detail');
+        if (evDetail) {
+          evDetail.classList.remove('open');
+          evDetail.dataset.openKey = '';
+          evDetail.innerHTML = '';
+        }
+        document.querySelectorAll('.forecast-event-chip.selected')
+          .forEach(c => c.classList.remove('selected'));
+        // toggle: if same expanded → close
+        const wasOpen = expandBox.classList.contains('open') && expandBox.dataset.idx === String(idx);
+        strip.querySelectorAll('.forecast-day.expanded').forEach(el => el.classList.remove('expanded'));
+        if (wasOpen) {
+          expandBox.classList.remove('open');
+          return;
+        }
+        cardEl.classList.add('expanded');
+        expandBox.dataset.idx = String(idx);
+        // header
+        document.getElementById('forecast-expand-title').textContent =
+          `${offsetLabel(d.offset)} — วัน${d.wan} ${d.be_date_short} พ.ศ. ${d.be_year}`;
+        document.getElementById('forecast-expand-summary').textContent =
+          d.hit_count
+            ? `${d.summary} • ${d.hit_count} ฤกษ์ผ่านเกณฑ์ใน ${d.event_count} กิจกรรม`
+            : 'วันนี้ไม่มีฤกษ์ดีตามเกณฑ์มาตรฐาน — ลองหาฤกษ์เฉพาะกิจกรรมเพื่อรายละเอียดเพิ่ม';
+        // good list — แต่ละ chip คลิกได้ → auto select event + submit
+        const goodList = document.getElementById('forecast-good-list');
+        const goodSection = document.getElementById('forecast-good-section');
+        if (d.top_events && d.top_events.length) {
+          goodList.innerHTML = d.top_events.map(e =>
+            `<button type="button" class="forecast-event-chip" data-event-key="${e.key}"
+               title="ฤกษ์ดีที่สุดของกิจกรรมนี้ได้ ${e.score} คะแนน — คลิกเพื่อดูเวลาทั้ง ${e.time_count} ฤกษ์">
+               ${e.icon} ${e.label}
+               <span class="forecast-event-chip-grade">${e.grade}</span>
+               <span class="forecast-event-chip-count">${e.time_count} เวลา</span>
+               <span class="forecast-event-chip-arrow">›</span>
+             </button>`
+          ).join('');
+          goodList.querySelectorAll('.forecast-event-chip').forEach(btn => {
+            btn.addEventListener('click', () => goToDetail(d, btn.dataset.eventKey, btn));
+          });
+          goodSection.style.display = '';
+        } else {
+          goodList.innerHTML = '<span class="forecast-expand-empty">— ไม่มีกิจกรรมที่ผ่านเกณฑ์ดีในวันนี้ —</span>';
+          // ยังโชว์ section ไว้ แต่ไม่มี chips ที่คลิกได้
+          goodSection.style.display = '';
+        }
+        // bad list — แสดงเหตุผล (text) ไม่ใช่ปุ่ม คลิกไม่ได้
+        const badSection = document.getElementById('forecast-bad-section');
+        const badList = document.getElementById('forecast-bad-list');
+        if (d.bad_alerts && d.bad_alerts.length) {
+          badList.innerHTML = d.bad_alerts.map(a =>
+            `<span class="forecast-event-chip bad" title="ห้ามตามตำราโบราณ">${a.icon} ${a.label} <span class="forecast-event-chip-grade">${a.reason}</span></span>`
+          ).join('');
+          badSection.style.display = '';
+        } else {
+          badSection.style.display = 'none';
+        }
+        expandBox.classList.add('open');
+      }
+
+      // คลิกกิจกรรมในการ์ด → toggle inline expansion ของฤกษ์ของกิจกรรมนั้น ใต้ chip
+      async function goToDetail(d, eventKey, chipEl) {
+        // หา container ที่อยู่ใต้ chip — สร้างถ้ายังไม่มี
+        let detailBox = document.getElementById('forecast-event-detail');
+        if (!detailBox) {
+          detailBox = document.createElement('div');
+          detailBox.id = 'forecast-event-detail';
+          detailBox.className = 'forecast-event-detail';
+          document.getElementById('forecast-good-section').appendChild(detailBox);
+        }
+        // toggle: ถ้ากดซ้ำที่ chip เดิม → ปิด
+        if (detailBox.dataset.openKey === eventKey && detailBox.classList.contains('open')) {
+          detailBox.classList.remove('open');
+          detailBox.dataset.openKey = '';
+          document.querySelectorAll('.forecast-event-chip.selected')
+            .forEach(c => c.classList.remove('selected'));
+          return;
+        }
+        // อัปเดต selected state
+        document.querySelectorAll('.forecast-event-chip.selected')
+          .forEach(c => c.classList.remove('selected'));
+        if (chipEl) chipEl.classList.add('selected');
+        detailBox.dataset.openKey = eventKey;
+        detailBox.innerHTML = '<div class="forecast-loading">⏳ กำลังโหลดเวลาฤกษ์...</div>';
+        detailBox.classList.add('open');
+        try {
+          const url = `/muhurta/forecast/event-hits?date=${d.date}&event=${encodeURIComponent(eventKey)}&province=${encodeURIComponent(currentProvince)}`;
+          const res = await fetch(url);
+          const html = await res.text();
+          detailBox.innerHTML = html;
+          // bind dithi-tag popover ให้ tag ที่ inject เข้ามาใหม่ (popover JS เดิมผูก static)
+          bindNewDithiTags(detailBox);
+        } catch (err) {
+          detailBox.innerHTML = `<div class="forecast-empty-msg" style="color:#b71c1c">⚠️ โหลดไม่สำเร็จ: ${err.message}</div>`;
+        }
+      }
+
+      // ผูก popover handler ให้ dithi-tag ที่ inject ใหม่
+      // (โค้ดเดิมใช้ querySelectorAll ตอนโหลดหน้า ไม่จับ DOM ที่ dynamic)
+      function bindNewDithiTags(container) {
+        const dpBg = document.getElementById('dithi-popover-bg');
+        if (!dpBg) return;
+        const REL_LABELS = {
+          'universal_good': '✨ ดิถีมงคล (เหมาะกับทุกกิจกรรม)',
+          'universal_bad': '🚫 ดิถีร้าย (ห้ามมงคลทุกประเภท)',
+          'specific_match': '✅ เหมาะ/เกี่ยวข้องกับกิจกรรมที่เลือก',
+          'specific_bad_match': '⛔ ห้าม/ไม่เหมาะกับกิจกรรมที่เลือกโดยเฉพาะ',
+          'specific_other': '💡 ดิถีอื่นในวันเดียวกัน (ไม่ตรงกิจกรรมที่เลือก)',
+          'neutral': '📅 ดิถีปกติ (ไม่ส่งผลคะแนน)',
+        };
+        container.querySelectorAll('.dithi-tag').forEach(tag => {
+          tag.addEventListener('click', () => {
+            document.getElementById('dithi-popover-title').textContent =
+              (tag.dataset.icon || '') + ' ' + tag.dataset.name;
+            document.getElementById('dithi-popover-short').textContent = tag.dataset.short;
+            document.getElementById('dithi-popover-long').textContent = tag.dataset.long;
+            const suitEl = document.getElementById('dithi-popover-suitable');
+            if (tag.dataset.suitable) {
+              suitEl.textContent = '📌 ' + tag.dataset.suitable;
+              suitEl.style.display = '';
+            } else { suitEl.style.display = 'none'; }
+            const relEl = document.getElementById('dithi-popover-relevance');
+            const rel = tag.dataset.relevance;
+            relEl.textContent = REL_LABELS[rel] || '';
+            relEl.className = 'dithi-popover-relevance ' + rel;
+            dpBg.classList.add('active');
+          });
+        });
+      }
+
+      async function loadForecast() {
+        // ใช้จังหวัดจากฟอร์มเมื่อมี
+        const provSel = document.querySelector('select[name="province"]');
+        if (provSel && provSel.value) currentProvince = provSel.value;
+        try {
+          const url = `/muhurta/forecast?province=${encodeURIComponent(currentProvince)}`;
+          const res = await fetch(url);
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          renderStrip(data.days || []);
+        } catch (err) {
+          strip.innerHTML = `<div class="forecast-loading" style="color:#b71c1c">⚠️ โหลดไม่สำเร็จ: ${err.message}</div>`;
+        }
+      }
+
+      // โหลดทันทีตอนเข้าหน้า
+      loadForecast();
+
+      // โหลดใหม่เมื่อเปลี่ยนจังหวัด
+      const provSel = document.querySelector('select[name="province"]');
+      if (provSel) {
+        provSel.addEventListener('change', () => {
+          if (provSel.value !== currentProvince) loadForecast();
+        });
+      }
+    })();
   </script>
 </body>
 </html>
