@@ -1872,6 +1872,106 @@ footer {
 .dignity-rasi { opacity: 0.85; font-size: 0.78rem; }
 .dignity-label { opacity: 0.95; font-size: 0.78rem; font-style: italic; }
 
+/* ---------- รายละเอียดเชิงลึก (Oracle Deep Detail) — view-student เท่านั้น ---------- */
+.oracle-deep-detail {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 2px dashed rgba(212, 165, 84, 0.4);
+}
+.oracle-deep-intro {
+  font-size: 0.88rem;
+  color: #f6d790;
+  margin-bottom: 12px;
+  font-weight: 600;
+  text-align: center;
+  opacity: 0.85;
+}
+
+/* ---------- รูปดวง / โยค / เกณฑ์ (Astro Patterns) ---------- */
+.oracle-astro-patterns {
+  margin-top: 24px;
+  padding: 18px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, rgba(60, 25, 30, 0.55), rgba(40, 20, 25, 0.35));
+  border: 1px solid rgba(212, 165, 84, 0.4);
+}
+.oracle-astro-patterns h3 {
+  margin: 0 0 6px 0;
+  color: #f6d790;
+}
+.ap-intro {
+  font-size: 0.85rem;
+  opacity: 0.8;
+  margin-bottom: 14px;
+  color: #f0d8b4;
+}
+.ap-category { margin-bottom: 16px; }
+.ap-cat-title {
+  font-size: 0.95rem;
+  margin: 8px 0 6px 0;
+  color: #f6d790;
+  border-bottom: 1px dashed rgba(212, 165, 84, 0.35);
+  padding-bottom: 4px;
+}
+.ap-card {
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: rgba(255, 245, 220, 0.06);
+  border-left: 3px solid #d4a554;
+}
+.ap-tone-good { border-left-color: #88c585; background: rgba(120, 180, 110, 0.10); }
+.ap-tone-warning { border-left-color: #e07a6a; background: rgba(220, 100, 80, 0.10); }
+.ap-tone-neutral { border-left-color: #b8a888; }
+.ap-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.ap-code {
+  font-family: monospace;
+  font-size: 0.72rem;
+  opacity: 0.7;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.ap-name { font-weight: 700; color: #f6d790; }
+.ap-badge {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+.ap-badge-good { background: rgba(120, 180, 110, 0.3); color: #c6ecb9; }
+.ap-badge-warn { background: rgba(220, 100, 80, 0.3); color: #fbd0c0; }
+.ap-badge-miss { background: rgba(180, 160, 130, 0.25); color: #ddc89a; }
+.ap-desc { font-size: 0.85rem; opacity: 0.92; margin-bottom: 2px; }
+.ap-meaning { font-size: 0.85rem; color: #f0d8b4; margin: 4px 0; }
+.ap-advice {
+  font-size: 0.82rem;
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: rgba(255, 220, 140, 0.10);
+  border-radius: 6px;
+  border-left: 2px solid #d4a554;
+  color: #f0d8b4;
+}
+.ap-nearmiss {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(212, 165, 84, 0.3);
+}
+.ap-nearmiss > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #f6d790;
+  padding: 6px 0;
+}
+.ap-nearmiss > summary:hover { color: #fce5b8; }
+
 /* ---------- Mobile fixes ---------- */
 /* iOS auto-zoom กัน: font-size < 16px ทำให้ Safari zoom เข้าเมื่อ focus
    ส่งผลให้ผู้ใช้รู้สึกเหมือน picker ไม่ทำงาน */

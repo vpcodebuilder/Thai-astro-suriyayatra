@@ -32,6 +32,7 @@ from thai_astro.bhava_lord_prophecy import (
 )
 from thai_astro.oracle_narrative import compose_oracle_reading
 from thai_astro.dignities import compute_all_dignities, detect_yogas
+from thai_astro.astro_patterns import detect_astro_patterns
 from thai_astro.taksa import (
     compute_taksa, compute_transit_taksa, transit_aspects_on_taksa,
 )
@@ -834,6 +835,7 @@ def chart_to_view(
     # ตำแหน่งกำลังดาว + เกณฑ์โยค (คำนวณก่อนเพื่อส่งเข้า bhava lord predictor)
     dignities = compute_all_dignities(chart.planets)
     yogas = detect_yogas(chart.ascendant.zodiac.rasi, chart.planets, dignities)
+    astro_report = detect_astro_patterns(chart, dignities)
     transit_dignities = (
         compute_all_dignities(transit_chart.planets) if transit_chart is not None else None
     )
@@ -897,6 +899,7 @@ def chart_to_view(
         transit_lord_summary=transit_lord_data["summary"] if transit_lord_data else None,
         yogas=yogas,
         dignities=dignities,
+        astro_patterns_matched=astro_report.matched,
         seed=oracle_seed,
         transit_date_label=transit_date_label,
     )
@@ -1053,6 +1056,7 @@ def chart_to_view(
         } if transit_chart is not None else None),
         "natal_bhava_lords": natal_lord_summary,
         "oracle": oracle_reading,
+        "astro_patterns": _astro_patterns_to_view(astro_report),
         "taksa": _taksa_to_view(taksa, taksa_transit_aspects, transit_taksa),
         "birth_weekday_name": taksa.birth_weekday_name,
         "lunar": {
@@ -1105,6 +1109,36 @@ TAKSA_GRID_POSITIONS = {
     "ทักษิณ": (2, 1),
     "อาคเนย์": (2, 2),
 }
+
+
+def _astro_patterns_to_view(report):
+    """แปลง AstroPatternReport เป็น dict สำหรับ Jinja2 template"""
+    def _pat(p):
+        return {
+            "code": p.code, "name": p.name, "category": p.category,
+            "level": p.level, "matched": p.matched, "tone": p.tone,
+            "description": p.description, "meaning": p.meaning,
+            "advice": p.advice, "planets_involved": p.planets_involved,
+        }
+    # group matched ตาม category สำหรับ render
+    matched = [_pat(p) for p in report.matched]
+    near = [_pat(p) for p in report.near_misses]
+    categories_order = [
+        "รูปดวงไทย", "กลุ่มลัคนา", "เกณฑ์ลัคนา (ยศ-ทรัพย์)",
+        "ปัญจมหาบุรุษ", "โยคสำคัญ", "จันทรโยค", "โยคเสีย",
+    ]
+    matched_by_cat = []
+    for cat in categories_order:
+        items = [p for p in matched if p["category"] == cat]
+        if items:
+            matched_by_cat.append({"category": cat, "patterns": items})
+    return {
+        "matched": matched,
+        "matched_by_category": matched_by_cat,
+        "near_misses": near,
+        "matched_count": len(matched),
+        "near_miss_count": len(near),
+    }
 
 
 def _taksa_to_view(taksa, transit_aspects, transit_taksa=None):

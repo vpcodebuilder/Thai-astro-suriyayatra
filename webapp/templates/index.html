@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260605d" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260614a" />
 </head>
 <body class="view-general" data-scroll-target="{% if scroll_target == '1' %}transit{% endif %}">
   <header class="site-header">
@@ -1233,19 +1233,80 @@
           </div>
         {% endif %}
 
-        {% if o.dignity_highlights %}
-          <div class="oracle-dignities">
-            <h3>⚡ ตำแหน่งกำลังของดาวสำคัญ</h3>
-            <div class="dignity-grid">
-              {% for d in o.dignity_highlights %}
-                <div class="dignity-chip {{ 'strong' if d.is_strong else 'weak' }}">
-                  <span class="dignity-planet">{{ d.planet }}</span>
-                  <span class="dignity-rasi">{{ d.rasi }}</span>
-                  <span class="dignity-label">{{ d.label }}</span>
+        {# ========== รายละเอียดเชิงลึก — เฉพาะโหมดศึกษา ========== #}
+        {% if o.dignity_highlights or (result.astro_patterns and result.astro_patterns.matched_count) %}
+        <div class="oracle-deep-detail view-student">
+          <div class="oracle-deep-intro">📊 รายละเอียดสำหรับผู้ศึกษาโหราศาสตร์</div>
+
+          {% if o.dignity_highlights %}
+            <div class="oracle-dignities">
+              <h3>⚡ ตำแหน่งกำลังของดาวรายดวง</h3>
+              <div class="ap-intro">
+                แสดงดาวที่ได้ตำแหน่ง <strong>อุจน์/เกษตร/มูลตรีโกณ</strong> (กำลังแข็ง)
+                หรือ <strong>นิจ/ประ/ศัตรู</strong> (กำลังอ่อน) เป็นรายดวง
+              </div>
+              <div class="dignity-grid">
+                {% for d in o.dignity_highlights %}
+                  <div class="dignity-chip {{ 'strong' if d.is_strong else 'weak' }}">
+                    <span class="dignity-planet">{{ d.planet }}</span>
+                    <span class="dignity-rasi">{{ d.rasi }}</span>
+                    <span class="dignity-label">{{ d.label }}</span>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          {% if result.astro_patterns and result.astro_patterns.matched_count %}
+            <div class="oracle-astro-patterns">
+              <h3>📜 โยค / เกณฑ์ในชะตา ({{ result.astro_patterns.matched_count }} เกณฑ์)</h3>
+              <div class="ap-intro">
+                การประกอบของดาวหลายดวงเป็น "โยค" ตามฐานข้อมูล
+                (ตำราอุดมเดช, อ.เทพย์ สาริกบุตร, Brihat Parashara Hora Shastra)
+              </div>
+              {% for grp in result.astro_patterns.matched_by_category %}
+                <div class="ap-category">
+                  <h4 class="ap-cat-title">{{ grp.category }}</h4>
+                  {% for p in grp.patterns %}
+                    <div class="ap-card ap-tone-{{ p.tone }}">
+                      <div class="ap-head">
+                        <span class="ap-code">{{ p.code }}</span>
+                        <span class="ap-name">{{ p.name }}</span>
+                        {% if p.tone == 'good' %}<span class="ap-badge ap-badge-good">✓ ได้เกณฑ์</span>
+                        {% elif p.tone == 'warning' %}<span class="ap-badge ap-badge-warn">⚠ เข้าโยคเสีย</span>
+                        {% endif %}
+                      </div>
+                      <div class="ap-desc">{{ p.description }}</div>
+                      <div class="ap-meaning">{{ p.meaning }}</div>
+                      {% if p.advice %}
+                        <div class="ap-advice">💡 {{ p.advice }}</div>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
                 </div>
               {% endfor %}
+
+              {% if result.astro_patterns.near_miss_count %}
+                <details class="ap-nearmiss">
+                  <summary>🔭 เกณฑ์ที่ยังเข้าไม่ครบ ({{ result.astro_patterns.near_miss_count }}) — คำแนะนำเพื่อหนุนเสริม</summary>
+                  {% for p in result.astro_patterns.near_misses %}
+                    <div class="ap-card ap-tone-neutral">
+                      <div class="ap-head">
+                        <span class="ap-code">{{ p.code }}</span>
+                        <span class="ap-name">{{ p.name }}</span>
+                        <span class="ap-badge ap-badge-miss">ยังไม่เข้าเกณฑ์</span>
+                      </div>
+                      <div class="ap-desc">{{ p.description }}</div>
+                      {% if p.advice %}
+                        <div class="ap-advice">💡 {{ p.advice }}</div>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                </details>
+              {% endif %}
             </div>
-          </div>
+          {% endif %}
+        </div>
         {% endif %}
 
         {% if o.headline %}
@@ -1330,6 +1391,6 @@
     <p>คำนวณตามคัมภีร์สุริยยาตร์ของไทย · port มาจาก Devtino.Astrology</p>
   </footer>
 
-  <script src="/static/script.js?v=20260605d"></script>
+  <script src="/static/script.js?v=20260614a"></script>
 </body>
 </html>

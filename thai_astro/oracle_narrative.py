@@ -254,29 +254,66 @@ def _emphasize(text: str) -> str:
 
 
 def _build_yoga_messages(yogas: List[Yoga]) -> List[dict]:
-    """สร้างประโยคชม/พลิกดวงจากโยคที่มี"""
+    """สร้างประโยคชม/พลิกดวงจากโยคที่มี (deprecated — เก็บไว้ใช้กับ astro_patterns)"""
     msgs = []
     seen_names = set()
-    # เรียง severity สูง → ต่ำ
     for y in sorted(yogas, key=lambda y: -y.severity):
         if y.name in seen_names:
             continue
         seen_names.add(y.name)
         text = YOGA_HEADLINE.get(y.name)
         if text is None:
-            # โยคชนิด "พฤหัสบดีได้อุจน์"
             text = (
                 f"ดวงคุณมีเรื่องดี — §§{y.name}§§ "
                 f"({y.description}). {y.effect}"
             )
         msgs.append({
-            "name": y.name,
-            "text": _emphasize(text),
-            "effect": y.effect,
-            "planets": y.planets_involved,
+            "name": y.name, "text": _emphasize(text),
+            "effect": y.effect, "planets": y.planets_involved,
             "severity": y.severity,
         })
-    return msgs[:4]  # อย่าเยอะเกินไป
+    return msgs[:4]
+
+
+def _build_yoga_messages_from_patterns(matched_patterns: List) -> List[dict]:
+    """สรุป 'เกณฑ์ดวงพื้นฐาน' จาก astro_patterns ที่ match จริง
+    (เลือกเฉพาะ tone=good — โยคเสียจัดแยกในคำเตือน)"""
+    if not matched_patterns:
+        return []
+    # ลำดับความสำคัญ — โยคใหญ่ขึ้นก่อน
+    priority_order = {
+        "ปัญจมหาบุรุษ": 10,
+        "โยคสำคัญ": 9,
+        "เกณฑ์ลัคนา (ยศ-ทรัพย์)": 8,
+        "รูปดวงไทย": 7,
+        "จันทรโยค": 5,
+        "กลุ่มลัคนา": 4,
+        "โยคเสีย": 0,
+    }
+    goods = [p for p in matched_patterns if p.tone == "good"]
+    goods.sort(key=lambda p: -priority_order.get(p.category, 0))
+
+    msgs = []
+    intro_phrases = [
+        "เรื่องแรกที่อยากบอกก่อน",
+        "อีกเรื่องที่อยากให้รู้",
+        "ที่น่าสนใจมากคือ",
+        "ขอชมก่อนเลย",
+    ]
+    for i, p in enumerate(goods[:4]):
+        intro = intro_phrases[i] if i < len(intro_phrases) else "และอีกเรื่อง"
+        text = (
+            f"{intro} — ดวงคุณมี §§{p.name}§§ "
+            f"({p.category}) {p.meaning}"
+        )
+        msgs.append({
+            "name": p.name,
+            "text": _emphasize(text),
+            "effect": p.meaning,
+            "planets": p.planets_involved,
+            "severity": 3 if p.category in ("ปัญจมหาบุรุษ", "โยคสำคัญ") else 2,
+        })
+    return msgs
 
 
 def _build_headline(
@@ -472,15 +509,21 @@ def compose_oracle_reading(
     transit_lord_summary: Optional[dict] = None,
     yogas: Optional[List[Yoga]] = None,
     dignities: Optional[Dict[str, PlanetDignity]] = None,
+    astro_patterns_matched: Optional[List] = None,
     seed: str = "default",
     transit_date_label: Optional[str] = None,
 ) -> dict:
     yogas = yogas or []
     dignities = dignities or {}
+    astro_patterns_matched = astro_patterns_matched or []
 
     # โยคที่มีคุณสมบัติ "พลิกดวง" — ใช้ปรับคำเตือน
-    flip_yoga_names = {"นิจภังคราชโยค", "อุดมเกณฑ์", "ปทุมเกณฑ์"}
-    has_flip_yoga = any(y.name in flip_yoga_names for y in yogas)
+    flip_yoga_names = {"นิจภังคราชโยค", "อุดมเกณฑ์", "ปทุมเกณฑ์", "นิจภังค"}
+    has_flip_yoga = (
+        any(y.name in flip_yoga_names for y in yogas)
+        or any(p.name in flip_yoga_names or "นิจภังค" in p.name
+               for p in astro_patterns_matched)
+    )
 
     address = _person_address(person_name)
     greeting, tone_class = _build_overall(
@@ -488,7 +531,11 @@ def compose_oracle_reading(
         yogas, address, seed,
     )
 
-    yoga_messages = _build_yoga_messages(yogas)
+    # ใช้ astro_patterns เป็นแหล่งหลัก ถ้ามี — ไม่งั้น fallback dignities yogas
+    if astro_patterns_matched:
+        yoga_messages = _build_yoga_messages_from_patterns(astro_patterns_matched)
+    else:
+        yoga_messages = _build_yoga_messages(yogas)
     headline = _build_headline(transit_summary, has_flip_yoga, seed)
 
     life_areas = []
