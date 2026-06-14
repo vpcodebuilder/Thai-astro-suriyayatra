@@ -353,7 +353,8 @@ def _check_pancha(planets, dignities, asc_rasi) -> List[AstroPattern]:
             continue
         d = dignities[planet]
         house = _rasi_to_house(planets[planet].zodiac.rasi, asc_rasi)
-        is_strong = d.is_exalted or d.dignity == "เกษตร" or d.dignity == "มูล"
+        # ปัญจมหาบุรุษ — ตำรา "อยู่เกษตรหรืออุจจ์" (ใช้นิยามคลาสสิก ไม่รวมตำแหน่งเสริม)
+        is_strong = d.is_exalted or d.dignity == "เกษตร"
         is_kendra = house in KENDRA_HOUSES
         matched = is_strong and is_kendra
 

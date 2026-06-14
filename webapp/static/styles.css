@@ -1872,20 +1872,139 @@ footer {
 .dignity-rasi { opacity: 0.85; font-size: 0.78rem; }
 .dignity-label { opacity: 0.95; font-size: 0.78rem; font-style: italic; }
 
-/* ---------- รายละเอียดเชิงลึก (Oracle Deep Detail) — view-student เท่านั้น ---------- */
-.oracle-deep-detail {
-  margin-top: 24px;
-  padding-top: 18px;
-  border-top: 2px dashed rgba(212, 165, 84, 0.4);
+/* ---------- Oracle Block Cards (เกณฑ์ดวง / โยค / ตำแหน่งดาว) ---------- */
+.oracle-block-card {
+  margin-top: 20px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, rgba(60, 25, 30, 0.55), rgba(40, 20, 25, 0.35));
+  border: 1px solid rgba(212, 165, 84, 0.4);
 }
-.oracle-deep-intro {
-  font-size: 0.88rem;
+.oracle-block-card h3 {
+  margin: 0 0 8px 0;
   color: #f6d790;
-  margin-bottom: 12px;
-  font-weight: 600;
-  text-align: center;
-  opacity: 0.85;
+  font-size: 1.05rem;
+  border-bottom: 1px dashed rgba(212, 165, 84, 0.35);
+  padding-bottom: 6px;
 }
+.ap-nearmiss-block {
+  border-style: dashed;
+  opacity: 0.92;
+}
+
+/* ตารางตำแหน่งกำลังดาว (10 ดวง) */
+.dignity-table {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+.dignity-row {
+  display: grid;
+  grid-template-columns: 70px 1fr auto 32px;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 7px;
+  border-left: 3px solid #8a7a5a;
+  background: rgba(255, 245, 220, 0.05);
+  font-size: 0.85rem;
+}
+.dignity-row .dignity-planet {
+  font-weight: 700;
+  color: #f6d790;
+}
+.dignity-row .dignity-rasi {
+  opacity: 0.85;
+  font-size: 0.78rem;
+}
+.dignity-row .dignity-label {
+  font-size: 0.78rem;
+  opacity: 0.95;
+  text-align: right;
+}
+.dignity-row .dignity-score {
+  font-family: monospace;
+  font-weight: 700;
+  text-align: center;
+  font-size: 0.82rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+/* ตำแหน่งกำลังแข็ง — โทนทอง-เขียว */
+.dignity-row.dignity-อุจน์       { border-left-color: #ffd166; background: rgba(255, 210, 100, 0.18); }
+.dignity-row.dignity-อุจน์       .dignity-score { background: rgba(255, 210, 100, 0.32); color: #fce8a8; }
+.dignity-row.dignity-มหาจักร    { border-left-color: #ffc266; background: rgba(255, 195, 100, 0.15); }
+.dignity-row.dignity-มหาจักร    .dignity-score { background: rgba(255, 195, 100, 0.3); color: #fce0a0; }
+.dignity-row.dignity-จุลจักร    { border-left-color: #f0c060; background: rgba(240, 195, 100, 0.13); }
+.dignity-row.dignity-จุลจักร    .dignity-score { background: rgba(240, 195, 100, 0.28); color: #f8dca0; }
+.dignity-row.dignity-ราชาโชค    { border-left-color: #e0c070; background: rgba(220, 195, 110, 0.13); }
+.dignity-row.dignity-ราชาโชค    .dignity-score { background: rgba(220, 195, 110, 0.28); color: #f5d8a0; }
+.dignity-row.dignity-เทวีโชค    { border-left-color: #c5d18a; background: rgba(180, 200, 130, 0.13); }
+.dignity-row.dignity-เทวีโชค    .dignity-score { background: rgba(180, 200, 130, 0.28); color: #e0e8b0; }
+.dignity-row.dignity-เกษตร      { border-left-color: #c5e1a5; background: rgba(160, 210, 130, 0.13); }
+.dignity-row.dignity-เกษตร      .dignity-score { background: rgba(160, 210, 130, 0.3); color: #d9f0b8; }
+.dignity-row.dignity-มูล        { border-left-color: #b0d3a0; background: rgba(140, 190, 110, 0.12); }
+.dignity-row.dignity-มูล        .dignity-score { background: rgba(140, 190, 110, 0.28); color: #d0e8b8; }
+/* ตำแหน่งกลาง */
+.dignity-row.dignity-อุจจาภิมุข { border-left-color: #aac5e0; background: rgba(140, 190, 220, 0.10); }
+.dignity-row.dignity-อุจจาวิลาส { border-left-color: #a09080; background: rgba(180, 165, 140, 0.10); }
+.dignity-row.dignity-มิตร  { border-left-color: #87ceeb; background: rgba(120, 190, 230, 0.10); }
+.dignity-row.dignity-สมพล  { border-left-color: #b8a888; }
+.dignity-row.dignity-ประ   { border-left-color: #e0a070; background: rgba(220, 140, 90, 0.10); }
+.dignity-row.dignity-ประ   .dignity-score { background: rgba(220, 140, 90, 0.25); color: #f5cba8; }
+.dignity-row.dignity-ศัตรู { border-left-color: #e08070; background: rgba(220, 110, 90, 0.12); }
+.dignity-row.dignity-นิจ   { border-left-color: #e06060; background: rgba(220, 80, 60, 0.16); }
+.dignity-row.dignity-นิจ   .dignity-score { background: rgba(220, 80, 60, 0.3); color: #fbd0c0; }
+
+/* Categories grid (2-col บน desktop) */
+.ap-categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+  margin-top: 10px;
+}
+@media (max-width: 600px) {
+  .ap-categories-grid { grid-template-columns: 1fr; }
+  .dignity-table { grid-template-columns: 1fr; }
+  .dignity-row { grid-template-columns: 60px 1fr auto 28px; font-size: 0.8rem; }
+}
+
+/* ---------- Dignity pill (chip in natal/transit table) — solid colors ---------- */
+.dignity-pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #d4c0a0;
+  color: #5a3a2a;
+  border: 1px solid #b59568;
+  white-space: nowrap;
+}
+.dignity-pill-อุจน์       { background: #ffc940; color: #4a2a05; border-color: #c89530; }
+.dignity-pill-มหาจักร    { background: #ffb84d; color: #4a2a05; border-color: #c8852a; }
+.dignity-pill-จุลจักร    { background: #f0a830; color: #4a2a05; border-color: #b87820; }
+.dignity-pill-ราชาโชค    { background: #e8b860; color: #4a2a05; border-color: #b08530; }
+.dignity-pill-เทวีโชค    { background: #b8d870; color: #2a4a10; border-color: #80a040; }
+.dignity-pill-เกษตร      { background: #98d870; color: #1a4010; border-color: #6ba038; }
+.dignity-pill-อุจจาภิมุข { background: #88c0e0; color: #1a3548; border-color: #5890b8; }
+.dignity-pill-อุจจาวิลาส { background: #b8a888; color: #3a2818; border-color: #8a7858; }
+.dignity-pill-มิตร       { background: #a8c8e0; color: #1a3548; border-color: #6898b8; }
+.dignity-pill-สมพล       { background: #c8b898; color: #3a2818; border-color: #988868; }
+.dignity-pill-ศัตรู      { background: #e09060; color: #3a1808; border-color: #b06028; }
+.dignity-pill-ประ        { background: #e07050; color: #3a0c04; border-color: #b04020; }
+.dignity-pill-นิจ        { background: #e04848; color: #3a0404; border-color: #a02020; }
+
+/* ---------- Tooltip dignity row ---------- */
+.tip-row.tip-dignity { font-weight: 600; }
+.tip-row.tip-dignity-very-strong { color: #ffe8a8; }
+.tip-row.tip-dignity-strong      { color: #d9f0b8; }
+.tip-row.tip-dignity-mild        { color: #c8e0f0; }
+.tip-row.tip-dignity-neutral     { color: #e0d4be; }
+.tip-row.tip-dignity-low         { color: #f5cba8; }
+.tip-row.tip-dignity-weak        { color: #fbd0c0; }
+.tip-strength { opacity: 0.85; font-family: monospace; margin-left: 4px; }
 
 /* ---------- รูปดวง / โยค / เกณฑ์ (Astro Patterns) ---------- */
 .oracle-astro-patterns {

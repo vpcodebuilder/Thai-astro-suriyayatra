@@ -31,7 +31,7 @@ from thai_astro.bhava_lord_prophecy import (
     generate_bhava_lord_summary,
 )
 from thai_astro.oracle_narrative import compose_oracle_reading
-from thai_astro.dignities import compute_all_dignities, detect_yogas
+from thai_astro.dignities import compute_all_dignities, compute_dignity, detect_yogas
 from thai_astro.astro_patterns import detect_astro_patterns
 from thai_astro.taksa import (
     compute_taksa, compute_transit_taksa, transit_aspects_on_taksa,
@@ -702,6 +702,7 @@ def chart_to_view(
                 continue
             info = PLANET_INFO_MAP[name]
             _ti = get_triyangka_info(p.zodiac.rasi, p.zodiac.degree, p.zodiac.arcminute)
+            _di = compute_dignity(name, p.zodiac.rasi)
             planets_here.append({
                 **info,
                 "rasi_name": RASI_NAMES_TH[p.zodiac.rasi],
@@ -714,6 +715,12 @@ def chart_to_view(
                 "poison_type": _ti.poison_type,
                 "poison_icon": _ti.poison_icon,
                 "poison_severity": _ti.poison_severity,
+                # dignity (มาตรฐานดาว)
+                "dignity": _di.dignity,
+                "dignity_label": _di.label,
+                "dignity_strength": _di.strength,
+                "dignity_is_strong": _di.is_strong,
+                "dignity_is_weak": _di.is_weak,
             })
         rasis.append({
             "index": rasi_idx,
@@ -739,6 +746,7 @@ def chart_to_view(
             p = transit_chart.planets[name]
             info = PLANET_INFO_MAP[name]
             _tti = get_triyangka_info(p.zodiac.rasi, p.zodiac.degree, p.zodiac.arcminute)
+            _tdi = compute_dignity(name, p.zodiac.rasi)
             transit_planet = {
                 "name": name,
                 "abbr": info["abbr_arabic"],     # ใช้เลขอารบิก
@@ -753,6 +761,11 @@ def chart_to_view(
                 "poison_type": _tti.poison_type,
                 "poison_icon": _tti.poison_icon,
                 "poison_severity": _tti.poison_severity,
+                "dignity": _tdi.dignity,
+                "dignity_label": _tdi.label,
+                "dignity_strength": _tdi.strength,
+                "dignity_is_strong": _tdi.is_strong,
+                "dignity_is_weak": _tdi.is_weak,
             }
             transits_by_rasi[p.zodiac.rasi].append(transit_planet)
             transit_positions.append({
@@ -776,6 +789,11 @@ def chart_to_view(
                 "element": _tti.element,
                 "element_name_th": _tti.element_name_th,
                 "element_icon": _tti.element_icon,
+                "dignity": _tdi.dignity,
+                "dignity_label": _tdi.label,
+                "dignity_strength": _tdi.strength,
+                "dignity_is_strong": _tdi.is_strong,
+                "dignity_is_weak": _tdi.is_weak,
             })
 
         # คำทำนายดาวจรกระทบดาวเดิม
@@ -807,6 +825,7 @@ def chart_to_view(
         info = PLANET_INFO_MAP[name]
         # ---- triyangka ของดาวกำเนิด ----
         tinfo = get_triyangka_info(p.zodiac.rasi, p.zodiac.degree, p.zodiac.arcminute)
+        ndi = compute_dignity(name, p.zodiac.rasi)
         planet_positions.append({
             "name": name,
             "abbr": info["abbr"],
@@ -830,6 +849,11 @@ def chart_to_view(
             "element": tinfo.element,
             "element_name_th": tinfo.element_name_th,
             "element_icon": tinfo.element_icon,
+            "dignity": ndi.dignity,
+            "dignity_label": ndi.label,
+            "dignity_strength": ndi.strength,
+            "dignity_is_strong": ndi.is_strong,
+            "dignity_is_weak": ndi.is_weak,
         })
 
     # ตำแหน่งกำลังดาว + เกณฑ์โยค (คำนวณก่อนเพื่อส่งเข้า bhava lord predictor)

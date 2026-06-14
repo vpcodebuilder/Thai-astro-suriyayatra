@@ -128,28 +128,121 @@ PLANET_RELATIONS: Dict[str, Dict[str, Set[str]]] = {
 
 
 # ============================================================
-# ระดับกำลัง (Strength)
+# ตำแหน่งดาวมาตรฐานไทย — 6 ตำแหน่งเสริม (จาก astropattern.md)
+# ============================================================
+# ราศีมหาจักร (เลขดาว 1=อาทิตย์ … 7=เสาร์)
+MAHACHAK: Dict[str, int] = {
+    "อาทิตย์": 1,    # พฤษภ
+    "จันทร์":  2,    # เมถุน
+    "อังคาร":  10,   # กุมภ์
+    "พุธ":     6,    # ตุล
+    "พฤหัสบดี": 4,   # สิงห์
+    "ศุกร์":   0,    # เมษ
+    "เสาร์":   7,    # พิจิก
+}
+
+# ราศีจุลจักร
+JULACHAK: Dict[str, int] = {
+    "อาทิตย์": 2,    # เมถุน
+    "จันทร์":  3,    # กรกฎ
+    "อังคาร":  11,   # มีน
+    "พุธ":     7,    # พิจิก
+    "พฤหัสบดี": 5,   # กันย์
+    "ศุกร์":   1,    # พฤษภ
+    "เสาร์":   8,    # ธนู
+}
+
+# ราชาโชค
+RAJA_YOKE: Dict[str, int] = {
+    "อาทิตย์": 3,    # กรกฎ
+    "จันทร์":  4,    # สิงห์
+    "อังคาร":  0,    # เมษ
+    "พุธ":     8,    # ธนู
+    "พฤหัสบดี": 6,   # ตุล
+    "ศุกร์":   2,    # เมถุน
+    "เสาร์":   9,    # มกร
+}
+
+# เทวีโชค
+TEVI_YOKE: Dict[str, int] = {
+    "อาทิตย์": 4,    # สิงห์
+    "จันทร์":  5,    # กันย์
+    "อังคาร":  1,    # พฤษภ
+    "พุธ":     9,    # มกร
+    "พฤหัสบดี": 7,   # พิจิก
+    "ศุกร์":   3,    # กรกฎ
+    "เสาร์":   10,   # กุมภ์
+}
+
+# อุจจาภิมุข
+UJ_PHIMUKH: Dict[str, int] = {
+    "อาทิตย์": 5,    # กันย์
+    "จันทร์":  6,    # ตุล
+    "อังคาร":  2,    # เมถุน
+    "พุธ":     10,   # กุมภ์
+    "พฤหัสบดี": 8,   # ธนู
+    "ศุกร์":   4,    # สิงห์
+    "เสาร์":   11,   # มีน
+}
+
+# อุจจาวิลาส
+UJ_VILAS: Dict[str, int] = {
+    "อาทิตย์": 6,    # ตุล
+    "จันทร์":  7,    # พิจิก
+    "อังคาร":  3,    # กรกฎ
+    "พุธ":     11,   # มีน
+    "พฤหัสบดี": 9,   # มกร
+    "ศุกร์":   5,    # กันย์
+    "เสาร์":   0,    # เมษ
+}
+
+# ตารางประ ตามตำราไทย (อาจมีหลายราศี — โดยเฉพาะดาวที่มี 2 เกษตร)
+PRA_RASIS: Dict[str, Set[int]] = {
+    "อาทิตย์": {10},          # กุมภ์
+    "จันทร์":  {9},           # มกร
+    "อังคาร":  {1, 6},        # พฤษภ, ตุล
+    "พุธ":     {8, 11},       # ธนู, มีน
+    "พฤหัสบดี": {2, 5},       # เมถุน, กันย์
+    "ศุกร์":   {0, 7},        # เมษ, พิจิก
+    "เสาร์":   {3, 4},        # กรกฎ, สิงห์
+}
+
+
+# ============================================================
+# ระดับกำลัง (Strength) — สเกล 10 ตำแหน่ง ตำราไทย
+# ลำดับ: อุจจ์ > มหาจักร > จุลจักร > ราชาโชค > เทวีโชค > เกษตร
+#       > อุจจาภิมุข > อุจจาวิลาส > ประ > นิจ
 # ============================================================
 DIGNITY_STRENGTH = {
-    "อุจน์":   3,    # สูงสุด — มหาอุจ
-    "เกษตร":  2,    # อยู่บ้านตัวเอง
-    "มูล":    2,    # มูลตรีโกณ
-    "มิตร":    1,    # ราศีของเพื่อน
-    "สมพล":    0,    # กลาง
-    "ศัตรู":   -1,   # ราศีของศัตรู (เป็นประ)
-    "ประ":     -1,   # ราศีศัตรู
-    "นิจ":     -3,   # ต่ำสุด — มหานิจ
+    "อุจน์":      5,    # สูงสุด — มหาอุจ
+    "มหาจักร":   4,
+    "จุลจักร":   3,
+    "ราชาโชค":   3,
+    "เทวีโชค":   2,
+    "เกษตร":     2,
+    "อุจจาภิมุข": 1,
+    "อุจจาวิลาส": 0,
+    "มิตร":      1,
+    "สมพล":      0,
+    "ศัตรู":     -1,
+    "ประ":       -2,
+    "นิจ":       -3,    # ต่ำสุด — มหานิจ
 }
 
 DIGNITY_LABEL_TH = {
-    "อุจน์":   "อุจน์ (มหาอุจ)",
-    "เกษตร":  "เกษตร",
-    "มูล":    "มูลตรีโกณ",
-    "มิตร":    "มิตร",
-    "สมพล":    "สมพล",
-    "ศัตรู":   "ศัตรู (เป็นประ)",
-    "ประ":     "ประ",
-    "นิจ":     "นิจ (มหานิจ)",
+    "อุจน์":      "อุจน์ (มหาอุจ)",
+    "มหาจักร":   "มหาจักร",
+    "จุลจักร":   "จุลจักร",
+    "ราชาโชค":   "ราชาโชค",
+    "เทวีโชค":   "เทวีโชค",
+    "เกษตร":     "เกษตร",
+    "อุจจาภิมุข": "อุจจาภิมุข",
+    "อุจจาวิลาส": "อุจจาวิลาส",
+    "มิตร":      "มิตร",
+    "สมพล":      "สมพล",
+    "ศัตรู":     "ศัตรู (เป็นประ)",
+    "ประ":       "ประ",
+    "นิจ":       "นิจ (มหานิจ)",
 }
 
 
@@ -161,28 +254,57 @@ class PlanetDignity:
     planet: str
     rasi: int                # 0-11
     rasi_name: str
-    dignity: str             # "อุจน์" | "เกษตร" | "มูล" | "มิตร" | "สมพล" | "ศัตรู" | "นิจ"
+    dignity: str             # 10 ตำแหน่งไทย + มิตร/สมพล/ศัตรู
     label: str               # ภาษาไทยพร้อมขยาย
-    strength: int            # -3..+3
-    is_strong: bool          # อุจน์ / เกษตร / มูล
-    is_weak: bool            # นิจ / ศัตรู
+    strength: int            # -3..+5
+    is_strong: bool          # อุจน์ / มหาจักร / จุลจักร / ราชาโชค / เทวีโชค / เกษตร
+    is_weak: bool            # นิจ / ประ / ศัตรู
     is_exalted: bool         # อุจน์ โดยเฉพาะ
     is_debilitated: bool     # นิจ โดยเฉพาะ
 
 
 def compute_dignity(planet: str, rasi: int) -> PlanetDignity:
-    """คำนวณตำแหน่ง 1 ดาว"""
-    # ลำดับเช็ค: อุจน์ → นิจ → มูล → เกษตร → มิตร/ศัตรู/สมพล
+    """คำนวณตำแหน่ง 1 ดาว — ใช้มาตรฐานไทย 10 ตำแหน่ง
+
+    ลำดับตรวจ (กำลังจากสูงไปต่ำ):
+      อุจจ์ > มหาจักร > จุลจักร > ราชาโชค > เทวีโชค > เกษตร
+      > อุจจาภิมุข > อุจจาวิลาส > ประ > นิจ
+      > มิตร/สมพล/ศัตรู (fallback ใช้ PLANET_RELATIONS)
+
+    ราหู/เกตุ/มฤตยู ใช้แค่ อุจจ์/นิจ/เกษตร (ไม่อยู่ในตารางมหาจักรฯ)
+    """
+    # 1. อุจจ์ (highest)
     if planet in EXALTATION_RASI and EXALTATION_RASI[planet] == rasi:
         dignity = "อุจน์"
-    elif planet in DEBILITATION_RASI and DEBILITATION_RASI[planet] == rasi:
-        dignity = "นิจ"
-    elif planet in MULATRIKONA and MULATRIKONA[planet] == rasi:
-        dignity = "มูล"
+    # 2. มหาจักร
+    elif planet in MAHACHAK and MAHACHAK[planet] == rasi:
+        dignity = "มหาจักร"
+    # 3. จุลจักร
+    elif planet in JULACHAK and JULACHAK[planet] == rasi:
+        dignity = "จุลจักร"
+    # 4. ราชาโชค
+    elif planet in RAJA_YOKE and RAJA_YOKE[planet] == rasi:
+        dignity = "ราชาโชค"
+    # 5. เทวีโชค
+    elif planet in TEVI_YOKE and TEVI_YOKE[planet] == rasi:
+        dignity = "เทวีโชค"
+    # 6. เกษตร (own sign)
     elif planet in SWAKSHETRA and rasi in SWAKSHETRA[planet]:
         dignity = "เกษตร"
+    # 7. อุจจาภิมุข
+    elif planet in UJ_PHIMUKH and UJ_PHIMUKH[planet] == rasi:
+        dignity = "อุจจาภิมุข"
+    # 8. อุจจาวิลาส
+    elif planet in UJ_VILAS and UJ_VILAS[planet] == rasi:
+        dignity = "อุจจาวิลาส"
+    # 9. ประ (Thai standard table)
+    elif planet in PRA_RASIS and rasi in PRA_RASIS[planet]:
+        dignity = "ประ"
+    # 10. นิจ (lowest)
+    elif planet in DEBILITATION_RASI and DEBILITATION_RASI[planet] == rasi:
+        dignity = "นิจ"
     else:
-        # ดูจากเจ้าราศี
+        # fallback: มิตร/ศัตรู/สมพล (ใช้ผังมิตรศัตรูพื้นฐาน)
         rasi_lord = RASI_LORD[rasi]
         if rasi_lord == planet:
             dignity = "เกษตร"  # safety net
@@ -191,12 +313,14 @@ def compute_dignity(planet: str, rasi: int) -> PlanetDignity:
             if rasi_lord in relations.get("friends", set()):
                 dignity = "มิตร"
             elif rasi_lord in relations.get("enemies", set()):
-                dignity = "ประ"
+                dignity = "ศัตรู"
             else:
                 dignity = "สมพล"
 
     strength = DIGNITY_STRENGTH[dignity]
     label = DIGNITY_LABEL_TH[dignity]
+    strong_set = {"อุจน์", "มหาจักร", "จุลจักร", "ราชาโชค", "เทวีโชค", "เกษตร"}
+    weak_set = {"นิจ", "ประ", "ศัตรู"}
     return PlanetDignity(
         planet=planet,
         rasi=rasi,
@@ -204,8 +328,8 @@ def compute_dignity(planet: str, rasi: int) -> PlanetDignity:
         dignity=dignity,
         label=label,
         strength=strength,
-        is_strong=dignity in ("อุจน์", "เกษตร", "มูล"),
-        is_weak=dignity in ("นิจ", "ประ", "ศัตรู"),
+        is_strong=dignity in strong_set,
+        is_weak=dignity in weak_set,
         is_exalted=dignity == "อุจน์",
         is_debilitated=dignity == "นิจ",
     )

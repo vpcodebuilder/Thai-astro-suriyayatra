@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260614a" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260614f" />
 </head>
 <body class="view-general" data-scroll-target="{% if scroll_target == '1' %}transit{% endif %}">
   <header class="site-header">
@@ -435,6 +435,8 @@
                    data-tip-arcmin="{{ chip.arcminute }}"
                    data-tip-arcsec="{{ chip.arcsecond }}"
                    data-tip-retro="{{ '1' if chip.retrograde else '0' }}"
+                   data-tip-dignity="{{ chip.dignity_label }}"
+                   data-tip-strength="{{ chip.dignity_strength }}"
                    {% if chip.is_poison %}
                      data-tip-poison-icon="{{ chip.poison_icon }}"
                      data-tip-poison-name="{{ chip.poison_type }}"
@@ -470,6 +472,8 @@
                      data-tip-arcmin="{{ tchip.arcminute }}"
                      data-tip-arcsec="{{ tchip.arcsecond }}"
                      data-tip-retro="{{ '1' if tchip.retrograde else '0' }}"
+                     data-tip-dignity="{{ tchip.dignity_label }}"
+                     data-tip-strength="{{ tchip.dignity_strength }}"
                      {% if tchip.is_poison %}
                        data-tip-poison-icon="{{ tchip.poison_icon }}"
                        data-tip-poison-name="{{ tchip.poison_type }}"
@@ -675,6 +679,7 @@
               <span class="planet-pos">{{ p.rasi_name }} {{ p.degree }}°{{ "%02d"|format(p.arcminute) }}′{{ "%02d"|format(p.arcsecond or 0) }}″</span>
               <span class="planet-house">ภพ{{ p.bhava }}</span>
               <span class="planet-triyangka" title="ตรียางค์ที่ {{ p.triyangka_decanate }} ของ{{ p.rasi_name }} — ครองโดย{{ p.triyangka_lord }} · ธาตุ{{ p.element_name_th }}">
+                <span class="dignity-pill dignity-pill-{{ p.dignity }}" title="กำลังดาว: {{ p.dignity_label }} ({% if p.dignity_strength > 0 %}+{% endif %}{{ p.dignity_strength }})">⚡{{ p.dignity_label }} {% if p.dignity_strength > 0 %}+{% endif %}{{ p.dignity_strength }}</span>
                 <span class="elem-tag elem-{{ p.element }}">{{ p.element_icon }}{{ p.element_name_th }}</span>
                 <span class="tri-tag">ตรียางค์ {{ p.triyangka_decanate }}/3 ({{ p.triyangka_lord }})</span>
                 {% if p.is_poison %}
@@ -704,6 +709,7 @@
               <span class="planet-pos">{{ p.rasi_name }} {{ p.degree }}°{{ "%02d"|format(p.arcminute) }}′{{ "%02d"|format(p.arcsecond or 0) }}″</span>
               <span class="planet-house"></span>
               <span class="planet-triyangka">
+                <span class="dignity-pill dignity-pill-{{ p.dignity }}" title="กำลังดาว: {{ p.dignity_label }} ({% if p.dignity_strength > 0 %}+{% endif %}{{ p.dignity_strength }})">⚡{{ p.dignity_label }} {% if p.dignity_strength > 0 %}+{% endif %}{{ p.dignity_strength }}</span>
                 <span class="elem-tag elem-{{ p.element }}">{{ p.element_icon }}{{ p.element_name_th }}</span>
                 <span class="tri-tag">ตรียางค์ {{ p.triyangka_decanate }}/3 ({{ p.triyangka_lord }})</span>
                 {% if p.is_poison %}
@@ -1233,37 +1239,18 @@
           </div>
         {% endif %}
 
-        {# ========== รายละเอียดเชิงลึก — เฉพาะโหมดศึกษา ========== #}
-        {% if o.dignity_highlights or (result.astro_patterns and result.astro_patterns.matched_count) %}
-        <div class="oracle-deep-detail view-student">
-          <div class="oracle-deep-intro">📊 รายละเอียดสำหรับผู้ศึกษาโหราศาสตร์</div>
-
-          {% if o.dignity_highlights %}
-            <div class="oracle-dignities">
-              <h3>⚡ ตำแหน่งกำลังของดาวรายดวง</h3>
-              <div class="ap-intro">
-                แสดงดาวที่ได้ตำแหน่ง <strong>อุจน์/เกษตร/มูลตรีโกณ</strong> (กำลังแข็ง)
-                หรือ <strong>นิจ/ประ/ศัตรู</strong> (กำลังอ่อน) เป็นรายดวง
-              </div>
-              <div class="dignity-grid">
-                {% for d in o.dignity_highlights %}
-                  <div class="dignity-chip {{ 'strong' if d.is_strong else 'weak' }}">
-                    <span class="dignity-planet">{{ d.planet }}</span>
-                    <span class="dignity-rasi">{{ d.rasi }}</span>
-                    <span class="dignity-label">{{ d.label }}</span>
-                  </div>
-                {% endfor %}
-              </div>
+        {# ============================================================
+           บล็อก 2: 📜 โยค/เกณฑ์ที่เข้าในชะตา (matched)
+           แสดงทั้งโหมดดูดวง + ศึกษา
+           ============================================================ #}
+        {% if result.astro_patterns and result.astro_patterns.matched_count %}
+          <div class="oracle-block-card oracle-astro-patterns">
+            <h3>📜 โยคและเกณฑ์ที่ได้ในชะตา ({{ result.astro_patterns.matched_count }})</h3>
+            <div class="ap-intro">
+              การประกอบของดาวหลายดวงตามฐานข้อมูล 28 กฎ
+              (ตำราอุดมเดช, อ.เทพย์ สาริกบุตร, Brihat Parashara Hora Shastra)
             </div>
-          {% endif %}
-
-          {% if result.astro_patterns and result.astro_patterns.matched_count %}
-            <div class="oracle-astro-patterns">
-              <h3>📜 โยค / เกณฑ์ในชะตา ({{ result.astro_patterns.matched_count }} เกณฑ์)</h3>
-              <div class="ap-intro">
-                การประกอบของดาวหลายดวงเป็น "โยค" ตามฐานข้อมูล
-                (ตำราอุดมเดช, อ.เทพย์ สาริกบุตร, Brihat Parashara Hora Shastra)
-              </div>
+            <div class="ap-categories-grid">
               {% for grp in result.astro_patterns.matched_by_category %}
                 <div class="ap-category">
                   <h4 class="ap-cat-title">{{ grp.category }}</h4>
@@ -1278,35 +1265,70 @@
                       </div>
                       <div class="ap-desc">{{ p.description }}</div>
                       <div class="ap-meaning">{{ p.meaning }}</div>
-                      {% if p.advice %}
-                        <div class="ap-advice">💡 {{ p.advice }}</div>
-                      {% endif %}
                     </div>
                   {% endfor %}
                 </div>
               {% endfor %}
-
-              {% if result.astro_patterns.near_miss_count %}
-                <details class="ap-nearmiss">
-                  <summary>🔭 เกณฑ์ที่ยังเข้าไม่ครบ ({{ result.astro_patterns.near_miss_count }}) — คำแนะนำเพื่อหนุนเสริม</summary>
-                  {% for p in result.astro_patterns.near_misses %}
-                    <div class="ap-card ap-tone-neutral">
-                      <div class="ap-head">
-                        <span class="ap-code">{{ p.code }}</span>
-                        <span class="ap-name">{{ p.name }}</span>
-                        <span class="ap-badge ap-badge-miss">ยังไม่เข้าเกณฑ์</span>
-                      </div>
-                      <div class="ap-desc">{{ p.description }}</div>
-                      {% if p.advice %}
-                        <div class="ap-advice">💡 {{ p.advice }}</div>
-                      {% endif %}
-                    </div>
-                  {% endfor %}
-                </details>
-              {% endif %}
             </div>
-          {% endif %}
-        </div>
+          </div>
+        {% endif %}
+
+        {# ============================================================
+           บล็อก 3: ⚡ ตำแหน่งกำลังของดาวรายดวง (ครบ 10 ดวง)
+           แสดงทั้งโหมด — เป็นมาตรฐานพื้นฐาน
+           ============================================================ #}
+        {% if o.dignity_highlights %}
+          <div class="oracle-block-card oracle-dignities">
+            <h3>⚡ ตำแหน่งกำลังของดาวในดวงชะตา</h3>
+            <div class="ap-intro">
+              ดาวแต่ละดวงมี <strong>ตำแหน่งกำลัง</strong> ตามราศีที่อยู่ —
+              อุจน์ (สูงสุด) / เกษตร (บ้านตัวเอง) / มูลตรีโกณ /
+              มิตร / สมพล / ประ-ศัตรู / นิจ (ต่ำสุด)
+            </div>
+            <div class="dignity-table">
+              {% for d in o.dignity_highlights %}
+                <div class="dignity-row dignity-{{ d.dignity }}">
+                  <span class="dignity-planet">{{ d.planet }}</span>
+                  <span class="dignity-rasi">{{ d.rasi }}</span>
+                  <span class="dignity-label">{{ d.label }}</span>
+                  <span class="dignity-score">
+                    {% if d.strength > 0 %}+{{ d.strength }}
+                    {% elif d.strength < 0 %}{{ d.strength }}
+                    {% else %}0{% endif %}
+                  </span>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {# ============================================================
+           บล็อก 4: 🔭 เกณฑ์ที่ยังเข้าไม่ครบ (near misses)
+           เฉพาะโหมดศึกษาโหราศาสตร์
+           ============================================================ #}
+        {% if result.astro_patterns and result.astro_patterns.near_miss_count %}
+          <div class="oracle-block-card view-student ap-nearmiss-block">
+            <details class="ap-nearmiss">
+              <summary>🔭 เกณฑ์ที่ยังเข้าไม่ครบ ({{ result.astro_patterns.near_miss_count }}) — สำหรับผู้ศึกษา</summary>
+              <div class="ap-intro">
+                เกณฑ์เหล่านี้ <strong>ยังไม่เข้า</strong> ดวงนี้
+                แต่บอกได้ว่าขาดอะไร — ถ้าดาวจรเข้าตำแหน่ง จะหนุนชั่วคราว
+              </div>
+              {% for p in result.astro_patterns.near_misses %}
+                <div class="ap-card ap-tone-neutral">
+                  <div class="ap-head">
+                    <span class="ap-code">{{ p.code }}</span>
+                    <span class="ap-name">{{ p.name }}</span>
+                    <span class="ap-badge ap-badge-miss">ยังไม่เข้าเกณฑ์</span>
+                  </div>
+                  <div class="ap-desc">{{ p.description }}</div>
+                  {% if p.advice %}
+                    <div class="ap-advice">💡 {{ p.advice }}</div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </details>
+          </div>
         {% endif %}
 
         {% if o.headline %}
@@ -1391,6 +1413,6 @@
     <p>คำนวณตามคัมภีร์สุริยยาตร์ของไทย · port มาจาก Devtino.Astrology</p>
   </footer>
 
-  <script src="/static/script.js?v=20260614a"></script>
+  <script src="/static/script.js?v=20260614f"></script>
 </body>
 </html>

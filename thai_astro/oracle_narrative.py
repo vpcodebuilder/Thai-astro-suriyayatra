@@ -550,19 +550,22 @@ def compose_oracle_reading(
     warnings = _build_warnings(transit_summary, transit_lord_summary, has_flip_yoga)
     closing = _build_closing(tone_class, has_flip_yoga, seed)
 
-    # สรุปกำลังดาวเด่น ๆ (สำหรับโชว์รายดวง)
+    # สรุปกำลังดาวรายดวง — แสดงครบทุกดวง (เด่น/อ่อน/กลาง)
+    # เรียงตามกำลัง: อุจน์ > เกษตร > มูล > มิตร > สมพล > ประ/ศัตรู > นิจ
     dignity_highlights = []
     for name, d in dignities.items():
-        if d.is_strong or d.is_debilitated:
-            dignity_highlights.append({
-                "planet": name,
-                "rasi": d.rasi_name,
-                "label": d.label,
-                "is_strong": d.is_strong,
-                "is_debilitated": d.is_debilitated,
-            })
-    # เรียงตามกำลัง
-    dignity_highlights.sort(key=lambda x: 0 if x["is_strong"] else 1)
+        dignity_highlights.append({
+            "planet": name,
+            "rasi": d.rasi_name,
+            "label": d.label,
+            "dignity": d.dignity,
+            "strength": d.strength,
+            "is_strong": d.is_strong,
+            "is_weak": d.is_weak,
+            "is_exalted": d.is_exalted,
+            "is_debilitated": d.is_debilitated,
+        })
+    dignity_highlights.sort(key=lambda x: -x["strength"])
 
     return {
         "address": address,

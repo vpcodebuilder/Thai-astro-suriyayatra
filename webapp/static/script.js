@@ -140,6 +140,23 @@ function setupPlanetTooltip() {
           <div class="tip-row tip-poison-meaning">${pinfo.meaning}</div>`;
       }
     }
+    let dignityHtml = "";
+    if (d.tipDignity) {
+      const s = parseInt(d.tipStrength || "0", 10);
+      let dignityClass = "tip-dignity-neutral";
+      let icon = "";
+      if (s >= 4) { dignityClass = "tip-dignity-very-strong"; icon = "★"; }
+      else if (s >= 2) { dignityClass = "tip-dignity-strong"; icon = "✦"; }
+      else if (s >= 1) { dignityClass = "tip-dignity-mild"; icon = "•"; }
+      else if (s <= -2) { dignityClass = "tip-dignity-weak"; icon = "✖"; }
+      else if (s < 0) { dignityClass = "tip-dignity-low"; icon = "▾"; }
+      const sign = s > 0 ? "+" + s : s;
+      dignityHtml = `
+        <div class="tip-row tip-dignity ${dignityClass}">
+          <span class="tip-label">${icon} กำลัง</span>
+          ${d.tipDignity} <span class="tip-strength">(${sign})</span>
+        </div>`;
+    }
     return `
       <div class="tip-title">
         <span class="tip-planet">${d.tipPlanet}</span>
@@ -150,6 +167,7 @@ function setupPlanetTooltip() {
       <div class="tip-row"><span class="tip-label">องศา</span>${d.tipDegree}°</div>
       <div class="tip-row"><span class="tip-label">ลิปดา</span>${d.tipArcmin}′</div>
       <div class="tip-row"><span class="tip-label">ฟิลิปดา</span>${d.tipArcsec}″</div>
+      ${dignityHtml}
       ${poisonHtml}`;
   }
 
