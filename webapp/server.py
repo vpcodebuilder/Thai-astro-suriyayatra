@@ -3022,7 +3022,8 @@ _FORECAST_CACHE: Dict[tuple, dict] = {}     # (date_iso, province) → result
 def _compute_forecast_day(d: _date, province: str) -> dict:
     """คำนวณข้อมูลฤกษ์ของวันเดียว สำหรับการ์ดใน strip
     Returns dict with: date, wan, score_avg, percent, stars, grade, tier,
-        top_events (3), bad_alerts, hit_count, event_count
+        top_events (ทุก event ที่ผ่าน sort by best score),
+        bad_alerts, hit_count, event_count
     """
     cache_key = (d.isoformat(), province)
     if cache_key in _FORECAST_CACHE:
@@ -3064,8 +3065,8 @@ def _compute_forecast_day(d: _date, province: str) -> dict:
     pct = _score_to_percent(int(round(card_score)))
     grade_info = _score_to_grade(int(round(card_score)))
 
-    # top 3 events เรียงตาม best score
-    top_sorted = sorted(event_stats.items(), key=lambda x: -x[1]["best"])[:3]
+    # ทุก event ที่ผ่านเกณฑ์ (sync กับ event_count ใน tally header)
+    top_sorted = sorted(event_stats.items(), key=lambda x: -x[1]["best"])
     top_events = []
     for ek, stats in top_sorted:
         ev = _MUHURTA_EVENTS[ek]
