@@ -2941,3 +2941,39 @@ hover chip ดาว → แสดง:
 
 ## Cache version
 `v=20260614h`
+
+
+# ===== Session 20 Hotfix — ฤกษ์ 7 วัน chip count mismatch — 2026-06-14 =====
+
+## ปัญหา
+Forecast strip บนหน้า /muhurta — Header ขยายของแต่ละวันแสดง
+"X ฤกษ์ผ่านเกณฑ์ใน N กิจกรรม" แต่ chip กิจกรรมที่โผล่ออกจริงมีแค่ 3 อัน
+(เช่น 26 ฤกษ์/13 กิจกรรม → ออก 3 chip)
+
+## Root cause
+`webapp/server.py:_compute_forecast_day`
+```python
+top_sorted = sorted(event_stats.items(), key=lambda x: -x[1]["best"])[:3]
+```
+slice เหลือ 3 event เท่านั้น แต่ `event_count` คำนวณก่อน slice
+(`event_count = len(event_stats)`) → mismatch
+
+## แก้
+ลบ `[:3]` ส่งครบทุก event ที่ผ่าน threshold sort by best score
+อยู่แล้ว — frontend render ตามจำนวนจริง
+
+## Verify
+API `/muhurta/forecast` พรุ่งนี้ (BKK):
+- `event_count=13` (เดิม)
+- `top_events_len=13` (เดิม=3) ✓
+- `hit_count=26`
+
+## Files
+- `webapp/server.py` — ลบ slice + แก้ docstring
+- `webapp/templates/index.html` — cache v=20260614i
+
+## Cache version
+`v=20260614i` (`index.html`); muhurta.html ไม่ต้อง bump เพราะ logic ฝั่ง backend
+
+## Commit
+`ca77922` (e14837c..ca77922)
