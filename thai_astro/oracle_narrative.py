@@ -294,17 +294,12 @@ def _build_yoga_messages_from_patterns(matched_patterns: List) -> List[dict]:
     goods.sort(key=lambda p: -priority_order.get(p.category, 0))
 
     msgs = []
-    intro_phrases = [
-        "เรื่องแรกที่อยากบอกก่อน",
-        "อีกเรื่องที่อยากให้รู้",
-        "ที่น่าสนใจมากคือ",
-        "ขอชมก่อนเลย",
-    ]
-    for i, p in enumerate(goods[:4]):
-        intro = intro_phrases[i] if i < len(intro_phrases) else "และอีกเรื่อง"
+    # แสดงครบทุก yoka ที่ match — ไม่มี prefix narrative
+    # รูปแบบ: §§ชื่อโยค§§ (หมวด) — ผลที่จะเกิด: {meaning}
+    for i, p in enumerate(goods):
         text = (
-            f"{intro} — ดวงคุณมี §§{p.name}§§ "
-            f"({p.category}) {p.meaning}"
+            f"§§{p.name}§§ ({p.category}) — "
+            f"ผลที่จะเกิด: {p.meaning}"
         )
         msgs.append({
             "name": p.name,

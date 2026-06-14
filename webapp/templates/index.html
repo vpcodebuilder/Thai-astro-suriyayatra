@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260614f" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260614h" />
 </head>
 <body class="view-general" data-scroll-target="{% if scroll_target == '1' %}transit{% endif %}">
   <header class="site-header">
@@ -1244,7 +1244,7 @@
            แสดงทั้งโหมดดูดวง + ศึกษา
            ============================================================ #}
         {% if result.astro_patterns and result.astro_patterns.matched_count %}
-          <div class="oracle-block-card oracle-astro-patterns">
+          <div class="oracle-block-card oracle-astro-patterns view-student">
             <h3>📜 โยคและเกณฑ์ที่ได้ในชะตา ({{ result.astro_patterns.matched_count }})</h3>
             <div class="ap-intro">
               การประกอบของดาวหลายดวงตามฐานข้อมูล 28 กฎ
@@ -1278,7 +1278,7 @@
            แสดงทั้งโหมด — เป็นมาตรฐานพื้นฐาน
            ============================================================ #}
         {% if o.dignity_highlights %}
-          <div class="oracle-block-card oracle-dignities">
+          <div class="oracle-block-card oracle-dignities view-student">
             <h3>⚡ ตำแหน่งกำลังของดาวในดวงชะตา</h3>
             <div class="ap-intro">
               ดาวแต่ละดวงมี <strong>ตำแหน่งกำลัง</strong> ตามราศีที่อยู่ —
@@ -1413,6 +1413,6 @@
     <p>คำนวณตามคัมภีร์สุริยยาตร์ของไทย · port มาจาก Devtino.Astrology</p>
   </footer>
 
-  <script src="/static/script.js?v=20260614f"></script>
+  <script src="/static/script.js?v=20260614h"></script>
 </body>
 </html>

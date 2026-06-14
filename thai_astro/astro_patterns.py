@@ -45,41 +45,76 @@ LAGNA_GROUP_MEANING = {
     "ปัศวะเกณฑ์": "ดวงผู้นำ-กล้าหาญ-ชอบแข่งขัน รักความท้าทาย",
 }
 
-# === องค์เกณฑ์ (เน้นยศศักดิ์/อำนาจ) ===
-# กฎ: ตามลัคนา → ดาวที่กำหนดต้องอยู่ในภพที่ระบุ → เข้าเกณฑ์
+# === องค์เกณฑ์ (เน้นยศศักดิ์/อำนาจ) — แก้ใหม่ตามตำราเป็นทางการ ===
+# กฎ: ตามกลุ่มลัคนา → ดาวที่กำหนดต้องอยู่ในภพที่ระบุ → เข้าเกณฑ์
+# ดาว 1=อาทิตย์ 2=จันทร์ 3=อังคาร 4=พุธ 5=พฤหัสบดี 6=ศุกร์ 7=เสาร์ 8=ราหู
 ONG_KEN_RULES = {
-    "ปัศวะเกณฑ์": {
-        "house": 10,
-        "house_name": "กัมมะ",
-        "planets": {"อาทิตย์", "จันทร์", "อังคาร", "ศุกร์"},
-        "result": "ได้ยศถึงพระยา — ตำแหน่งสูงในราชการ/องค์กรใหญ่",
-    },
     "นระเกณฑ์": {
         "house": 1,
         "house_name": "ตนุ (กุมลัคนา)",
-        "planets": {"พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"},
-        "result": "เด่นตัวเองตลอดชีวิต — ผู้ใหญ่หนุน ภาพลักษณ์ดี",
+        "planets": {"อาทิตย์", "พฤหัสบดี", "เสาร์"},     # ๑ ๕ ๗
+        "subname": "นระเอกเกณฑ์",
+        "result": (
+            "ตำแหน่งระดับสูง — เป็นที่ยอมรับในวงการ มีบารมีคน "
+            "(สมัยใหม่: ผู้บริหาร/ผู้นำทีม/เจ้าของกิจการที่มีชื่อเสียง)"
+        ),
     },
     "อัมพุเกณฑ์": {
         "house": 4,
         "house_name": "พันธุ",
-        "planets": {"จันทร์", "พุธ", "ศุกร์", "พฤหัสบดี"},
-        "result": "ได้ยศถึงพระยา — มีบ้าน/ทรัพย์มรดก/ฐานครอบครัวมั่นคง",
+        "planets": {"จันทร์", "พุธ", "พฤหัสบดี", "ศุกร์"},  # ๒ ๔ ๕ ๖
+        "subname": "อัมพุจตุเกณฑ์",
+        "result": (
+            "ยศใหญ่ ฐานะมั่นคงจากครอบครัว/ที่ดิน/บ้าน "
+            "(สมัยใหม่: นักธุรกิจอสังหา/มรดก คนวงในที่มีอิทธิพล)"
+        ),
     },
     "กีฏะเกณฑ์": {
         "house": 7,
         "house_name": "ปัตนิ",
-        "planets": {"อังคาร", "ราหู"},
-        "result": "ฐานะมั่นคงจากคู่ครอง/หุ้นส่วน — เจรจาเก่ง พลิกได้",
+        "planets": {"อังคาร", "ราหู"},                      # ๓ ๘
+        "subname": "กีฏะสัตตะเกณฑ์",
+        "result": (
+            "เด่นจากคู่ครอง/หุ้นส่วน — เสมอวงศ์ผู้ใหญ่ "
+            "(สมัยใหม่: คู่ค้าเก่ง พลิกวิกฤตจากความสัมพันธ์ ได้บารมีจากคู่ชีวิต)"
+        ),
+    },
+    "ปัศวะเกณฑ์": {
+        "house": 10,
+        "house_name": "กัมมะ",
+        "planets": {"อาทิตย์", "จันทร์", "อังคาร", "พฤหัสบดี"},  # ๑ ๒ ๓ ๕
+        "subname": "ปัสวะทศะเกณฑ์",
+        "result": (
+            "ยศใหญ่ ตำแหน่งสาธารณะ "
+            "(สมัยใหม่: CEO ผู้บริหารระดับสูง นักการเมือง คนดังในสาขาอาชีพ)"
+        ),
     },
 }
 
-# === อุดมเกณฑ์ (เน้นทรัพย์สิน/บริวาร) ===
-# กฎ: ลัคนา นระเกณฑ์ → ดาวที่กำหนดในภพ 1/3/4/7/11
-#     ลัคนากลุ่มอื่น → ดาวใด ๆ ในภพ 1/3/4/7/11
-UDOM_HOUSES = {1, 3, 4, 7, 11}
-UDOM_HOUSE_NAMES = {1: "ตนุ", 3: "สหัชชะ", 4: "พันธุ", 7: "ปัตนิ", 11: "ลาภะ"}
-UDOM_NRA_PLANETS = {"พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"}
+# === อุดมเกณฑ์ (เน้นทรัพย์สิน/บริวาร) — แก้ใหม่ตามตำรา ===
+# แต่ละกลุ่มลัคนามี ดาวเฉพาะ + ภพเฉพาะ ของตนเอง (ไม่ใช่ generic อีกต่อไป)
+UDOM_KEN_RULES = {
+    "นระเกณฑ์": {
+        "planets": {"พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"},
+        "houses": {1, 3, 4, 7, 11},
+        "house_names_th": "ตนุ/สหัชชะ/พันธุ/ปัตนิ/ลาภะ",
+    },
+    "อัมพุเกณฑ์": {
+        "planets": {"อังคาร", "พฤหัสบดี", "เสาร์", "ราหู"},
+        "houses": {4, 5, 9},
+        "house_names_th": "พันธุ/ปุตตะ/ศุภะ",
+    },
+    "กีฏะเกณฑ์": {
+        "planets": {"อังคาร", "ราหู"},
+        "houses": {3, 7, 9, 12},
+        "house_names_th": "สหัชชะ/ปัตนิ/ศุภะ/วินาศ",
+    },
+    "ปัศวะเกณฑ์": {
+        "planets": {"อาทิตย์", "จันทร์", "อังคาร", "ศุกร์"},
+        "houses": {6, 10},
+        "house_names_th": "อริ/กัมมะ",
+    },
+}
 
 # ปัญจมหาบุรุษ: ดาว → (รหัส, ชื่อ, ความหมาย)
 PANCHA = {
@@ -275,14 +310,8 @@ def _check_th_lagna(asc_rasi: int) -> List[AstroPattern]:
     return [p for p in out if p.matched]
 
 
-def _check_ong_udom(asc_rasi: int, planets) -> List[AstroPattern]:
-    """องค์เกณฑ์ + อุดมเกณฑ์ ตามตำราไทย (TH-105, TH-106)
-
-    องค์เกณฑ์ = ดาวที่กำหนด ลงในภพเฉพาะ ตามกลุ่มลัคนา → ยศศักดิ์/อำนาจ
-    อุดมเกณฑ์ = ดาวลงในภพ 1/3/4/7/11 → ทรัพย์สิน/บริวาร
-        - ลัคนานระเกณฑ์: เฉพาะดาวพุธ/พฤหัส/ศุกร์/เสาร์
-        - ลัคนากลุ่มอื่น: ดาวใด ๆ
-    """
+def _check_ong_udom(asc_rasi: int, planets, house_lords) -> List[AstroPattern]:
+    """หมวด 3: องค์เกณฑ์ + อุดมเกณฑ์ + ปทุมเกณฑ์ + ธนะโยค (TH-105..108)"""
     out: List[AstroPattern] = []
     group = _lagna_group_of(asc_rasi)
     if group is None:
@@ -300,7 +329,8 @@ def _check_ong_udom(asc_rasi: int, planets) -> List[AstroPattern]:
     ok = len(qualifying) >= 1
     planets_str = "/".join(sorted(target_planets))
     out.append(AstroPattern(
-        code="TH-105", name="องค์เกณฑ์", category="เกณฑ์ลัคนา (ยศ-ทรัพย์)", level="A",
+        code="TH-105", name=f"องค์เกณฑ์ ({rule['subname']})",
+        category="เกณฑ์ลัคนา (ยศ-ทรัพย์)", level="A",
         matched=ok, tone="good",
         description=(
             f"ลัคนากลุ่ม{group} → ต้องมีดาว {planets_str} "
@@ -311,36 +341,122 @@ def _check_ong_udom(asc_rasi: int, planets) -> List[AstroPattern]:
         planets_involved=qualifying,
         advice=("" if ok else
                 f"ขาด: ต้องมีดาว {planets_str} อย่างน้อย 1 ดวง ลงภพ {target_house} "
-                f"({rule['house_name']}) — ดาวจรเสริมที่ภพนี้จะช่วยชั่วคราว"),
+                f"({rule['house_name']}) — ดาวจรเข้าภพนี้จะหนุนชั่วคราว"),
     ))
 
-    # ---- TH-106 อุดมเกณฑ์ ----
-    if group == "นระเกณฑ์":
-        allowed = UDOM_NRA_PLANETS
-        rule_text = f"ดาว {'/'.join(sorted(allowed))} ลงภพ 1/3/4/7/11"
-    else:
-        allowed = set(MAIN_PLANETS_7) | {"ราหู", "เกตุ", "มฤตยู"}
-        rule_text = "ดาวใด ๆ ลงภพ 1/3/4/7/11 (โบราณจารย์อนุโลม)"
-
-    udom_planets = []
-    for p in allowed:
+    # ---- TH-106 อุดมเกณฑ์ — กฎเฉพาะกลุ่ม ----
+    udom = UDOM_KEN_RULES[group]
+    u_planets = udom["planets"]
+    u_houses = udom["houses"]
+    u_house_str = "/".join(str(h) for h in sorted(u_houses))
+    udom_qualifying = []
+    for p in u_planets:
         if p in planets:
             h = _rasi_to_house(planets[p].zodiac.rasi, asc_rasi)
-            if h in UDOM_HOUSES:
-                udom_planets.append(f"{p}(ภพ{h})")
-
-    ok2 = len(udom_planets) >= 1
+            if h in u_houses:
+                udom_qualifying.append(f"{p}(ภพ{h})")
+    ok2 = len(udom_qualifying) >= 1
     out.append(AstroPattern(
-        code="TH-106", name="อุดมเกณฑ์", category="เกณฑ์ลัคนา (ยศ-ทรัพย์)", level="A",
+        code="TH-106", name="อุดมเกณฑ์",
+        category="เกณฑ์ลัคนา (ยศ-ทรัพย์)", level="A",
         matched=ok2, tone="good",
         description=(
-            f"ลัคนากลุ่ม{group} → {rule_text} — "
-            f"พบ {len(udom_planets)} ดวง ({', '.join(udom_planets) or '—'})"
+            f"ลัคนากลุ่ม{group} → ดาว {'/'.join(sorted(u_planets))} "
+            f"ลงภพ {u_house_str} ({udom['house_names_th']}) — "
+            f"พบ {len(udom_qualifying)} ดวง ({', '.join(udom_qualifying) or '—'})"
         ),
-        meaning="ทรัพย์สิน เงินทอง บริวารพร้อม — ความมั่งคั่งและความสมบูรณ์พูนสุข",
-        planets_involved=[s.split("(")[0] for s in udom_planets],
+        meaning=(
+            "ทรัพย์สิน เงินทอง บริวารพร้อมหน้า — "
+            "(สมัยใหม่: รายได้หลายทาง คนรอบตัวพร้อมหนุน ใช้ชีวิตสบาย)"
+        ),
+        planets_involved=[s.split("(")[0] for s in udom_qualifying],
         advice=("" if ok2 else
-                "ไม่มีดาวเข้าภพอุดม (1/3/4/7/11) — รายได้ต้องพึ่งความขยันมากกว่าโชค"),
+                f"ไม่มีดาว {'/'.join(sorted(u_planets))} เข้าภพ {u_house_str} "
+                "— ทรัพย์ต้องสร้างเอง ไม่หล่นจากฟ้า"),
+    ))
+
+    # ---- TH-107 ปทุมเกณฑ์ (จันทร์/พฤหัส/ศุกร์ ในภพเฉพาะ) ----
+    moon_h = _rasi_to_house(planets["จันทร์"].zodiac.rasi, asc_rasi) if "จันทร์" in planets else None
+    jup_h = _rasi_to_house(planets["พฤหัสบดี"].zodiac.rasi, asc_rasi) if "พฤหัสบดี" in planets else None
+    ven_h = _rasi_to_house(planets["ศุกร์"].zodiac.rasi, asc_rasi) if "ศุกร์" in planets else None
+    pa_hits = []
+    if moon_h == 11: pa_hits.append("จันทร์(ภพ11 ลาภะ)")
+    if jup_h == 4:   pa_hits.append("พฤหัสบดี(ภพ4 พันธุ)")
+    if ven_h == 3:   pa_hits.append("ศุกร์(ภพ3 สหัชชะ)")
+    pa_full = len(pa_hits) == 3
+    pa_ok = len(pa_hits) >= 1
+    if pa_full:
+        pa_meaning = (
+            "ปทุมเกณฑ์ครบสามดวง — โชคดี รุ่งเรืองประดุจดอกบัวบาน "
+            "เป็นผู้มีเสน่ห์ ตำราอ.เชย บัวก้านทอง ว่า 'กลิ่นกายหอม'"
+        )
+    else:
+        pa_meaning = (
+            "ได้บางส่วนของปทุมเกณฑ์ — มีเสน่ห์เฉพาะเรื่อง "
+            f"({len(pa_hits)}/3 ดวง)"
+        )
+    out.append(AstroPattern(
+        code="TH-107", name="ปทุมเกณฑ์",
+        category="เกณฑ์ลัคนา (ยศ-ทรัพย์)", level="A",
+        matched=pa_ok, tone="good",
+        description=(
+            f"ปทุมเกณฑ์ ({len(pa_hits)}/3 ดวง): "
+            f"{', '.join(pa_hits) or 'ไม่มีดวงใดเข้า'}"
+        ),
+        meaning=pa_meaning,
+        planets_involved=[s.split("(")[0] for s in pa_hits],
+        advice=("" if pa_ok else
+                "ต้องการ จันทร์(ภพ11) / พฤหัส(ภพ4) / ศุกร์(ภพ3) อย่างน้อย 1 ดวง"),
+    ))
+
+    # ---- TH-108 ธนะโยค (เศรษฐี) ----
+    # เจ้าเรือนของ 1/2/5/7/9/11 สลับเรือนกันใน 6 ภพนี้ → ดวงเศรษฐี
+    wealth_houses = {1, 2, 5, 7, 9, 11}
+    lords_in_wealth = []
+    for h in sorted(wealth_houses):
+        lord = house_lords.get(h)
+        if lord and lord in planets:
+            lord_h = _rasi_to_house(planets[lord].zodiac.rasi, asc_rasi)
+            if lord_h in wealth_houses:
+                lords_in_wealth.append(f"เจ้าภพ{h}={lord}→ภพ{lord_h}")
+    th_full = len(lords_in_wealth) >= 4
+    # variant อ.เชียร: เจ้าเรือน 1/2/11 อยู่สลับ
+    small_set = {1, 2, 11}
+    small_hits = []
+    for h in small_set:
+        lord = house_lords.get(h)
+        if lord and lord in planets:
+            lord_h = _rasi_to_house(planets[lord].zodiac.rasi, asc_rasi)
+            if lord_h in small_set:
+                small_hits.append(f"เจ้าภพ{h}={lord}→ภพ{lord_h}")
+    th_small = len(small_hits) == 3
+
+    matched_th = th_full or th_small
+    th_desc_lines = []
+    if th_full:
+        th_desc_lines.append(
+            f"ตำรับ อ.เอื้อน: เจ้าเรือน 1/2/5/7/9/11 สลับใน 6 ภพ — {len(lords_in_wealth)}/6 ดวง"
+        )
+    elif lords_in_wealth:
+        th_desc_lines.append(
+            f"ตำรับ อ.เอื้อน: {len(lords_in_wealth)}/6 ดวง (ต้อง ≥ 4)"
+        )
+    if th_small:
+        th_desc_lines.append(
+            "ตำรับ อ.เชียร: เจ้าเรือน 1/2/11 สลับเรือนกันครบ ✓"
+        )
+    out.append(AstroPattern(
+        code="TH-108", name="ธนะโยค (ดวงเศรษฐี)",
+        category="เกณฑ์ลัคนา (ยศ-ทรัพย์)", level="A",
+        matched=matched_th, tone="good",
+        description=" / ".join(th_desc_lines) or "ไม่เข้าเกณฑ์เศรษฐีทั้ง 2 ตำรับ",
+        meaning=(
+            "ดวงเศรษฐี ฐานะการเงินดี ทรัพย์สินมากมาย — "
+            "(สมัยใหม่: ความมั่งคั่งระยะยาว มี portfolio หลายตัว เก็บเงินอยู่)"
+        ),
+        planets_involved=[],
+        advice=("" if matched_th else
+                "เจ้าเรือนทรัพย์ยังไม่เชื่อมโยงกัน — ต้องบริหารแต่ละช่องรายได้แยกเอง"),
     ))
     return out
 
@@ -654,9 +770,10 @@ def detect_astro_patterns(
     # หมวด 2+3: กลุ่มลัคนา + องค์เกณฑ์ + อุดมเกณฑ์
     # กฎใหม่: แสดง "กลุ่มลัคนา" (TH-101..104) เฉพาะเมื่อเข้าทั้ง TH-105 + TH-106
     lagna_patterns = _check_th_lagna(asc_rasi)
-    ong_udom_patterns = _check_ong_udom(asc_rasi, planets)
+    ong_udom_patterns = _check_ong_udom(asc_rasi, planets, house_lords)
     ong_ok = any(p.matched and p.code == "TH-105" for p in ong_udom_patterns)
     udom_ok = any(p.matched and p.code == "TH-106" for p in ong_udom_patterns)
+    # แสดง "กลุ่มลัคนา" เมื่อเข้าทั้งองค์เกณฑ์ + อุดมเกณฑ์
     if ong_ok and udom_ok:
         all_patterns += lagna_patterns
     all_patterns += ong_udom_patterns
