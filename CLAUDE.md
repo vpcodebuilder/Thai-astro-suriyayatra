@@ -2977,3 +2977,426 @@ API `/muhurta/forecast` พรุ่งนี้ (BKK):
 
 ## Commit
 `ca77922` (e14837c..ca77922)
+
+
+# ===== Session 21 — Muhurta personal mode + กนกนารี (ตารางอ.หลวงวุฒิรณพัศตุ์) — 2026-06-16 =====
+
+## ภาพรวม
+1. เปิดใช้ "👤 หาฤกษ์เฉพาะบุคคล" บน /muhurta (เดิม disabled)
+2. เปลี่ยนเกณฑ์ **กนกนารี** จาก MVP (จันทร์+ศุกร์ราศีหญิง) → ตาราง 7×27
+   ตามตำราอ.หลวงวุฒิรณพัศตุ์ (ปรมาจารย์ ณ.ร. รวบรวม)
+
+## ส่วนที่ 1 — Personal mode
+
+### Backend (มีอยู่แล้วก่อน session นี้)
+- `scan_range_multi_events(birth_datetime=..., birth_province=...)` รองรับ
+  เจ้าชะตา อยู่แล้ว
+- คำนวณ `personal_bhava = ((asc_now - natal_asc_rasi) % 12) + 1`
+- `_bhava_quality_label`: kendra(1/4/7/10)+trikona(1/5/9) → good (+2),
+  dusthana(6/8/12) → warning (−2), อื่น → neutral
+- Vargottama: detect ใน base.vargottama_planets อยู่แล้ว
+- `_serialize_hit` มี personal_bhava + tone field พร้อม render
+
+### UI ที่เพิ่ม
+- ลบ `disabled` class จาก mode-btn[personal] + เพิ่ม radio input
+- เพิ่ม `<div id="birth-step">` (วันเกิด/เวลาเกิด/จังหวัดเกิด) หลัง Step 1
+- JS toggle: คลิกโหมด → `syncBirthStep(mode)` show/hide birth-step
+
+### Files
+- `webapp/templates/muhurta.html` — activate mode + birth-step + sync JS
+- cache `v=20260616a`
+
+## ส่วนที่ 2 — กนกนารี ตารางอ.หลวงวุฒิรณพัศตุ์
+
+### หลักการ
+ตรวจ "วาร × ฤกษ์" (วันในสัปดาห์ × ตำแหน่งจันทร์ในนักษัตร 1-27)
+ตามตารางในตำรา — แต่ละช่อง = "ทำได้" หรือ "ห้าม"
+- **ทำได้** → ผ่านเกณฑ์, tone=good, score +2 (logic เดิม)
+- **ห้าม** → ไม่ผ่านเกณฑ์, tone=warning, score −3 (logic เดิมของ warning criteria)
+
+### ตาราง KANAKA_NAREE_PASS (set ของ ฤกษ์ที่ "ทำได้")
+**Source authoritative**: `knowledge/ฤกษ์.xlsx`
+(ตารางที่ transcribe จากภาพรอบแรกผิด — ถูกแทนที่ด้วยข้อมูลจาก Excel แล้ว
+ตอนนี้ผ่าน full 7×27 = 189/189 cell match)
+
+| วาร | ฤกษ์ที่ผ่าน (ทำได้) |
+|-----|----------|
+| 1 อาทิตย์ | 1,3,4,7,9,10,11,13, 16,19,21,22,24,26,27 |
+| 2 จันทร์ | 1,4,7,9,11,12,13,14, 15,20,22,24,25,26,27 |
+| 3 อังคาร | 2,7,9,10,13, 16,21,22,23,25,26,27 |
+| 4 พุธ | 2,4,5,7,9,10, 15,17,19,21,22,23,26,27 |
+| 5 พฤหัสบดี | 2,9,11,12, 15,17,18,19,22,23,25 |
+| 6 ศุกร์ | 1,2,5,6,7,10,11,14, 17,19,21,22,24 |
+| 7 เสาร์ | 8,10,11,14, 15,16,17,18,20,21,22,24 |
+
+(ฤกษ์ที่เหลือ = "ห้าม")
+
+### กฎย่อยสำหรับ data flow
+1. `check_kanaka_naree(chart, wan, nak_number, nak_name)` — รับ wan+nakshatra
+   ตรวจตาราง → return CriterionMatch:
+   - ผ่าน: matched=True, tone="good", detail="ทำได้ — วัน{X} × ฤกษ์ที่ {N} ({nak_name}) ผ่านเกณฑ์..."
+   - ห้าม: matched=True, tone="warning", detail="⛔ ห้าม — วัน{X} × ฤกษ์ที่ {N} ({nak_name}) ไม่ผ่านเกณฑ์..."
+2. `evaluate_special_criteria(chart, wan=0, nak_number=0, nak_name="")` —
+   เพิ่ม optional args (default 0 → returns neutral, backward-compat)
+3. `compute_muhurta` ส่ง `wan + nak.number + nak.name` เข้า evaluator
+4. `ScanHit` มี field ใหม่ 2 ตัว:
+   - `criteria_tones: Dict[name, tone]` — per-hit tone
+   - `criteria_details: Dict[name, detail]` — per-hit reason
+5. `_serialize_criteria` ใช้ per-hit tone (override CRITERION_INFO default)
+   + ส่ง `detail` ผ่าน data-short ของ chip
+6. UI hit-row: chip กนกนารี ห้าม → `specific_bad_match` (สีแดง+⚠️+✓ ถ้า is_match)
+7. Popover REL_LABELS เพิ่ม "specific_bad_match" + CSS class
+
+### Files (Session 21)
+| ไฟล์ | สรุป |
+|------|------|
+| `thai_astro/muhurta_criteria.py` | + KANAKA_NAREE_PASS table; rewrite check_kanaka_naree; update evaluate_special_criteria sig; update CRITERION_INFO |
+| `thai_astro/muhurta.py` | + criteria_tones/criteria_details ฟิลด์ใน ScanHit (และ populate ทั้ง 2 scan paths); ส่ง wan+nak เข้า evaluate_special_criteria |
+| `webapp/server.py` | `_serialize_criteria` ใช้ per-hit tone + ส่ง detail |
+| `webapp/templates/_muhurta_hit_row.html` | chip กนกนารี ใช้ data-short = c.detail |
+| `webapp/templates/muhurta.html` | + REL_LABELS["specific_bad_match"] + CSS popover-relevance class |
+
+### Tests
+- 199/199 ผ่าน (no test changes — backward compat ผ่าน default args)
+- spot-check 9/9 case (table vs image) → ตรง
+
+### Verify ใน UI (BKK, wedding event, 17/6–16/7/2569)
+- กนกนารี ห้าม: 18/06 พฤ-8, 19/06 ศ-9, 24/06 พุธ-14, 25/06 ศ-15, 28/06 อา-18, 02/07 ศ-22 ...
+- กนกนารี ทำได้: 09/07 พุธ-26, 03/07 อา-19, 26/06 ศ-16, 22/06 จ-12 ...
+- 22 chips กนกนารี + 15 warning banners
+
+### Gotchas
+1. **uvicorn ไม่มี --reload ใน launch.json** — แก้ Python ต้อง preview_stop + preview_start
+2. **กนกนารี ห้าม ยังคงเป็น matched=True** — เพราะ "เข้าเกณฑ์ test แล้ว" (ไม่ใช่ skip)
+   → score logic เดิม `tone=warning → score-=3` ใช้ได้เลย ไม่ต้อง branch ใหม่
+3. **ScanHit เก่าไม่มี criteria_tones field** — getattr(h, ..., None) ใน
+   `_serialize_criteria` → ปลอดภัย
+4. **`nakshatra.number` 1-27 ตรงกับ "ฤกษ์ที่" ในตาราง** — ไม่ใช่ ROEK_GROUPS (9 กลุ่ม)
+5. **CSS popover-relevance.specific_bad_match** ใช้ #ffcdd2/red text — เข้ากับ chip
+6. **กนกนารี เป็นเกณฑ์ที่ละเอียดสุด** ในชุดเกณฑ์พิเศษ — ต่างจากกนกกุญชร/จักขุมายา
+   ที่ใช้กฎอย่างง่าย (ราศีจร / จันทร์กุมราหู)
+
+### Backlog
+- ขยายเกณฑ์ "ห้าม" ใน กนกกุญชร + จักขุมายา ตามตำราเดียวกัน (ถ้ามีตาราง)
+- เพิ่ม transit aspects + ทักษาจร per hit (สำหรับโหมดเฉพาะบุคคล) — task #3+#4 ยังค้าง
+
+### Cache version
+`v=20260616a`
+
+### สถานะ commit
+ยังไม่ push ตาม user request — testing เท่านั้น
+
+
+# ===== Session 22 — กนกกุญชร ตารางจริงจาก Excel + คะแนน ดีนัก/ดี — 2026-06-16 =====
+
+## ภาพรวม
+แทนที่ `check_kanaka_kunchara` MVP (พฤหัส/อังคารใน movable signs)
+ด้วยตาราง 27 ฤกษ์ × 7 วาร จาก `knowledge/ฤกษ์.xlsx` sheet "กนกกุญชร"
+— แต่ละช่องเก็บกฎ "ลัคนาราศีของฤกษ์ ดีนัก/ดี/ห้าม"
+
+## สถาปัตยกรรม
+- **`thai_astro/kanaka_kunchara_table.py`** ★ ใหม่ (auto-generated):
+  - `KANAKA_KUNCHARA_RAW[nak][wan] = "ข้อความกฎ"` (189 cells)
+- **`thai_astro/kanaka_kunchara.py`** ★ ใหม่:
+  - `parse_cell(text) → ParsedCell{forbidden,good,very_good,exclusive_listed,extra_note}`
+  - `check(lagna_rasi_name, nak_number, wan) → KKResult{tone,matched,label,...}`
+  - Greedy token scanner + alias map สำหรับ `มิถุน↔เมถุน` / `มังกร↔มกร` /
+    typo `สิงห็`/`มิน`/`กุม`
+
+## รูปแบบ cell ที่พบ
+| ตัวอย่าง | ตีความ |
+|---------|--------|
+| `ห้ามกรกฎ` | ลัคนากรกฎ = ห้าม (อื่น = neutral) |
+| `ห้ามกันย์ตุลย์มีน` | ห้าม 3 ราศี |
+| `ตุลย์พิจิกมังกรดี` | ลัคนา 3 ราศีนี้ = ดี |
+| `ห้ามราศีอื่น-ตุลย์ดีนัก` | ห้ามทุกราศีเว้น ตุลย์ (ดีนัก) |
+| `ธนูมังกรกันย์ดี-ห้ามปลูกเรือน` | ดี 3 + note ห้ามปลูกบ้าน |
+| `มิถุนดีนัก` | ลัคนาเมถุน = ดีนัก |
+
+## Scoring (มาตราคะแนนใหม่)
+ใน [muhurta.py](thai_astro/muhurta.py) loop ของ specials:
+- `tone=good` × `strength=1` (ดี)    → **+2**
+- `tone=good` × `strength=2` (ดีนัก) → **+3** ★ ใหม่
+- `tone=warning` (ห้าม)              → −3 (เหมือนเดิม)
+
+`CriterionMatch` มี field ใหม่ `strength: int = 1` (default backward-compat).
+`check_kanaka_kunchara` ตั้ง `strength=2` เมื่อพบ "ดีนัก".
+
+## SCORE_MAX
+- เดิม `MUHURTA_SCORE_MAX = 17`
+- ใหม่ **18** (เพิ่ม +1 จาก ดีนัก bonus ของกนกกุญชร)
+- Test `test_score_max_is_100` ใช้ MUHURTA_SCORE_MAX constant (ไม่ hardcode 17 แล้ว)
+
+## Logic flow ของ check_kanaka_kunchara
+```
+1. รับ chart + wan + nak_number (+ nak_name + roek_name สำหรับ detail)
+2. lagna_name = chart.ascendant.zodiac.rasi_name
+3. lookup cell_text = KANAKA_KUNCHARA_RAW[nak][wan]
+4. parse_cell(cell_text) → ParsedCell
+5. ตัดสินตามลำดับ:
+   - lagna ∈ very_good     → good, strength=2, label="ดีนัก"
+   - lagna ∈ good          → good, strength=1, label="ดี"
+   - lagna ∈ forbidden     → warning, label="ห้าม"
+   - exclusive_listed       → warning, label="ห้าม (ราศีอื่น)"
+   - else                   → neutral, label="ไม่ระบุชัด"
+```
+
+## Detail format
+`✨ ดีนัก — ลัคนา{X} × วัน{Y} × {ฤกษ์ใหญ่} ฤกษ์ที่ {N} กลุ่มดาว{nakชื่อ} (กฎ: ...) ผ่านเกณฑ์กนกกุญชร เด่นเป็นพิเศษ`
+
+## ทดสอบ
+- 189/189 cells parse สำเร็จ (no empty result)
+- 11/11 parser spot tests ผ่าน (รวม alias + exclusive + ดีนัก)
+- 199/199 unit tests ผ่าน
+- Browser scan 30 วัน (BKK, แต่งงาน): 11 chip kk ดี + 13 chip กนกนารี ดี
+- Direct call: lagna=เมถุน, nak=27, wan=1 → strength=2, tone=good ✓
+- 18/06/2569 พฤ-8 cell "ธนูมังกรกันย์ดี-ห้ามปลูกเรือน": lagna=กันย์/ธนู/มกร = ดี;
+  อื่น = neutral ✓ (verify ทุกชั่วโมง)
+
+## relevant_events ของกนกกุญชร (ขยาย)
+เปลี่ยนจากเฉพาะการเดินทาง (travel/vehicle/move_house/...) เป็น **ครอบทุกกิจกรรม**
+เพราะตาราง = "ลัคนาราศีของฤกษ์" ใช้ได้กับทุกการตั้งฤกษ์
+
+## ไฟล์ที่แตะ (Session 22)
+| ไฟล์ | สรุป |
+|------|------|
+| `thai_astro/kanaka_kunchara_table.py` ★ ใหม่ | raw 27×7 table |
+| `thai_astro/kanaka_kunchara.py` ★ ใหม่ | parser + check() |
+| `thai_astro/muhurta_criteria.py` | rewrite check_kanaka_kunchara; + strength field ใน CriterionMatch; update CRITERION_INFO + relevant_events |
+| `thai_astro/muhurta.py` | score loop ตามคะแนน 2/3/-3 (strength-aware); pass wan+nak+nak_name+roek_name |
+| `webapp/server.py` | MUHURTA_SCORE_MAX 17→18 |
+| `tests/test_dithi_weighting.py` | test_score_17 → test_score_max ใช้ constant |
+
+## Gotchas
+1. **Spreadsheet ใช้ "มิถุน"/"มังกร" ส่วน chart ใช้ "เมถุน"/"มกร"** — แก้ใน
+   `RASI_ALIAS` map ในตัว parser
+2. **Typo ใน Excel**: `สิงห็` (cell nak=10 wan=3), `มิน` (หลาย cells),
+   `กุม` (nak=9 wan=2) → แก้ใน alias map
+3. **Cell ที่ระบุ "ห้ามปลูกเรือน"** = constraint นอกเหนือราศี — เก็บเป็น `extra_note`
+   ไม่ส่งผลต่อ pass/fail แต่แสดงในรายละเอียด
+4. **cell ส่วนใหญ่ partial** — ลัคนาที่ไม่อยู่ในรายการดี/ห้าม = neutral → ไม่นับคะแนน
+5. **uvicorn ไม่มี --reload** — แก้ Python ต้อง preview_stop + preview_start
+6. **MUHURTA_SCORE_MAX hardcoded ใน test** — เปลี่ยนเป็น import constant
+
+### Cache version
+ยังไม่ bump (เพราะไม่ได้แก้ HTML/CSS frontend)
+
+### สถานะ
+ยังไม่ push — testing เท่านั้น
+
+
+# ===== Session 23 — จักขุมายา (สูตร nak+เกณฑ์วัน mod 7) + Tag UI overhaul — 2026-06-16 =====
+
+## ภาพรวม
+1. แทน `check_chakkhumaya` MVP (จันทร์กุมราหู) ด้วยสูตรโบราณ
+   "(ลำดับนักษัตรของจันทร์ + เกณฑ์วัน) mod 7" → เศษ 0/4/5/6 ผ่าน, 1/2/3 ไม่ผ่าน
+2. ปรับ Tag UI: ไอคอน thematic (front) + badge 4 ระดับ (back)
+3. กนกกุญชร neutral → ยังคืน matched=True เพื่อให้ tag แสดงเสมอ
+
+## สูตรจักขุมายา
+```
+total = nak_number + JAKKHUMAYA_WAN_KANE[wan]
+remainder = total % 7
+```
+
+### เกณฑ์วาร (JAKKHUMAYA_WAN_KANE)
+| wan | ชื่อบาลี | เกณฑ์ |
+|-----|----------|-------|
+| 1 อาทิตย์ | ระวิฉัฏโฐ | 6 |
+| 2 จันทร์ | ทเวจันโท | 2 |
+| 3 อังคาร | ภุมโมปัญจ | 5 |
+| 4 พุธ | พุธเอโก | 1 |
+| 5 พฤหัสบดี | ชีโวจัตวา | 4 |
+| 6 ศุกร์ | ศุกราสูญญ | 0 (หรือ 7) |
+| 7 เสาร์ | โสรตรีนิ | 3 |
+
+### ผลตามเศษ (JAKKHUMAYA_REMAINDER)
+| เศษ | ชื่อโยค | tone | ความหมาย |
+|----|---------|------|----------|
+| 0 | สรรพโยคอำพล | good (+2) | สร้างวัด หล่อพระ ปลุกเสก ศิลปะ |
+| 1 | อุบาทว์ | warning (−3) | ร้ายไม่ดี — ครูห้าม |
+| 2 | กาลกิณี | warning (−3) | กาลกิณีเข้าครอบ |
+| 3 | มฤตยู | warning (−3) | แสนเข็ญ — ครูให้เว้นเด็ดขาด |
+| 4 | สาธุโยคบูชา | good (+2) | สวัสดิมงคล พูลผล |
+| 5 | สิทธิโชค | good (+2) | สำเร็จทุกประการ |
+| 6 | อำมฤคโชค | good (+2) | โชคดีทุกสถาน |
+
+ตรวจกับตัวอย่าง user (nak=14, wan=อา): (14+6)÷7 = 2 เศษ 6 → อำมฤคโชค ✓
+
+## Tag UI overhaul
+
+### Front icon (thematic — ไม่ใช่ pass/fail)
+| Tag type | Icon |
+|---|---|
+| ฤกษ์ใหญ่ | ⭐ |
+| กนกนารี | 💃 |
+| กนกกุญชร | 🐘 |
+| จักขุมายา | 👁️ |
+| ดิถี | 🌙 |
+
+### Badge ด้านหลัง (4 ระดับ + neutral)
+| Status | Badge | สี chip class | Tooltip |
+|---|---|---|---|
+| ผ่าน + ตรงกิจกรรม | ✓✓ | specific_match (เขียวเข้ม) | "ผ่านเกณฑ์ตรงกิจกรรม" |
+| ผ่าน + ทั่วไป | ✓ | universal_good (เขียวอ่อน) | "ผ่านเกณฑ์ทั่วไป" |
+| ไม่ผ่าน + ตรงกิจกรรม | 🚫 | specific_bad_match (แดงเข้ม) | "ไม่ผ่านเกณฑ์ตรงกิจกรรม" |
+| ไม่ผ่าน + ทั่วไป | ✗ | universal_bad (แดงอ่อน) | "ไม่ผ่านเกณฑ์ทั่วไป" |
+| ไม่ระบุชัด | ○ | neutral (ครีม) | "ไม่ระบุชัด" |
+
+ใช้กับ:
+- criteria (3 ตัว: kn, kk, chk)
+- roek (ฤกษ์ใหญ่ จาก nakshatra)
+- ดิถี (dithi_classifications)
+
+## SCORE_MAX
+- เดิม `MUHURTA_SCORE_MAX = 18`
+- ใหม่ **20** (จักขุมายาเพิ่มมาตราใหม่ → top hits จริงทะลุ 19)
+- `min_score=11 → 12` (~60% ของ 20)
+
+## ไฟล์ที่แตะ
+| ไฟล์ | สรุป |
+|------|------|
+| `thai_astro/muhurta_criteria.py` | rewrite check_chakkhumaya + JAKKHUMAYA_WAN_KANE/REMAINDER tables; เก็บ legacy เป็น `_check_chakkhumaya_legacy`; update evaluate_special_criteria signature; CRITERION_INFO update |
+| `webapp/server.py` | MUHURTA_SCORE_MAX 18→20, min_score=12 |
+| `webapp/templates/_muhurta_hit_row.html` | thematic icon + 4-level badge สำหรับ criteria/roek/ดิถี |
+| `webapp/templates/muhurta.html` | REL_LABELS update + cache v=20260616c |
+| `tests/test_dithi_weighting.py` | threshold test ใช้ MAX*0.6 แทน hardcode 11 |
+
+## Gotchas
+1. **legacy function เก็บไว้** — ถ้าวันหนึ่งอยากกลับมาใช้ "จันทร์กุมราหู/เกตุ"
+   ก็เปลี่ยน `SPECIAL_CRITERIA_FNS` กลับ
+2. **MUHURTA_SCORE_MAX 20 → top hits ~19 ได้ ~95%** เพดานเหลือพอ
+   ถ้าในอนาคตเพิ่มเกณฑ์อีก อาจต้องบวมต่อ
+3. **เศษ 0 = "สรรพโยคอำพล"** ต้อง keisn ของ ศ = 0 ให้รวมตรงนี้ด้วย
+   (ถ้าใช้ 7 แทน 0 จะได้ผลเดียวกัน เพราะ mod 7)
+4. **CRITERION_ICONS dict ใน template** — เก็บ inline ใน Jinja (ไม่ต้อง import)
+5. **กนกกุญชร neutral matched=True** — chip โผล่ครบทั้งสาม pass/fail/neutral
+
+### Cache
+`v=20260616c`
+
+### สถานะ commit
+ยังไม่ push — รอ user review
+
+
+# ===== Session 24 — Muhurta UX overhaul ครบชุด — 2026-06-16 =====
+
+## ภาพรวม
+รวมการแก้ไขทั้งหมดของ Sessions 21-23 (กนกนารี ตาราง / กนกกุญชร ตาราง / จักขุมายา สูตร)
++ UI overhaul ครั้งใหญ่: layout 2-col, equal heights, sticky toolbar, weekday filter,
+3-criteria popover v2, footer per card, kalayok+vargottama tags
+
+## ตารางคะแนน (สรุปสุดท้าย)
+- **MUHURTA_SCORE_MAX = 19** (top จริง)
+- **MUHURTA_SCORE_MIN = -14** (worst case)
+- **% สูตรใหม่**: `(score + 14) / 33 × 100` — base shift ให้ MIN=0%, MAX=100%
+- **Filter min_score = 3** (~50% — แสดงเฉพาะฤกษ์ที่ผ่านครึ่งทาง)
+- **max_per_day = 4**
+
+## คะแนนเกณฑ์พิเศษ (เบาลง −3 → −1)
+- ดี (strength=1): +2
+- ดีนัก (strength=2): +3
+- ไม่ผ่าน (warning): **−1** (เกณฑ์เป็นข้อมูลประกอบ ไม่ใช่ตัวตัดสินหลัก)
+
+## UI Components
+
+### Sticky toolbar (สีเลือดหมู-ทอง)
+`.result-toolbar` — bg gradient `#6d1414 → #8b2c2c`, border ทอง 2px, ปุ่ม "▼ ย่อทั้งหมด / ▶ ขยายทั้งหมด"
+ใช้ `position: sticky; top: 6px;`
+
+### Hit-card footer
+ทุก hit-card มี footer แสดง "🎯 กิจกรรม: X" + ปุ่ม "▲ ย่อกิจกรรมนี้"
+คลิกปุ่ม → `panel.removeAttribute('open')` + scroll ไป summary
+
+### 2-col equal heights
+```css
+.hit-grid { display: grid; grid-template-columns: repeat(2, 1fr); align-items: stretch; }
+.hit-grid > .hit-card { height: 100%; display: flex; flex-direction: column; }
+```
+
+### Weekday + Period filter (sync)
+- `.weekday-tally` (อา/จ/อ/พุธ/พฤ/ศ/ส) + `.period-tally` (เช้า/สาย/บ่าย/เย็น/ค่ำ/กลางคืน)
+- `applyHitFilter()` filter ด้วย `periodMatch && wanMatch`
+- หลัง filter — อัปเดต count บน tally buttons ทั้งสอง
+
+## Backend additions
+ScanHit + `_serialize_hit`:
+- `vargottama_planets: List[str]`
+- `kalayok_tags: List[str]` (`thongchai/athibodi/ubat/lokawinat`)
+- `wan_num` / `wan_label` สำหรับ filter
+
+## Tag system
+
+### Front icons (thematic)
+ฤกษ์ใหญ่=⭐, กนกนารี=💃, กนกกุญชร=🐘, จักขุมายา=👁️, ดิถี=🌙,
+ธงชัย=🏳️, อธิบดี=👑, อุบาทว์=⚠️, โลกาวินาศ=💀, วรโคตม=✨
+
+### Back badges (5 ระดับ)
+- ผ่าน+ตรงกิจกรรม: ✓✓ (specific_match)
+- ผ่าน+ทั่วไป: ✓ (universal_good)
+- ไม่ผ่าน+ตรงกิจกรรม: 🚫 (specific_bad_match)
+- ไม่ผ่าน+ทั่วไป: ✗ (universal_bad)
+- ไม่ระบุชัด: ○ (neutral)
+
+### Conditional rendering
+- **วรโคตม**: เฉพาะ `result.mode == 'personal'`
+- **กาลโยควาร**: ทุก mode ถ้าตรง
+- **3 เกณฑ์พิเศษ**: ทุก mode
+
+## Popover v2 (3 criteria)
+- Header: icon + ชื่อ
+- Summary banner (เขียว/แดง/ครีม)
+- ความหมาย (กล่องครีม)
+- เหมาะสำหรับ (chips กิจกรรม)
+- คะแนนฤกษ์ ±N (กล่องทอง)
+- ▶ 🔍 รายละเอียดการคำนวณ (collapsible: ตำรา/คำนวณ/ผลลัพธ์/หมายเหตุ)
+
+## Bug fixes
+1. **Warning banner "1 เกณฑ์ห้าม" แต่ไม่มี tag** — `tone != 'good'` รวม neutral
+   → แก้ `tone == 'warning'` เฉพาะ + เพิ่ม `bad_kalayok` filter
+2. **Period filter ไม่ทำงาน** — 3-group wrapper ทับ display
+   → เปลี่ยนเป็นรายการเดียว
+3. **HTML attribute escape** Jinja `{% set %}`
+   → ใช้ `data-suitable-json="{{ list|tojson|forceescape }}"`
+
+## Personal mode
+- Backend พร้อมตั้งแต่ Session 21
+- UI ปิดชั่วคราว (Session 24) — เป็น "เร็วๆ นี้"
+- Vargottama tag prepared
+
+## ไฟล์ที่แตะ (Session 24)
+| ไฟล์ | สรุป |
+|------|------|
+| `thai_astro/muhurta.py` | + vargottama_planets / kalayok_tags ใน ScanHit; summary cleanup; penalty −3→−1 |
+| `thai_astro/muhurta_criteria.py` | rewrite 3 criteria; +strength; CRITERION_INFO update |
+| `thai_astro/kanaka_kunchara.py` + table.py | parser + 27×7 table |
+| `webapp/server.py` | MAX=19, MIN=-14, % formula, _serialize_criteria v2, _CRITERION_CONTENT |
+| `webapp/templates/muhurta.html` | toolbar/weekday/period tally; popover v2; CSS overhaul |
+| `webapp/templates/_muhurta_hit_row.html` | tags overhaul; footer; varg/kalayok conditional |
+| `webapp/changelog.py` | +entry 2026.06.16 |
+| `tests/test_dithi_weighting.py` | threshold/min tests ใช้ constant |
+
+## Cache
+`?v=20260616k`
+
+## Filter ตามรอบสุดท้าย (per-panel)
+- คลิก weekday → reset period filter ของ panel นั้น
+- คลิก period → กรองภายใน weekday ที่เลือกอยู่
+- ปุ่ม 0 ฤกษ์ → disabled (กดไม่ได้)
+- Filter ทุก panel **อิสระต่อกัน** (กรอง panel A ไม่กระทบ panel B)
+- ปุ่ม "ล้างกรอง" reset ทั้งสองมิติของ panel เดียว
+
+## Forecast strip
+`_FORECAST_MIN_SCORE = 3` (เปลี่ยนจาก 11) — ตรงกับ scan หลัก (≥50%)
+
+## Gotchas
+1. `history.scrollRestoration = 'manual'` เพื่อให้ scroll-to-result ทำงาน
+2. weekday calc: Python weekday() Mon=0 → wan = `((weekday+1)%7)+1`
+3. Kalayok info dict 5 fields (icon/label/tone/short/long) เก็บใน template
+4. `chart_to_navamsa_view` คืนทุก planet + lagna — อาจมี "วรโคตม: ลัคนา"
+5. Footer button → `panel.removeAttribute('open')` + smooth scroll
+6. **`_FORECAST_CACHE` clear ตอน restart เท่านั้น** — แก้ MIN_SCORE ต้อง restart server
+
+### สถานะ commit
+2026-06-16 push ครั้งใหญ่ — Muhurta UX overhaul ครบชุด (Sessions 21-24)
+

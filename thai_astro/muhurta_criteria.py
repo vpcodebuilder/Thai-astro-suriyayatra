@@ -39,53 +39,225 @@ class CriterionMatch:
     matched: bool
     tone: str           # "good" / "warning" / "neutral"
     detail: str         # อธิบายเหตุผล
+    strength: int = 1   # 2 = ดีนัก (โดดเด่นเป็นพิเศษ); 1 = ปกติ (ดี / ห้าม)
 
 
-def check_kanaka_naree(chart) -> CriterionMatch:
-    """**กนกนารี** — เกณฑ์เคลื่อนไหวสตรี
+# ============================================================
+# ตารางเกณฑ์กนกนารี (อ.หลวงวุฒิรณพัศตุ์ — ปรมาจารย์ ณ.ร. รวบรวม)
+# Lookup: KANAKA_NAREE_PASS[wan] = set ของ "ฤกษ์ที่" (1-27) ที่ "ทำได้"
+# wan 1=อาทิตย์, 2=จันทร์, 3=อังคาร, 4=พุธ, 5=พฤหัสบดี, 6=ศุกร์, 7=เสาร์
+# ============================================================
+# Source: knowledge/ฤกษ์.xlsx (authoritative)
+KANAKA_NAREE_PASS: dict = {
+    1: frozenset({1, 3, 4, 7, 9, 10, 11, 13, 16, 19, 21, 22, 24, 26, 27}),    # อาทิตย์
+    2: frozenset({1, 4, 7, 9, 11, 12, 13, 14, 15, 20, 22, 24, 25, 26, 27}),   # จันทร์
+    3: frozenset({2, 7, 9, 10, 13, 16, 21, 22, 23, 25, 26, 27}),              # อังคาร
+    4: frozenset({2, 4, 5, 7, 9, 10, 15, 17, 19, 21, 22, 23, 26, 27}),        # พุธ
+    5: frozenset({2, 9, 11, 12, 15, 17, 18, 19, 22, 23, 25}),                 # พฤหัสบดี
+    6: frozenset({1, 2, 5, 6, 7, 10, 11, 14, 17, 19, 21, 22, 24}),            # ศุกร์
+    7: frozenset({8, 10, 11, 14, 15, 16, 17, 18, 20, 21, 22, 24}),            # เสาร์
+}
 
-    เข้าเกณฑ์เมื่อ:
-        - จันทร์อยู่ในราศีเพศหญิง (1, 3, 5, 7, 9, 11) และ
-        - ศุกร์อยู่ในราศีเพศหญิง
-    เหมาะ: หาฤกษ์แต่งงาน หมั้น พบคู่ ทำการเกี่ยวเนื่องกับสตรี
+
+def check_kanaka_naree(chart, wan: int = 0, nak_number: int = 0,
+                       nak_name: str = "", roek_name: str = "") -> CriterionMatch:
+    """**กนกนารี** — เกณฑ์เคลื่อนไหวสตรี (ตามตารางอ.หลวงวุฒิรณพัศตุ์)
+
+    Lookup ตาราง 7 วาร × 27 ฤกษ์:
+        - "ทำได้" → ผ่านเกณฑ์ (matched, tone=good) → +คะแนน
+        - "ห้าม"  → ไม่ผ่านเกณฑ์ (matched, tone=warning) → -คะแนน
+
+    Format detail: "วัน{X} × {roek_name} ฤกษ์ที่ {N} กลุ่มดาว{nak_name}"
     """
-    moon = chart.planets["จันทร์"].zodiac.rasi
-    venus = chart.planets["ศุกร์"].zodiac.rasi
-    cond = moon in FEMININE_SIGNS and venus in FEMININE_SIGNS
-    if cond:
-        detail = f"จันทร์ใน{chart.planets['จันทร์'].zodiac.rasi_name} + ศุกร์ใน{chart.planets['ศุกร์'].zodiac.rasi_name} — เป็นราศีเพศหญิงทั้งสอง"
-    else:
-        detail = "จันทร์/ศุกร์ ไม่อยู่ในราศีเพศหญิงพร้อมกัน"
-    return CriterionMatch("กนกนารี", cond, "good" if cond else "neutral", detail)
+    wan_names = {1: "อาทิตย์", 2: "จันทร์", 3: "อังคาร", 4: "พุธ",
+                 5: "พฤหัสบดี", 6: "ศุกร์", 7: "เสาร์"}
+    if wan not in KANAKA_NAREE_PASS or not (1 <= nak_number <= 27):
+        return CriterionMatch("กนกนารี", False, "neutral",
+                              "ไม่สามารถตรวจสอบเกณฑ์ได้ (ข้อมูลไม่ครบ)")
+    pass_ = nak_number in KANAKA_NAREE_PASS[wan]
+    wan_name = wan_names[wan]
+    roek_part = f"{roek_name} " if roek_name else ""
+    nak_group = f"กลุ่มดาว{nak_name}" if nak_name else ""
+    check_line = f"ตรงกับวัน{wan_name} เป็น{roek_part}ฤกษ์ที่ {nak_number} {nak_group}".strip()
+    if pass_:
+        detail = (
+            f"✓ ผ่านเกณฑ์: คู่ \"วัน × ฤกษ์\" อยู่ในช่อง \"ทำได้\"\n"
+            f"ตรวจสอบ: {check_line}\n"
+            f"ตำราระบุ: คู่นี้อนุญาตให้ใช้ตั้งฤกษ์\n"
+            f"ผลที่ได้: ฤกษ์หนุนเรื่องสตรี ความอ่อนหวาน ความสัมพันธ์ "
+            f"เหมาะงานแต่ง/หมั้น/สู่ขอ\n"
+            f"คะแนน: +2"
+        )
+        return CriterionMatch("กนกนารี", True, "good", detail)
+    detail = (
+        f"✗ ไม่ผ่านเกณฑ์: คู่ \"วัน × ฤกษ์\" อยู่ในช่อง \"ห้าม\"\n"
+        f"ตรวจสอบ: {check_line}\n"
+        f"ตำราระบุ: คู่นี้ห้ามใช้ตั้งฤกษ์เรื่องสตรี\n"
+        f"ผลที่ได้: ขัดกับพลังเกณฑ์สตรี ไม่ควรใช้กับงานแต่ง/หมั้น/สู่ขอ\n"
+        f"คะแนน: −1"
+    )
+    return CriterionMatch("กนกนารี", True, "warning", detail)
 
 
-def check_kanaka_kunchara(chart) -> CriterionMatch:
-    """**กนกกุญชร** — เกณฑ์เคลื่อนไหวยานพาหนะ/ช้าง
+def check_kanaka_kunchara(chart, wan: int = 0, nak_number: int = 0,
+                          nak_name: str = "", roek_name: str = "") -> CriterionMatch:
+    """**กนกกุญชร** — เกณฑ์ลัคนาราศีของฤกษ์ (ตามตารางอ.หลวงวุฒิรณพัศตุ์)
 
-    เข้าเกณฑ์เมื่อ:
-        - พฤหัสบดีอยู่ในราศีจร (movable: เมษ/กรกฎ/ตุล/มกร) หรือ
-        - อังคารอยู่ในราศีจร
-    เหมาะ: ออกรถใหม่ เดินทางไกล ขนส่ง พิธีเคลื่อนย้าย
+    Lookup ตาราง 27 ฤกษ์ × 7 วาร (knowledge/ฤกษ์.xlsx sheet "กนกกุญชร")
+    แต่ละช่องกำหนดราศี "ดีนัก/ดี/ห้าม" ของลัคนา ณ ฤกษ์นั้น
+    - ลัคนาตรงราศี "ดีนัก" → ผ่าน (tone=good, label="ดีนัก")
+    - ลัคนาตรงราศี "ดี"   → ผ่าน (tone=good, label="ดี")
+    - ลัคนาตรงราศี "ห้าม" หรือ cell "ห้ามราศีอื่น" และไม่อยู่ในรายการ
+      → ไม่ผ่าน (tone=warning, label="ห้าม")
+    - ไม่ระบุชัด → neutral (ไม่มีผลต่อคะแนน)
     """
-    jupiter = chart.planets["พฤหัสบดี"].zodiac.rasi
-    mars = chart.planets["อังคาร"].zodiac.rasi
-    cond = jupiter in MOVABLE_SIGNS or mars in MOVABLE_SIGNS
-    parts = []
-    if jupiter in MOVABLE_SIGNS:
-        parts.append(f"พฤหัสฯ ใน{chart.planets['พฤหัสบดี'].zodiac.rasi_name} (ราศีจร)")
-    if mars in MOVABLE_SIGNS:
-        parts.append(f"อังคารใน{chart.planets['อังคาร'].zodiac.rasi_name} (ราศีจร)")
-    detail = " + ".join(parts) if parts else "พฤหัสฯ/อังคาร ไม่อยู่ในราศีจร"
-    return CriterionMatch("กนกกุญชร", cond, "good" if cond else "neutral", detail)
+    from .kanaka_kunchara import check as kk_check
+
+    lagna_name = chart.ascendant.zodiac.rasi_name
+    if not (1 <= wan <= 7) or not (1 <= nak_number <= 27):
+        return CriterionMatch("กนกกุญชร", False, "neutral",
+                              "ไม่สามารถตรวจสอบเกณฑ์ได้ (ข้อมูลไม่ครบ)")
+
+    res = kk_check(lagna_name, nak_number, wan)
+    wan_names = {1: "อาทิตย์", 2: "จันทร์", 3: "อังคาร", 4: "พุธ",
+                 5: "พฤหัสบดี", 6: "ศุกร์", 7: "เสาร์"}
+    wan_name = wan_names.get(wan, "?")
+    roek_part = f"{roek_name} " if roek_name else ""
+    nak_group = f"กลุ่มดาว{nak_name}" if nak_name else ""
+    check_line = f"ตรงกับวัน{wan_name} เป็น{roek_part}ฤกษ์ที่ {nak_number} {nak_group}".strip()
+    note_tail = f"\nหมายเหตุ: {res.extra_note}" if res.extra_note else ""
+
+    if res.tone == "good" and res.label == "ดีนัก":
+        detail = (
+            f"✨ ผ่านเกณฑ์ระดับ \"ดีนัก\": ลัคนา{lagna_name} เด่นเป็นพิเศษ\n"
+            f"ตรวจสอบ: {check_line}\n"
+            f"ตำราระบุ: {res.rule_summary}\n"
+            f"ผลที่ได้: ฤกษ์นี้แรงเป็นพิเศษ พื้นฐานลัคนาเด่นมาก เหมาะงานสำคัญ\n"
+            f"คะแนน: +3" + note_tail
+        )
+        return CriterionMatch("กนกกุญชร", True, "good", detail, strength=2)
+    if res.tone == "good":
+        detail = (
+            f"✓ ผ่านเกณฑ์: ลัคนา{lagna_name} ตรงราศี \"ดี\" ของฤกษ์นี้\n"
+            f"ตรวจสอบ: {check_line}\n"
+            f"ตำราระบุ: {res.rule_summary}\n"
+            f"ผลที่ได้: ลัคนาตกในราศีที่หนุนการเคลื่อนไหว ฤกษ์มั่นคง พื้นฐานแน่น\n"
+            f"คะแนน: +2" + note_tail
+        )
+        return CriterionMatch("กนกกุญชร", True, "good", detail)
+    if res.tone == "warning":
+        if "ราศีอื่น" in res.label:
+            head = f"✗ ไม่ผ่านเกณฑ์: ลัคนา{lagna_name} ไม่อยู่ในรายการอนุญาต"
+            outcome = "ลัคนาไม่อยู่ในกลุ่มที่ตำรากำหนด ฤกษ์ไม่สนับสนุน"
+        else:
+            head = f"✗ ไม่ผ่านเกณฑ์: ลัคนา{lagna_name} ตรงราศี \"ห้าม\" ของฤกษ์นี้"
+            outcome = "ลัคนาตกในราศีที่ขัดกับธาตุของฤกษ์ พลังฤกษ์ลด"
+        detail = (
+            f"{head}\n"
+            f"ตรวจสอบ: {check_line}\n"
+            f"ตำราระบุ: {res.rule_summary}\n"
+            f"ผลที่ได้: {outcome}\n"
+            f"คะแนน: −1" + note_tail
+        )
+        return CriterionMatch("กนกกุญชร", True, "warning", detail)
+    # neutral — ลัคนาไม่อยู่ในรายการดี/ห้าม (ยังคืน matched=True เพื่อให้ tag แสดงเสมอ)
+    detail = (
+        f"○ ไม่ระบุชัด: ลัคนา{lagna_name} ไม่อยู่ในรายการดีหรือห้ามของฤกษ์นี้\n"
+        f"ตรวจสอบ: {check_line}\n"
+        f"ตำราระบุ: {res.rule_summary}\n"
+        f"ผลที่ได้: เกณฑ์นี้ไม่กระทบฤกษ์ — ไม่หนุนและไม่ขัด\n"
+        f"คะแนน: 0" + note_tail
+    )
+    return CriterionMatch("กนกกุญชร", True, "neutral", detail)
 
 
-def check_chakkhumaya(chart) -> CriterionMatch:
-    """**จักขุมายา** — เกณฑ์ภาพลวงตา (เตือน)
+# ============================================================
+# เกณฑ์จักขุมายา — สูตร (นักษัตร + เกณฑ์วัน) mod 7
+# ============================================================
+# เกณฑ์วัน (ตามตำราโบราณ — ระวิฉัฏโฐ/ทเวจันโท ฯลฯ)
+JAKKHUMAYA_WAN_KANE = {
+    1: 6,  # อาทิตย์ — ระวิฉัฏโฐ
+    2: 2,  # จันทร์ — ทเวจันโท
+    3: 5,  # อังคาร — ภุมโมปัญจ
+    4: 1,  # พุธ — พุธเอโก
+    5: 4,  # พฤหัสบดี — ชีโวจัตวา
+    6: 0,  # ศุกร์ — ศุกราสูญญ (เกณฑ์ 0 หรือ 7)
+    7: 3,  # เสาร์ — โสรตรีนิ
+}
 
-    เข้าเกณฑ์เมื่อ:
-        - จันทร์อยู่ราศีเดียวกับราหูหรือเกตุ (กุมราหู/เกตุ)
-    เตือน: ระวังการหลอกลวง สัญญา การมองเห็นไม่ชัด ไม่ควรเซ็นเอกสาร
+# เศษหารด้วย 7 → ชื่อโยค + tone + คำพยากรณ์
+JAKKHUMAYA_REMAINDER = {
+    0: {"name": "สรรพโยคอำพล", "tone": "good",
+        "meaning": "เหมาะการสร้างวัด หล่อพระ ปลุกเสก ต่อเรือ ศิลปกรรม หัตถกรรม "
+                   "พิธีศักดิ์สิทธิ์"},
+    1: {"name": "อุบาทว์", "tone": "warning",
+        "meaning": "ร้ายไม่ดี — ครูท่านห้ามทำการมงคล กิจจะอุบาทว์ ขัดข้อง"},
+    2: {"name": "กาลกิณี", "tone": "warning",
+        "meaning": "ร้ายไม่ดี — กาลกิณีเข้าครอบ กิจจะมีอุปสรรค สูญเสีย"},
+    3: {"name": "มฤตยู", "tone": "warning",
+        "meaning": "แสนเข็ญ — ครูท่านให้เว้นเด็ดขาด เป็นเศษที่อันตรายที่สุด"},
+    4: {"name": "สาธุโยคบูชา", "tone": "good",
+        "meaning": "เกิดสวัสดิมงคล พูลผล — เหมาะกิจมงคลทุกประเภท การบูชา ทำบุญ"},
+    5: {"name": "สิทธิโชค", "tone": "good",
+        "meaning": "สำเร็จทุกประการ — เหมาะกิจมงคลทั่วไป สมความปรารถนา"},
+    6: {"name": "อำมฤคโชค", "tone": "good",
+        "meaning": "โชคดีทุกสถาน — เหมาะทำสวนไร่นา หว่านพืชผล กิจมงคลทั่วไป"},
+}
+
+
+def check_chakkhumaya(chart, wan: int = 0, nak_number: int = 0,
+                     nak_name: str = "", roek_name: str = "") -> CriterionMatch:
+    """**จักขุมายาฤกษ์** — เกณฑ์สอบผลฤกษ์ตามสูตรโบราณ
+
+    หลักการ: ตั้ง "ลำดับนักษัตรของจันทร์" บวกด้วย "เกณฑ์วัน"
+              แล้วหารด้วย 7 พิจารณาจากเศษ
+        - เศษ 0/4/5/6 → ผ่านเกณฑ์ (+2)
+        - เศษ 1/2/3   → ไม่ผ่านเกณฑ์ (−3)
     """
+    wan_names = {1: "อาทิตย์", 2: "จันทร์", 3: "อังคาร", 4: "พุธ",
+                 5: "พฤหัสบดี", 6: "ศุกร์", 7: "เสาร์"}
+    if wan not in JAKKHUMAYA_WAN_KANE or not (1 <= nak_number <= 27):
+        return CriterionMatch("จักขุมายา", False, "neutral",
+                              "ไม่สามารถตรวจสอบเกณฑ์ได้ (ข้อมูลไม่ครบ)")
+
+    keisn = JAKKHUMAYA_WAN_KANE[wan]
+    keisn_disp = "0 หรือ 7" if keisn == 0 else str(keisn)
+    total = nak_number + keisn
+    remainder = total % 7
+    res = JAKKHUMAYA_REMAINDER[remainder]
+    quotient = total // 7
+
+    wan_name = wan_names[wan]
+    roek_part = f"{roek_name} " if roek_name else ""
+    nak_group = f"กลุ่มดาว{nak_name}" if nak_name else ""
+    check_line = (f"ตรงกับวัน{wan_name} (เกณฑ์ {keisn_disp}) "
+                  f"เป็น{roek_part}ฤกษ์ที่ {nak_number} {nak_group}").strip()
+    formula = (f"({nak_number} + {keisn}) ÷ 7 = {quotient} เศษ {remainder} "
+               f"→ \"{res['name']}\"")
+
+    if res["tone"] == "good":
+        detail = (
+            f"✓ ผ่านเกณฑ์: ได้ \"{res['name']}\" (เศษ {remainder})\n"
+            f"ตรวจสอบ: {check_line}\n"
+            f"ตำราระบุ: {formula}\n"
+            f"ผลที่ได้: {res['meaning']}\n"
+            f"คะแนน: +2"
+        )
+        return CriterionMatch("จักขุมายา", True, "good", detail)
+
+    # warning (เศษ 1/2/3)
+    detail = (
+        f"✗ ไม่ผ่านเกณฑ์: ได้ \"{res['name']}\" (เศษ {remainder})\n"
+        f"ตรวจสอบ: {check_line}\n"
+        f"ตำราระบุ: {formula}\n"
+        f"ผลที่ได้: {res['meaning']}\n"
+        f"คะแนน: −1"
+    )
+    return CriterionMatch("จักขุมายา", True, "warning", detail)
+
+
+def _check_chakkhumaya_legacy(chart) -> CriterionMatch:
+    """**(เลิกใช้)** เก็บไว้อ้างอิง — เกณฑ์จันทร์กุมราหู/เกตุเดิม"""
     moon = chart.planets["จันทร์"].zodiac.rasi
     rahu = chart.planets["ราหู"].zodiac.rasi
     ketu = chart.planets["เกตุ"].zodiac.rasi
@@ -101,9 +273,25 @@ def check_chakkhumaya(chart) -> CriterionMatch:
 SPECIAL_CRITERIA_FNS = [check_kanaka_naree, check_kanaka_kunchara, check_chakkhumaya]
 
 
-def evaluate_special_criteria(chart) -> List[CriterionMatch]:
-    """ตรวจเกณฑ์พิเศษทั้ง 3 อย่าง"""
-    return [fn(chart) for fn in SPECIAL_CRITERIA_FNS]
+def evaluate_special_criteria(chart, wan: int = 0, nak_number: int = 0,
+                              nak_name: str = "", roek_name: str = "") -> List[CriterionMatch]:
+    """ตรวจเกณฑ์พิเศษ 3 อย่าง
+
+    Args:
+        chart: Chart object
+        wan: 1-7 (ใช้ใน กนกนารี — ลำดับ 1=อาทิตย์)
+        nak_number: 1-27 (ใช้ใน กนกนารี — ตำแหน่งนักษัตรของจันทร์)
+        nak_name: ชื่อนักษัตร (กลุ่มดาว) เช่น "ภรณี"
+        roek_name: ชื่อฤกษ์ใหญ่ (1 ใน 9) เช่น "มหัทธโนฤกษ์"
+    """
+    return [
+        check_kanaka_naree(chart, wan=wan, nak_number=nak_number,
+                           nak_name=nak_name, roek_name=roek_name),
+        check_kanaka_kunchara(chart, wan=wan, nak_number=nak_number,
+                              nak_name=nak_name, roek_name=roek_name),
+        check_chakkhumaya(chart, wan=wan, nak_number=nak_number,
+                          nak_name=nak_name, roek_name=roek_name),
+    ]
 
 
 # ============================================================
@@ -112,10 +300,12 @@ def evaluate_special_criteria(chart) -> List[CriterionMatch]:
 CRITERION_INFO = {
     "กนกนารี": {
         "long_desc": (
-            "กนกนารี เป็นเกณฑ์มงคลในตำราโหรไทย เกิดเมื่อจันทร์และศุกร์ "
-            "อยู่ในราศีเพศหญิงทั้งสอง (พฤษภ/กรกฎ/กันย์/พิจิก/มกร/มีน) "
+            "กนกนารี เป็นเกณฑ์มงคลในตำราโหรไทย ตรวจสอบจาก \"วาร × ฤกษ์\" "
+            "(วันในสัปดาห์ × ตำแหน่งจันทร์ในนักษัตร 1-27) — แต่ละคู่ "
+            "ตำรากำหนดเป็น \"ทำได้\" หรือ \"ห้าม\". "
+            "ผ่านเกณฑ์ +2 คะแนน, ไม่ผ่าน −3 คะแนน. "
             "พลังของเกณฑ์นี้เกี่ยวกับสตรี ความอ่อนหวาน และความสัมพันธ์ "
-            "เหมาะการแต่งงาน หมั้น สู่ขอ พบสตรี หรืองานพิธีที่มีสตรีเป็นเจ้างาน"
+            "เหมาะการแต่งงาน หมั้น สู่ขอ พบสตรี งานพิธีที่มีสตรีเป็นเจ้างาน"
         ),
         "relevant_events": (
             "wedding", "engagement_ask", "wedding_registration",
@@ -125,28 +315,42 @@ CRITERION_INFO = {
     },
     "กนกกุญชร": {
         "long_desc": (
-            "กนกกุญชร (\"ช้างทองคำ\") เป็นเกณฑ์มงคลสำหรับการเคลื่อนไหว "
-            "เกิดเมื่อพฤหัสบดีหรืออังคารอยู่ในราศีจร (เมษ/กรกฎ/ตุล/มกร) "
-            "พลังของเกณฑ์นี้เหมาะกับการเดินทาง การออกรถ การขนย้าย "
-            "พิธียกเสาเอก หรือการเริ่มต้นใหม่ที่ต้องการความคล่องตัว"
+            "กนกกุญชร (\"ช้างทองคำ\") เป็นเกณฑ์ตรวจ \"ลัคนาราศีของฤกษ์\" "
+            "— แต่ละคู่ \"วาร × ฤกษ์\" ตำราจะกำหนดราศีลัคนาที่ "
+            "\"ดีนัก / ดี / ห้าม\" ของฤกษ์นั้น ๆ. "
+            "ผ่านระดับ \"ดีนัก\" +3 คะแนน, ผ่านระดับ \"ดี\" +2 คะแนน, "
+            "ลัคนาตรง \"ห้าม\" หรือ \"ห้ามราศีอื่น\" (อนุญาตเฉพาะที่ระบุ) → ไม่ผ่าน −3 คะแนน. "
+            "เกณฑ์นี้ใช้ได้กับทุกกิจกรรม เพราะวัด \"ความเหมาะสมของลัคนา\" "
+            "ซึ่งเป็นพื้นฐานของการตั้งฤกษ์"
         ),
         "relevant_events": (
-            "travel", "vehicle", "move_house",
-            "foundation_stone", "shop_opening",
+            "wedding", "engagement_ask", "wedding_registration",
+            "housewarming", "foundation_stone", "move_house", "land_purchase",
+            "shop_opening", "office_opening", "investment", "contract",
+            "product_launch", "interview_apply",
+            "travel", "vehicle",
+            "education", "exam",
+            "ordination", "merit",
         ),
         "tone": "good",
     },
     "จักขุมายา": {
         "long_desc": (
-            "จักขุมายา (\"ภาพลวงตา\") เป็นเกณฑ์เตือนภัยในตำราโหรไทย "
-            "เกิดเมื่อจันทร์อยู่ราศีเดียวกับราหูหรือเกตุ พลังของเกณฑ์นี้ "
-            "ทำให้การมองเห็นไม่ชัด ตัดสินใจผิดพลาด ถูกหลอกลวง "
-            "ห้ามใช้กับการเซ็นสัญญา ทำเอกสารสำคัญ หรือกิจกรรมที่ต้องการ "
-            "ความรอบคอบในการตัดสินใจ"
+            "จักขุมายาฤกษ์ — เกณฑ์สอบผลฤกษ์ที่โหราจารย์โบราณนับถือมาก "
+            "หลักการ: ตั้ง \"ลำดับนักษัตรของจันทร์\" บวก \"เกณฑ์วัน\" "
+            "(อา=6, จ=2, อ=5, พุธ=1, พฤ=4, ศ=0/7, ส=3) แล้วหารด้วย 7 "
+            "พิจารณาจากเศษ — เศษ 0/4/5/6 ผ่านเกณฑ์ +2 คะแนน, "
+            "เศษ 1/2/3 (อุบาทว์/กาลกิณี/มฤตยู) ไม่ผ่าน −3 คะแนน. "
+            "เกณฑ์นี้ใช้ \"สอบผล\" ทุกฤกษ์ ใช้ได้กับกิจกรรมทุกประเภท"
         ),
         "relevant_events": (
-            "contract", "wedding_registration", "investment",
-            "land_purchase", "interview_apply",
+            "wedding", "engagement_ask", "wedding_registration",
+            "housewarming", "foundation_stone", "move_house", "land_purchase",
+            "shop_opening", "office_opening", "investment", "contract",
+            "product_launch", "interview_apply",
+            "travel", "vehicle",
+            "education", "exam",
+            "ordination", "merit",
         ),
         "tone": "warning",
     },

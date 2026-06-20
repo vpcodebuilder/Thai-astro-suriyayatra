@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260608m" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260616k" />
   <style>
     .muhurta-wrap { max-width: 1100px; margin: 0 auto; padding: 16px; color: #3a2a00; }
     .step { background: #fffbf0; border: 1.5px solid #b78b3a; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
@@ -258,7 +258,7 @@
     .hit-extras { padding-left: 16px; padding-right: 16px; }
 
     /* Dithi tags (chip-style) */
-    .hit-dithi-tags { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #d8b870; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+    .hit-dithi-tags { margin-top: 8px; padding-top: 8px; padding-bottom: 10px; border-top: 1px dashed #d8b870; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
     .dithi-tags-title { font-size: 12px; font-weight: 700; color: #6d4c00; margin-right: 4px; width: 100%; margin-bottom: 2px; }
     @media (min-width: 700px) { .dithi-tags-title { width: auto; margin-bottom: 0; } }
     .dithi-conflict-hint {
@@ -287,13 +287,91 @@
     .dithi-popover { background: linear-gradient(180deg, #fffbf0 0%, #fff 100%); border: 2px solid #b78b3a; border-radius: 14px; padding: 20px 22px; max-width: 480px; width: 100%; box-shadow: 0 16px 48px rgba(0,0,0,0.4); position: relative; }
     .dithi-popover-close { position: absolute; top: 10px; right: 12px; width: 32px; height: 32px; border-radius: 50%; background: #b78b3a; color: #fff; border: none; font-size: 14px; font-weight: 700; cursor: pointer; }
     .dithi-popover-title { font-family: 'Kanit', sans-serif; font-size: 19px; color: #6d4c00; margin: 0 0 4px; padding-right: 36px; }
-    .dithi-popover-short { font-size: 13px; color: #5d3a00; margin-bottom: 12px; font-style: italic; }
+    .dithi-popover-short { font-size: 13px; color: #5d3a00; margin-bottom: 12px; font-style: normal; white-space: pre-line; line-height: 1.65; }
     .dithi-popover-long { font-size: 14px; color: #3a2a00; line-height: 1.7; padding: 10px 12px; background: #fff8e1; border-left: 4px solid #b78b3a; border-radius: 6px; }
     .dithi-popover-suitable { margin-top: 10px; font-size: 13px; color: #6d4c00; font-weight: 600; padding: 6px 10px; background: #fff3d2; border-radius: 6px; }
     .dithi-popover-relevance { margin-top: 8px; font-size: 12px; padding: 6px 10px; border-radius: 6px; font-weight: 600; }
     .dithi-popover-relevance.universal_good { background: #e8f5e9; color: #1b5e20; }
     .dithi-popover-relevance.universal_bad { background: #fde7d8; color: #b71c1c; }
+    .dithi-popover-relevance.specific_bad_match { background: #ffcdd2; color: #b71c1c; }
     .dithi-popover-relevance.specific_match { background: #c8e6c9; color: #1b5e20; }
+
+    /* ===== Hit grid (2-col desktop, 1-col mobile) — เท่ากันทั้ง 2 ด้าน ===== */
+    .hit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+    @media (max-width: 900px) { .hit-grid { grid-template-columns: 1fr; } }
+    .hit-grid > .hit-card { margin-bottom: 0; height: 100%; display: flex; flex-direction: column; }
+    .hit-grid > .hit-card > .hit-footer { margin-top: auto; }  /* footer ติดล่างถ้าการ์ดยาว */
+
+    /* ===== Sticky result toolbar (สีเด่นชัด: เลือดหมู-ทอง) ===== */
+    .result-toolbar { position: sticky; top: 6px; z-index: 50; display: flex; gap: 8px; padding: 10px 14px; background: linear-gradient(135deg, #6d1414, #8b2c2c); border: 2px solid #d4a017; border-radius: 12px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(109, 20, 20, 0.35); flex-wrap: wrap; align-items: center; }
+    .result-toolbar-title { font-weight: 700; color: #ffd166; margin-right: auto; font-size: 15px; }
+    .result-tool-btn { padding: 6px 14px; border-radius: 8px; background: #ffd166; border: none; color: #6d1414; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
+    .result-tool-btn:hover { background: #fff; transform: translateY(-1px); }
+
+    /* ===== Hit-card footer (event label + ปุ่มขึ้นบน/ปิด) ===== */
+    .hit-footer { padding: 8px 16px; border-top: 1px dashed #d8b870; display: flex; align-items: center; gap: 8px; background: rgba(183, 139, 58, 0.08); font-size: 12px; color: #6d4c00; }
+    .hit-footer-event { flex: 1; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+    .hit-footer-btn { padding: 4px 10px; border-radius: 8px; background: #b78b3a; color: #fff; border: none; cursor: pointer; font-family: inherit; font-size: 11px; font-weight: 700; }
+    .hit-footer-btn:hover { background: #6d4c00; }
+    /* Read-only tag (ไม่มี popover) */
+    .dithi-tag-readonly { cursor: default; pointer-events: none; }
+
+    /* ===== Weekday tally ===== */
+    .weekday-tally { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; padding: 8px 10px; background: #fff8e1; border: 1px dashed #b78b3a; border-radius: 8px; font-size: 13px; align-items: center; }
+    .weekday-tally-title { font-weight: 700; color: #6d4c00; margin-right: 4px; }
+    .weekday-tally-item { padding: 4px 10px; border-radius: 12px; background: #fff; border: 1.5px solid #d8b870; color: #6d4c00; cursor: pointer; font-family: inherit; font-size: 12px; transition: all 0.15s; }
+    .weekday-tally-item:hover:not(:disabled) { background: #fff3d2; border-color: #b78b3a; }
+    .weekday-tally-item.active { background: #6d4c00; color: #fff; border-color: #4a3500; }
+    .weekday-tally-item:disabled, .weekday-tally-item.zero { opacity: 0.4; cursor: not-allowed; }
+
+    /* ===== Hit groups (legacy — unused after switch to single list) ===== */
+    .hit-group { border: 1.5px solid #d8b870; border-radius: 10px; margin-bottom: 10px; background: #fffbf0; overflow: hidden; }
+    .hit-group > summary { padding: 10px 14px; cursor: pointer; display: flex; align-items: center; gap: 10px; list-style: none; user-select: none; font-weight: 700; }
+    .hit-group > summary::-webkit-details-marker { display: none; }
+    .hit-group > summary::before { content: '▶'; font-size: 12px; color: #b78b3a; transition: transform 0.15s; }
+    .hit-group[open] > summary::before { transform: rotate(90deg); }
+    .hit-group-icon { font-size: 18px; }
+    .hit-group-label { font-size: 15px; color: #6d4c00; }
+    .hit-group-range { font-size: 12px; color: #777; font-weight: 400; }
+    .hit-group-count { margin-left: auto; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; background: #b78b3a; color: #fff; }
+    .hit-group-body { padding: 10px 12px 12px; border-top: 1px dashed #d8b870; }
+    .hit-group-top    > summary { background: linear-gradient(135deg, #fff8e1, #ffe9a8); }
+    .hit-group-top    .hit-group-count { background: linear-gradient(135deg, #d4a017, #8b6914); }
+    .hit-group-mid    > summary { background: linear-gradient(135deg, #fffbf0, #fff3d2); }
+    .hit-group-mid    .hit-group-count { background: #c9a227; }
+    .hit-group-warn   > summary { background: linear-gradient(135deg, #fff3e0, #ffe0b2); }
+    .hit-group-warn   .hit-group-count { background: #ef6c00; }
+    .hit-group-warn   { border-color: #ef6c00; }
+
+    /* ===== Popover v2 layout (สำหรับเกณฑ์พิเศษ 3 อย่าง) ===== */
+    .dpv2-headline { font-size: 16px; font-weight: 700; padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; text-align: center; }
+    .dpv2-headline.tone-good    { background: linear-gradient(135deg, #c8e6c9, #a5d6a7); color: #1b5e20; border: 1.5px solid #2e7d32; }
+    .dpv2-headline.tone-warning { background: linear-gradient(135deg, #ffcdd2, #ef9a9a); color: #b71c1c; border: 1.5px solid #c62828; }
+    .dpv2-headline.tone-neutral { background: linear-gradient(135deg, #f1ecd9, #e8e0c0); color: #6d4c00; border: 1.5px solid #b78b3a; }
+
+    .dpv2-section { margin-bottom: 12px; }
+    .dpv2-section-label { font-size: 12px; font-weight: 700; color: #6d4c00; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+    .dpv2-meaning { font-size: 14px; color: #3a2a00; line-height: 1.7; padding: 10px 12px; background: #fff8e1; border-left: 4px solid #b78b3a; border-radius: 6px; }
+    .dpv2-suitable-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+    .dpv2-suitable-item { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #fff3d2; border: 1px solid #d8b870; border-radius: 14px; font-size: 12px; color: #6d4c00; }
+    .dpv2-suitable-item .ev-icon { font-size: 14px; line-height: 1; }
+    .dpv2-score { margin: 14px 0; padding: 10px 14px; background: linear-gradient(135deg, #fff8e1, #ffe9a8); border: 1.5px solid #b78b3a; border-radius: 10px; text-align: center; font-size: 15px; font-weight: 700; color: #6d4c00; }
+
+    .dpv2-tech { margin-top: 10px; border: 1px dashed #b78b3a; border-radius: 8px; background: #fffbf0; }
+    .dpv2-tech > summary { padding: 8px 12px; cursor: pointer; font-size: 13px; font-weight: 600; color: #6d4c00; list-style: none; user-select: none; }
+    .dpv2-tech > summary::-webkit-details-marker { display: none; }
+    .dpv2-tech > summary::before { content: '▶'; display: inline-block; margin-right: 6px; font-size: 10px; transition: transform 0.15s; color: #b78b3a; }
+    .dpv2-tech[open] > summary::before { transform: rotate(90deg); }
+    .dpv2-tech-grid { padding: 4px 14px 12px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #3a2a00; }
+    .dpv2-tech-row { display: grid; grid-template-columns: 80px 1fr; gap: 10px; align-items: start; }
+    .dpv2-tech-key { font-weight: 700; color: #6d4c00; }
+    .dpv2-tech-val { color: #3a2a00; line-height: 1.55; }
+    @media (max-width: 600px) {
+      .dpv2-tech-row { grid-template-columns: 70px 1fr; font-size: 12px; }
+      .dpv2-headline { font-size: 14px; padding: 8px 12px; }
+      .dpv2-meaning { font-size: 13px; padding: 8px 10px; }
+      .dpv2-score { font-size: 14px; padding: 8px 12px; }
+    }
     .dithi-popover-relevance.specific_other { background: #f5f5dc; color: #6d4c00; }
     .dithi-popover-relevance.neutral { background: #f1ecd9; color: #6d4c00; }
 
@@ -674,12 +752,38 @@
           </label>
           <label class="mode-btn disabled" data-mode="personal" title="ฟีเจอร์นี้กำลังพัฒนา จะเปิดในอนาคต">
             <span class="mode-title">💑 หาฤกษ์เฉพาะบุคคล <span class="coming-soon-badge">เร็วๆ นี้</span></span>
-            <span class="mode-desc">เทียบกับดวงเจ้าชะตา + เกณฑ์พิเศษ (กำลังพัฒนา)</span>
+            <span class="mode-desc">เทียบกับลัคนาเจ้าชะตา + วรโคตม (กำลังพัฒนา)</span>
           </label>
           <label class="mode-btn disabled" data-mode="oracle" title="ฟีเจอร์นี้กำลังพัฒนา จะเปิดในอนาคต">
             <span class="mode-title">🔬 สำหรับโหราจารย์ <span class="coming-soon-badge">เร็วๆ นี้</span></span>
             <span class="mode-desc">ดวงราศีจักร์ + นวางค์จักร์ + การคำนวณ (กำลังพัฒนา)</span>
           </label>
+        </div>
+      </div>
+
+      <!-- Step Personal: Birth info (show เมื่อ mode = personal) -->
+      <div class="step birth-block" id="birth-step" style="{% if form.mode != 'personal' %}display:none;{% endif %}">
+        <h3>
+          <span class="step-num">👤</span>ข้อมูลเจ้าชะตา
+          <span class="step-hint">(สำหรับเทียบฤกษ์กับลัคนาคุณ)</span>
+        </h3>
+        <div class="form-grid">
+          <div class="form-cell">
+            <label>วันเกิด (พ.ศ.)</label>
+            <input type="text" name="birth_date_th" id="birth-date-th" value="{{ form.birth_date_th }}" placeholder="DD/MM/YYYY">
+          </div>
+          <div class="form-cell">
+            <label>เวลาเกิด</label>
+            <input type="time" name="birth_time" value="{{ form.birth_time }}">
+          </div>
+          <div class="form-cell">
+            <label>จังหวัดเกิด</label>
+            <select name="birth_province">
+              {% for p in provinces %}
+                <option value="{{ p }}" {% if p == form.birth_province %}selected{% endif %}>{{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -737,13 +841,6 @@
         </div>
       </div>
 
-      <!-- Step 4: Birth (hidden — for future personal/oracle modes) -->
-      <div class="step birth-block hide" id="birth-step" style="display:none;">
-        <input type="hidden" name="birth_date_th" value="">
-        <input type="hidden" name="birth_time" value="">
-        <input type="hidden" name="birth_province" value="กรุงเทพมหานคร">
-      </div>
-
       <button type="submit" class="btn-primary">🔍 ค้นหาฤกษ์ดี</button>
       {% if usage_counts and usage_counts.get('muhurta_search') %}
         <p class="usage-stat-muhurta">
@@ -759,7 +856,13 @@
 
     <!-- ===== Results ===== -->
     {% if result %}
-      <div class="result-section">
+      <div class="result-section" id="result-section">
+        {# Sticky toolbar — ย่อ/ขยายทั้งหมด #}
+        <div class="result-toolbar">
+          <span class="result-toolbar-title">📋 ผลการหาฤกษ์</span>
+          <button type="button" id="collapse-all-btn" class="result-tool-btn">▼ ย่อทั้งหมด</button>
+          <button type="button" id="expand-all-btn" class="result-tool-btn">▶ ขยายทั้งหมด</button>
+        </div>
         <div class="result-header">
           <h2>📋 ผลการหาฤกษ์</h2>
           <p>พบฤกษ์ดี <strong>{{ result.total_events }}</strong> กิจกรรม (จากที่เลือก {{ result.total_requested }})
@@ -782,23 +885,39 @@
             <div class="event-panel-body">
               <div class="event-desc">{{ group.event_description }}</div>
 
+              {# Weekday tally — แสดงจำนวนฤกษ์แต่ละวันในสัปดาห์ + กดเพื่อกรอง #}
+              {% set wan_tally = {1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0} %}
+              {% for h in group.hits %}{% if wan_tally.update({h.wan_num: wan_tally[h.wan_num]+1}) %}{% endif %}{% endfor %}
+              {% set wan_labels = [(1,'☉','อา.'),(2,'🌙','จ.'),(3,'♂','อ.'),(4,'☿','พ.'),(5,'♃','พฤ.'),(6,'♀','ศ.'),(7,'♄','ส.')] %}
+              <div class="weekday-tally">
+                <span class="weekday-tally-title">📅 วันในสัปดาห์:</span>
+                {% for wn, wi, wl in wan_labels %}
+                  <button type="button" class="weekday-tally-item {% if wan_tally[wn] == 0 %}zero{% endif %}" data-tally-wan="{{ wn }}" data-base-count="{{ wan_tally[wn] }}" {% if wan_tally[wn] == 0 %}disabled{% endif %}>
+                    {{ wi }} {{ wl }} <strong>{{ wan_tally[wn] }} ฤกษ์</strong>
+                  </button>
+                {% endfor %}
+              </div>
+
               {# Period tally — แสดงจำนวนฤกษ์แต่ละช่วง + กดเพื่อกรอง #}
               {% set tally = {'morning':0,'late_morning':0,'noon':0,'evening':0,'dusk':0,'night':0} %}
               {% for h in group.hits %}{% if tally.update({h.period: tally[h.period]+1}) %}{% endif %}{% endfor %}
               {% set tally_labels = [('morning','🌅','เช้า','06-09'),('late_morning','☀️','สาย','09-12'),('noon','🌞','บ่าย','12-15'),('evening','🌇','เย็น','15-18'),('dusk','🌆','ค่ำ','18-21'),('night','🌙','กลางคืน','21-06')] %}
               <div class="period-tally">
-                <span class="period-tally-title">📊 ทั้งหมด {{ group.hits|length }} ฤกษ์ — กดเพื่อกรอง:</span>
+                <span class="period-tally-title">⏰ ช่วงเวลา:</span>
                 {% for tp_key, tp_icon, tp_label, tp_range in tally_labels %}
-                  <button type="button" class="period-tally-item {% if tally[tp_key] == 0 %}zero{% endif %}" data-tally-period="{{ tp_key }}" {% if tally[tp_key] == 0 %}disabled{% endif %}>
+                  <button type="button" class="period-tally-item {% if tally[tp_key] == 0 %}zero{% endif %}" data-tally-period="{{ tp_key }}" data-base-count="{{ tally[tp_key] }}" {% if tally[tp_key] == 0 %}disabled{% endif %}>
                     {{ tp_icon }} {{ tp_label }} ({{ tp_range }}) <strong>{{ tally[tp_key] }} ฤกษ์</strong>
                   </button>
                 {% endfor %}
                 <button type="button" class="period-tally-clear" style="margin-left:auto;display:none;">ล้างกรอง</button>
               </div>
 
-              {% for h in group.hits %}
-                {% with rank=loop.index %}{% include "_muhurta_hit_row.html" %}{% endwith %}
-              {% endfor %}
+              {# Hit cards — 2-column grid on desktop, single column on mobile #}
+              <div class="hit-grid">
+                {% for h in group.hits %}
+                  {% with rank=loop.index %}{% include "_muhurta_hit_row.html" %}{% endwith %}
+                {% endfor %}
+              </div>
               {% if not group.hits %}
                 <p style="text-align:center;color:#777;padding:10px;">ไม่พบฤกษ์ดีสำหรับกิจกรรมนี้ในช่วงเวลานี้</p>
               {% endif %}
@@ -861,10 +980,37 @@
     <div class="dithi-popover">
       <button type="button" class="dithi-popover-close" id="dithi-popover-close">✕</button>
       <h3 class="dithi-popover-title" id="dithi-popover-title"></h3>
-      <div class="dithi-popover-short" id="dithi-popover-short"></div>
-      <div class="dithi-popover-long" id="dithi-popover-long"></div>
-      <div class="dithi-popover-suitable" id="dithi-popover-suitable"></div>
-      <div class="dithi-popover-relevance" id="dithi-popover-relevance"></div>
+
+      {# ===== NEW layout (criteria) ===== #}
+      <div class="dpv2" id="dpv2" style="display:none">
+        <div class="dpv2-headline" id="dpv2-headline"></div>
+        <div class="dpv2-section">
+          <div class="dpv2-section-label">ความหมาย</div>
+          <div class="dpv2-meaning" id="dpv2-meaning"></div>
+        </div>
+        <div class="dpv2-section" id="dpv2-suitable-wrap">
+          <div class="dpv2-section-label">เหมาะสำหรับ</div>
+          <div class="dpv2-suitable-grid" id="dpv2-suitable"></div>
+        </div>
+        <div class="dpv2-score" id="dpv2-score"></div>
+        <details class="dpv2-tech" id="dpv2-tech">
+          <summary>🔍 รายละเอียดการคำนวณ</summary>
+          <div class="dpv2-tech-grid">
+            <div class="dpv2-tech-row"><span class="dpv2-tech-key">ตำรา</span><span class="dpv2-tech-val" id="dpv2-tech-rule">—</span></div>
+            <div class="dpv2-tech-row"><span class="dpv2-tech-key">คำนวณ</span><span class="dpv2-tech-val" id="dpv2-tech-check">—</span></div>
+            <div class="dpv2-tech-row"><span class="dpv2-tech-key">ผลลัพธ์</span><span class="dpv2-tech-val" id="dpv2-tech-outcome">—</span></div>
+            <div class="dpv2-tech-row" id="dpv2-tech-note-row" style="display:none"><span class="dpv2-tech-key">หมายเหตุ</span><span class="dpv2-tech-val" id="dpv2-tech-note">—</span></div>
+          </div>
+        </details>
+      </div>
+
+      {# ===== OLD layout (ดิถี/ฤกษ์ใหญ่ — ใช้แบบเดิม) ===== #}
+      <div class="dpv1" id="dpv1">
+        <div class="dithi-popover-short" id="dithi-popover-short"></div>
+        <div class="dithi-popover-long" id="dithi-popover-long"></div>
+        <div class="dithi-popover-suitable" id="dithi-popover-suitable"></div>
+        <div class="dithi-popover-relevance" id="dithi-popover-relevance"></div>
+      </div>
     </div>
   </div>
 
@@ -873,7 +1019,7 @@
     <div class="score-modal">
       <button type="button" class="score-modal-close" id="close-score-modal" aria-label="ปิด">✕</button>
       <h2 class="score-modal-title">💡 หลักการคำนวณคะแนนฤกษ์</h2>
-      <p class="score-modal-intro">ระบบรวมคะแนนจาก <strong>6 ปัจจัย</strong> ในตำราโหราศาสตร์ไทย โดย scan ทุก 1 ชั่วโมงในช่วงเวลาที่เลือก แล้วกรองเฉพาะ "<strong>ฤกษ์ดีเยี่ยม</strong>" (คะแนน ≥ 12)</p>
+      <p class="score-modal-intro">ระบบรวมคะแนนจาก <strong>6 ปัจจัย</strong> ในตำราโหราศาสตร์ไทย ช่วงคะแนนจริง <strong>−14 ถึง +19</strong> โดย scan ทุก 1 ชั่วโมงในช่วงเวลาที่เลือก แล้วแบ่งเป็น 3 กลุ่ม: <strong>🏆 ดีมากขึ้นไป (≥13)</strong> / <strong>⚖️ ดี-กลาง (0–12)</strong> / <strong>⚠️ ระวัง (&lt;0)</strong></p>
 
       <div class="score-factor">
         <h3>1️⃣ วาร (ดาวประจำวัน)</h3>
@@ -928,15 +1074,20 @@
       </div>
 
       <div class="score-factor">
-        <h3>5️⃣ เกณฑ์พิเศษ</h3>
-        <p>3 เกณฑ์ตามตำรา horapayakorn — ใช้เฉพาะกิจกรรม</p>
+        <h3>5️⃣ เกณฑ์พิเศษ 3 อย่าง (ใช้เป็น "ข้อมูลประกอบ" — คะแนนเบา)</h3>
+        <p>เกณฑ์เหล่านี้บอกว่าฤกษ์ตรงตำราหรือไม่ — ผ่านได้คะแนนเสริมเล็กน้อย ไม่ผ่านลดคะแนนน้อยมาก เพื่อให้คะแนนรวมยังเป็นตัวตัดสินหลัก</p>
         <table class="score-tbl">
-          <tr><th>เกณฑ์</th><th>คะแนน</th><th>เหมาะกับ</th></tr>
-          <tr><td>👰 กนกนารี (จันทร์+ศุกร์ในราศีหญิง)</td><td class="sc-good">+2</td><td>แต่งงาน หมั้น</td></tr>
-          <tr><td>🐘 กนกกุญชร (พฤหัส/อังคารราศีจร)</td><td class="sc-good">+2</td><td>เดินทาง ออกรถ ขนย้าย</td></tr>
-          <tr><td>👁️ จักขุมายา (จันทร์กุมราหู/เกตุ)</td><td class="sc-bad">−3</td><td>ระวัง! เลี่ยงเซ็นสัญญา</td></tr>
+          <tr><th>เกณฑ์</th><th>คะแนน</th><th>เหตุผล</th></tr>
+          <tr><td>💃 กนกนารี — วาร × ฤกษ์ "ทำได้"</td><td class="sc-good">+2</td><td>คู่วัน-ฤกษ์อนุญาตตามตารางอ.หลวงวุฒิรณพัศตุ์</td></tr>
+          <tr><td>💃 กนกนารี — วาร × ฤกษ์ "ห้าม"</td><td class="sc-bad">−1</td><td>คู่วัน-ฤกษ์ห้ามตามตำรา (เตือนเฉยๆ)</td></tr>
+          <tr><td>🐘 กนกกุญชร — ลัคนา "ดีนัก"</td><td class="sc-best">+3</td><td>ลัคนาตรงราศีโดดเด่นของฤกษ์ (เด่นพิเศษ)</td></tr>
+          <tr><td>🐘 กนกกุญชร — ลัคนา "ดี"</td><td class="sc-good">+2</td><td>ลัคนาตรงราศี "ดี" ของฤกษ์</td></tr>
+          <tr><td>🐘 กนกกุญชร — ลัคนา "ห้าม"</td><td class="sc-bad">−1</td><td>ลัคนาตรง "ห้าม" หรือไม่อยู่ในรายการอนุญาต</td></tr>
+          <tr><td>👁️ จักขุมายา — เศษ 0/4/5/6</td><td class="sc-good">+2</td><td>(nakชม. + เกณฑ์วัน) mod 7 = สรรพโยค/สาธุ/สิทธิ/อำมฤค</td></tr>
+          <tr><td>👁️ จักขุมายา — เศษ 1/2/3</td><td class="sc-bad">−1</td><td>อุบาทว์ / กาลกิณี / มฤตยู — เตือนเฉยๆ</td></tr>
         </table>
-        <div class="score-example">📌 ตัวอย่าง: ฤกษ์แต่งงานเข้า "กนกนารี" = <strong>+2</strong></div>
+        <div class="score-example">📌 ทั้ง 3 เกณฑ์มีบทบาท "เตือน" — รวมขอบเขตคะแนนสูงสุด +7 (ดี+ดี+ดีนัก), ต่ำสุด −3</div>
+        <div class="score-example" style="background:#fff;border-left-color:#777">ℹ️ <em>เหตุที่ลดคะแนนเบา: ตำราโบราณบอกว่าเกณฑ์เหล่านี้เป็น "ข้อมูลประกอบ" — ไม่ใช่ตัวตัดสินหลัก ถ้าฤกษ์อื่นดี รวมยังผ่านเกณฑ์ได้</em></div>
       </div>
 
       <div class="score-factor">
@@ -950,19 +1101,19 @@
       </div>
 
       <div class="score-grading">
-        <h3>🌟 เกรดฤกษ์ — แปลคะแนนรวมเป็น %, ดาว, เกรด</h3>
-        <p style="font-size:13px;margin-bottom:8px">คะแนนเต็ม <strong>17</strong> (top score จริงสุดที่พบในข้อมูล) — สูตร: <code>% = (คะแนน ÷ 17) × 100</code> (clamp ที่ 100%)</p>
+        <h3>🌟 เกรดฤกษ์ + กลุ่ม — แปลคะแนนรวมเป็น %, ดาว, เกรด</h3>
+        <p style="font-size:13px;margin-bottom:8px">คะแนนเต็ม <strong>19</strong> ต่ำสุด <strong>−14</strong> — สูตร: <code>% = (คะแนน ÷ 19) × 100</code> (clamp 0–100%). ระบบแบ่งผลลัพธ์เป็น <strong>3 กลุ่ม</strong>: 🏆 ดีมากขึ้นไป (เปิด default) / ⚖️ ดี-พอใช้-กลาง / ⚠️ ระวัง</p>
         <table class="score-tbl">
-          <tr><th>คะแนน</th><th>%</th><th>เกรด</th><th>คำอธิบาย</th></tr>
-          <tr class="grade-row-best"><td>17+</td><td>100.00%</td><td>⭐⭐⭐⭐⭐ ดีเยี่ยม</td><td>ฤกษ์สมบูรณ์แบบ — top ของระบบ</td></tr>
-          <tr><td>12 – 16</td><td>70-94%</td><td>⭐⭐⭐⭐⭐ ดีเยี่ยม</td><td>เหมาะที่สุดสำหรับงานสำคัญ</td></tr>
-          <tr><td>8 – 11</td><td>47-65%</td><td>⭐⭐⭐⭐½ ดีมาก</td><td>องค์ประกอบเอื้ออำนวยส่วนใหญ่</td></tr>
-          <tr><td>5 – 7</td><td>29-41%</td><td>⭐⭐⭐⭐ ดี</td><td>เหมาะการเริ่มกิจมงคล — เกณฑ์ขั้นต่ำที่ระบบแสดง</td></tr>
-          <tr><td>2 – 4</td><td>11-24%</td><td>⭐⭐⭐ พอใช้</td><td>ดีกว่าวันธรรมดา (ไม่แสดงในผลลัพธ์)</td></tr>
-          <tr><td>0 – 1</td><td>0-6%</td><td>⭐⭐½ กลาง</td><td>ไม่ดีไม่ร้าย</td></tr>
-          <tr><td>&lt; 0</td><td>0%</td><td>⭐⭐ ระวัง</td><td>ไม่เหมาะ — มีปัจจัยขัด</td></tr>
+          <tr><th>คะแนน</th><th>%</th><th>เกรด</th><th>กลุ่ม</th><th>คำอธิบาย</th></tr>
+          <tr class="grade-row-best"><td>17 – 19</td><td>89–100%</td><td>⭐⭐⭐⭐⭐ ดีเยี่ยม</td><td>🏆 ดีมากขึ้นไป</td><td>ฤกษ์สมบูรณ์แบบ — top ของระบบ</td></tr>
+          <tr class="grade-row-best"><td>13 – 16</td><td>68–84%</td><td>⭐⭐⭐⭐ ดีมาก</td><td>🏆 ดีมากขึ้นไป</td><td>เหมาะที่สุดสำหรับงานสำคัญ</td></tr>
+          <tr><td>7 – 12</td><td>37–63%</td><td>⭐⭐⭐ ดี</td><td>⚖️ ดี-กลาง</td><td>องค์ประกอบเอื้อบางส่วน</td></tr>
+          <tr><td>3 – 6</td><td>16–32%</td><td>⭐⭐ พอใช้</td><td>⚖️ ดี-กลาง</td><td>ดีกว่าวันธรรมดา</td></tr>
+          <tr><td>0 – 2</td><td>0–11%</td><td>⭐ กลาง</td><td>⚖️ ดี-กลาง</td><td>ไม่ดีไม่ร้าย</td></tr>
+          <tr><td>−1 ถึง −7</td><td>0%</td><td>ระวัง</td><td>⚠️ ระวัง</td><td>มีปัจจัยขัด — ระวัง</td></tr>
+          <tr><td>&lt; −7</td><td>0%</td><td>ไม่เหมาะ</td><td>⚠️ ระวัง</td><td>มีปัจจัยขัดข้องหลายอย่าง</td></tr>
         </table>
-        <p style="font-size:12px;margin-top:8px;color:#777"><em>หมายเหตุ: ระบบแสดงฤกษ์ตั้งแต่ "ดี" ขึ้นไป (≥5 คะแนน) ให้คุณพิจารณาเลือกตามความเหมาะสม</em></p>
+        <p style="font-size:12px;margin-top:8px;color:#777"><em>หมายเหตุ: ระบบแสดงทุกกลุ่ม — เปิดเฉพาะกลุ่ม "🏆 ดีมากขึ้นไป" เป็น default คุณกดเปิดกลุ่มอื่นเพื่อพิจารณาเพิ่มได้</em></p>
       </div>
 
       <p class="score-note">หมายเหตุ: ระบบนี้ scan ทุก 1 ชั่วโมงในช่วงที่เลือก จำกัด <strong>สูงสุด 2 ฤกษ์/วัน</strong> เพื่อกระจายไม่ให้กระจุก</p>
@@ -981,6 +1132,11 @@
     }
 
     // ===== Mode selector =====
+    const birthStepEl = document.getElementById('birth-step');
+    function syncBirthStep(mode) {
+      if (!birthStepEl) return;
+      birthStepEl.style.display = (mode === 'personal') ? '' : 'none';
+    }
     document.querySelectorAll('.mode-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         if (btn.classList.contains('disabled')) {
@@ -990,8 +1146,12 @@
         }
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        const radio = btn.querySelector('input[type=radio]');
+        if (radio) radio.checked = true;
+        syncBirthStep(btn.dataset.mode);
       });
     });
+    syncBirthStep(document.querySelector('.mode-btn.active')?.dataset.mode || 'general');
 
     // ===== Event chips + Time-period chips (multi-select via checkboxes) =====
     const eventCountEl = document.getElementById('event-count');
@@ -1025,25 +1185,82 @@
     const REL_LABELS = {
       'universal_good': '✨ ดิถีมงคล (เหมาะกับทุกกิจกรรม)',
       'universal_bad': '🚫 ดิถีร้าย (ห้ามมงคลทุกประเภท)',
-      'specific_match': '✅ เหมาะ/เกี่ยวข้องกับกิจกรรมที่เลือก',
-      'specific_other': '💡 ดิถีอื่นในวันเดียวกัน (ไม่ตรงกิจกรรมที่เลือก)',
-      'neutral': '📅 ดิถีปกติ (ไม่ส่งผลคะแนน)',
+      'specific_match': '✅ ผ่านเกณฑ์ตรงกิจกรรมที่เลือก',
+      'specific_bad_match': '⛔ ไม่ผ่านเกณฑ์ตรงกิจกรรมที่เลือก',
+      'specific_other': '💡 ดิถี/เกณฑ์อื่นในวันเดียวกัน (ไม่ตรงกิจกรรมที่เลือก)',
+      'neutral': '○ ไม่ระบุชัด (ไม่ส่งผลคะแนน)',
     };
-    document.querySelectorAll('.dithi-tag').forEach(tag => {
+    const dpv1 = document.getElementById('dpv1');
+    const dpv2 = document.getElementById('dpv2');
+    const dpv2Headline = document.getElementById('dpv2-headline');
+    const dpv2Meaning = document.getElementById('dpv2-meaning');
+    const dpv2Suitable = document.getElementById('dpv2-suitable');
+    const dpv2SuitableWrap = document.getElementById('dpv2-suitable-wrap');
+    const dpv2Score = document.getElementById('dpv2-score');
+    const dpv2Tech = document.getElementById('dpv2-tech');
+    const dpv2TechRule = document.getElementById('dpv2-tech-rule');
+    const dpv2TechCheck = document.getElementById('dpv2-tech-check');
+    const dpv2TechOutcome = document.getElementById('dpv2-tech-outcome');
+    const dpv2TechNote = document.getElementById('dpv2-tech-note');
+    const dpv2TechNoteRow = document.getElementById('dpv2-tech-note-row');
+
+    function bindDithiTagClick(tag) {
       tag.addEventListener('click', () => {
         dpTitle.textContent = (tag.dataset.icon || '') + ' ' + tag.dataset.name;
-        dpShort.textContent = tag.dataset.short;
-        dpLong.textContent = tag.dataset.long;
-        if (tag.dataset.suitable) {
-          dpSuitable.textContent = '📌 ' + tag.dataset.suitable;
-          dpSuitable.style.display = '';
-        } else { dpSuitable.style.display = 'none'; }
-        const rel = tag.dataset.relevance;
-        dpRel.textContent = REL_LABELS[rel] || '';
-        dpRel.className = 'dithi-popover-relevance ' + rel;
+        if (tag.dataset.layout === 'v2') {
+          // ===== NEW criteria layout =====
+          dpv1.style.display = 'none';
+          dpv2.style.display = '';
+          const tone = tag.dataset.tone || 'neutral';
+          dpv2Headline.textContent = tag.dataset.headline || '';
+          dpv2Headline.className = 'dpv2-headline tone-' + tone;
+          dpv2Meaning.textContent = tag.dataset.meaning || '';
+          let suitArr = [];
+          try { suitArr = JSON.parse(tag.dataset.suitableJson || '[]'); } catch(e) {}
+          if (suitArr.length) {
+            dpv2Suitable.innerHTML = suitArr.map(ev => {
+              const ic = document.createElement('span');
+              ic.className = 'ev-icon'; ic.textContent = ev.icon || '';
+              const wrap = document.createElement('span');
+              wrap.className = 'dpv2-suitable-item';
+              wrap.appendChild(ic);
+              wrap.appendChild(document.createTextNode(' ' + (ev.label || '')));
+              return wrap.outerHTML;
+            }).join('');
+            dpv2SuitableWrap.style.display = '';
+          } else {
+            dpv2SuitableWrap.style.display = 'none';
+          }
+          dpv2Score.textContent = tag.dataset.scoreLine || '';
+          dpv2Score.style.display = tag.dataset.scoreLine ? '' : 'none';
+          dpv2TechRule.textContent = tag.dataset.techRule || '—';
+          dpv2TechCheck.textContent = tag.dataset.techCheck || '—';
+          dpv2TechOutcome.textContent = tag.dataset.techOutcome || '—';
+          if (tag.dataset.techNote) {
+            dpv2TechNote.textContent = tag.dataset.techNote;
+            dpv2TechNoteRow.style.display = '';
+          } else {
+            dpv2TechNoteRow.style.display = 'none';
+          }
+          dpv2Tech.open = false; // เก็บไว้ ผู้ใช้กดเปิดเอง
+        } else {
+          // ===== OLD layout (ดิถี/ฤกษ์ใหญ่) =====
+          dpv2.style.display = 'none';
+          dpv1.style.display = '';
+          dpShort.textContent = tag.dataset.short || '';
+          dpLong.textContent = tag.dataset.long || '';
+          if (tag.dataset.suitable) {
+            dpSuitable.textContent = '📌 ' + tag.dataset.suitable;
+            dpSuitable.style.display = '';
+          } else { dpSuitable.style.display = 'none'; }
+          const rel = tag.dataset.relevance;
+          dpRel.textContent = REL_LABELS[rel] || '';
+          dpRel.className = 'dithi-popover-relevance ' + rel;
+        }
         dpBg.classList.add('active');
       });
-    });
+    }
+    document.querySelectorAll('.dithi-tag').forEach(bindDithiTagClick);
     if (dpClose) {
       dpClose.addEventListener('click', () => dpBg.classList.remove('active'));
       dpBg.addEventListener('click', (e) => { if (e.target === dpBg) dpBg.classList.remove('active'); });
@@ -1052,6 +1269,44 @@
 
     // ===== Score info modal =====
     const scoreBtn = document.getElementById('open-score-info');
+    // ===== Hit footer "ย่อกิจกรรมนี้" → ปิด event panel แล้วเลื่อนไปที่หัวข้อ =====
+    document.querySelectorAll('.hit-footer-btn[data-action="collapse-event"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const panel = btn.closest('.event-panel');
+        if (!panel) return;
+        panel.removeAttribute('open');
+        // scroll ไปที่ summary ของ panel นี้
+        const summary = panel.querySelector('summary');
+        if (summary) summary.scrollIntoView({block: 'start', behavior: 'smooth'});
+      });
+    });
+
+    // ===== Collapse/Expand all event panels =====
+    const collapseAllBtn = document.getElementById('collapse-all-btn');
+    const expandAllBtn = document.getElementById('expand-all-btn');
+    if (collapseAllBtn) {
+      collapseAllBtn.addEventListener('click', () => {
+        document.querySelectorAll('.event-panel').forEach(p => p.removeAttribute('open'));
+      });
+    }
+    if (expandAllBtn) {
+      expandAllBtn.addEventListener('click', () => {
+        document.querySelectorAll('.event-panel').forEach(p => p.setAttribute('open', ''));
+      });
+    }
+
+    // ===== Auto-scroll to result-section ถ้ามีผลลัพธ์ =====
+    // (ไม่เด้งไปบนสุดหลังกดปุ่มหาฤกษ์)
+    const _resultEl = document.getElementById('result-section');
+    if (_resultEl && history.scrollRestoration) {
+      history.scrollRestoration = 'manual';
+    }
+    if (_resultEl && window.scrollY < 100) {
+      requestAnimationFrame(() => {
+        _resultEl.scrollIntoView({block: 'start', behavior: 'instant'});
+      });
+    }
+
     const scoreBg = document.getElementById('score-modal-bg');
     const scoreClose = document.getElementById('close-score-modal');
     if (scoreBtn) {
@@ -1061,72 +1316,108 @@
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape') scoreBg.classList.remove('active'); });
     }
 
-    // ===== Period tally filter (อยู่ในผลลัพธ์) =====
-    // หมายเหตุ: ปุ่ม period-tally-item แชร์ filter ระหว่างทุก event panel (ฟิลเตอร์รวม)
-    document.querySelectorAll('.period-tally-item').forEach(item => {
-      item.addEventListener('click', () => {
-        if (item.disabled || item.classList.contains('zero')) return;
-        // sync active state ไปทุก panel (ทุก tally bar)
-        const period = item.dataset.tallyPeriod;
-        const wasActive = item.classList.contains('active');
-        document.querySelectorAll('.period-tally-item[data-tally-period="' + period + '"]').forEach(el => {
-          el.classList.toggle('active', !wasActive);
-        });
-        applyPeriodFilter();
-      });
-    });
-    document.querySelectorAll('.period-tally-clear').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.period-tally-item.active').forEach(el => el.classList.remove('active'));
-        applyPeriodFilter();
-      });
-    });
+    // ===== Filter per event panel (อิสระต่อกัน) =====
+    // Logic:
+    //   1. คลิก weekday → toggle เลือกวัน + RESET period filter ของ panel นั้น
+    //   2. คลิก period → toggle เลือกช่วงเวลา (ภายในวันที่กรองอยู่)
+    //   3. period buttons disabled ถ้า count = 0 หลัง weekday filter
+    //   4. weekday buttons disabled ถ้า base count = 0
+    document.querySelectorAll('.event-panel').forEach(panel => {
+      const weekdayItems = panel.querySelectorAll('.weekday-tally-item');
+      const periodItems = panel.querySelectorAll('.period-tally-item');
+      const clearBtn = panel.querySelector('.period-tally-clear');
 
-    function applyPeriodFilter() {
-      const activeSet = new Set(
-        Array.from(document.querySelectorAll('.period-tally-item.active'))
-          .map(c => c.dataset.tallyPeriod)
-      );
-      const activePeriods = Array.from(activeSet);
-      const filterOn = activePeriods.length > 0;
-      // โชว์/ซ่อนปุ่ม "ล้างกรอง"
-      document.querySelectorAll('.period-tally-clear').forEach(btn => {
-        btn.style.display = filterOn ? '' : 'none';
-      });
-      // กรอง card แต่ละ event panel
-      document.querySelectorAll('.event-panel').forEach(panel => {
+      function recompute() {
+        const activeWans = [...weekdayItems]
+          .filter(b => b.classList.contains('active'))
+          .map(b => b.dataset.tallyWan);
+        const activePeriods = [...periodItems]
+          .filter(b => b.classList.contains('active'))
+          .map(b => b.dataset.tallyPeriod);
+
+        // นับ period count ภายใต้ weekday filter (เพื่อ disable ปุ่ม 0)
+        const periodCountUnderWan = {morning:0,late_morning:0,noon:0,evening:0,dusk:0,night:0};
         let shown = 0;
         panel.querySelectorAll('.hit-card').forEach(card => {
-          const match = !filterOn || activePeriods.includes(card.dataset.period);
-          card.classList.toggle('period-hidden', !match);
-          // fallback inline style (กัน CSS เก่า cache อยู่)
-          card.style.display = match ? '' : 'none';
-          if (match) shown++;
+          const wanMatch = activeWans.length === 0 || activeWans.includes(card.dataset.wan);
+          const periodMatch = activePeriods.length === 0 || activePeriods.includes(card.dataset.period);
+          const visible = wanMatch && periodMatch;
+          card.style.display = visible ? '' : 'none';
+          card.classList.toggle('period-hidden', !visible);
+          if (visible) shown++;
+          if (wanMatch) {
+            periodCountUnderWan[card.dataset.period] = (periodCountUnderWan[card.dataset.period] || 0) + 1;
+          }
           const detail = card.nextElementSibling;
           if (detail && detail.classList.contains('hit-detail')) {
-            detail.classList.toggle('period-hidden', !match);
-            detail.style.display = match ? '' : 'none';
+            detail.style.display = visible ? '' : 'none';
           }
         });
+
+        // อัปเดต period buttons: count + disabled state
+        periodItems.forEach(btn => {
+          const p = btn.dataset.tallyPeriod;
+          const count = periodCountUnderWan[p] || 0;
+          const strong = btn.querySelector('strong');
+          if (strong) strong.textContent = count + ' ฤกษ์';
+          if (count === 0) {
+            btn.classList.add('zero');
+            btn.classList.remove('active');
+            btn.disabled = true;
+          } else {
+            btn.classList.remove('zero');
+            btn.disabled = false;
+          }
+        });
+
+        // weekday buttons: ใช้ base count (จำนวนเดิม) ไม่เปลี่ยนตาม filter
+        weekdayItems.forEach(btn => {
+          const base = parseInt(btn.dataset.baseCount, 10) || 0;
+          if (base === 0) {
+            btn.classList.add('zero');
+            btn.disabled = true;
+          }
+        });
+
+        const filterOn = activeWans.length > 0 || activePeriods.length > 0;
+        if (clearBtn) clearBtn.style.display = filterOn ? '' : 'none';
+
         // อัปเดต badge ที่ summary ของ panel
         const badge = panel.querySelector('.event-count-badge');
-        if (badge) badge.textContent = shown + ' ฤกษ์' + (filterOn ? ' (กรอง)' : '');
-        // ถ้ากรองแล้วเหลือ 0 → แสดงข้อความเปล่า
-        const body = panel.querySelector('.event-panel-body');
-        let emptyMsg = body.querySelector('.filter-empty-msg');
-        if (filterOn && shown === 0) {
-          if (!emptyMsg) {
-            emptyMsg = document.createElement('p');
-            emptyMsg.className = 'filter-empty-msg';
-            emptyMsg.style.cssText = 'text-align:center;color:#777;padding:14px;';
-            emptyMsg.textContent = 'ไม่มีฤกษ์ใน 15 อันดับที่อยู่ในช่วงเวลาที่เลือก';
-            body.appendChild(emptyMsg);
-          }
-        } else if (emptyMsg) {
-          emptyMsg.remove();
+        if (badge) {
+          const total = panel.querySelectorAll('.hit-card').length;
+          badge.textContent = filterOn ? (shown + ' / ' + total + ' ฤกษ์') : (total + ' ฤกษ์');
         }
+      }
+
+      weekdayItems.forEach(item => {
+        item.addEventListener('click', () => {
+          if (item.disabled || item.classList.contains('zero')) return;
+          item.classList.toggle('active');
+          // RESET period filter เมื่อเปลี่ยนการเลือกวัน (ตามคำขอ user)
+          periodItems.forEach(p => p.classList.remove('active'));
+          recompute();
+        });
       });
-    }
+
+      periodItems.forEach(item => {
+        item.addEventListener('click', () => {
+          if (item.disabled || item.classList.contains('zero')) return;
+          item.classList.toggle('active');
+          recompute();
+        });
+      });
+
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          weekdayItems.forEach(b => b.classList.remove('active'));
+          periodItems.forEach(b => b.classList.remove('active'));
+          recompute();
+        });
+      }
+
+      recompute();
+    });
 
     // ===== Range buttons =====
     const startInput = document.getElementById('start-date');

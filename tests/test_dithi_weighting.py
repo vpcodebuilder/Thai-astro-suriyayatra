@@ -46,24 +46,26 @@ class TestUniversalBadPenalty(unittest.TestCase):
 class TestScorePercentMapping(unittest.TestCase):
     """ทดสอบ % calc + กรอง 60%"""
 
-    def test_score_11_is_60_percent(self):
-        """score 11 → 64.7% (>= 60% threshold)"""
-        # 11 / 17 * 100 = 64.71
-        from webapp.server import _score_to_percent
-        self.assertGreaterEqual(_score_to_percent(11), 60)
+    def test_score_threshold_60_percent(self):
+        """score = ceil(MAX*0.6) ควรได้ >= 60%"""
+        import math
+        from webapp.server import _score_to_percent, MUHURTA_SCORE_MAX
+        threshold_score = math.ceil(MUHURTA_SCORE_MAX * 0.6)
+        self.assertGreaterEqual(_score_to_percent(threshold_score), 60)
 
-    def test_score_10_below_threshold(self):
-        """score 10 → 58.8% (< 60% threshold)"""
-        from webapp.server import _score_to_percent
-        self.assertLess(_score_to_percent(10), 60)
+    def test_score_max_is_100(self):
+        """ค่า score เต็มควรได้ 100% (เปลี่ยนจาก 17 → 18 หลังเพิ่มมาตรา ดีนัก กนกกุญชร)"""
+        from webapp.server import _score_to_percent, MUHURTA_SCORE_MAX
+        self.assertEqual(_score_to_percent(MUHURTA_SCORE_MAX), 100.0)
 
-    def test_score_17_is_100(self):
-        from webapp.server import _score_to_percent
-        self.assertEqual(_score_to_percent(17), 100.0)
+    def test_score_min_is_zero(self):
+        """ค่า score ต่ำสุด (MIN) ควรได้ 0%"""
+        from webapp.server import _score_to_percent, MUHURTA_SCORE_MIN
+        self.assertEqual(_score_to_percent(MUHURTA_SCORE_MIN), 0.0)
 
-    def test_negative_score_is_zero(self):
-        from webapp.server import _score_to_percent
-        self.assertEqual(_score_to_percent(-5), 0.0)
+    def test_score_below_min_clamps_to_zero(self):
+        from webapp.server import _score_to_percent, MUHURTA_SCORE_MIN
+        self.assertEqual(_score_to_percent(MUHURTA_SCORE_MIN - 10), 0.0)
 
 
 class TestRoekTagging(unittest.TestCase):

@@ -2,9 +2,12 @@
 {# ตัวแปร: h, rank, result, form #}
 {% set bad_dithis = h.dithi_classifications|selectattr('relevance', 'in', ['universal_bad', 'specific_bad_match'])|list %}
 {% set bad_roek = h.roek and not h.roek.is_auspicious %}
-{% set bad_criteria = h.matched_criteria_details|selectattr('tone', 'ne', 'good')|list %}
-{% set has_bad = bad_dithis or bad_roek or bad_criteria %}
-{% set bad_count = (bad_dithis|length) + (1 if bad_roek else 0) + (bad_criteria|length) %}
+{# bad = tone=='warning' เท่านั้น; neutral (กนกกุญชร ลัคนาไม่อยู่ในรายการ) ไม่ใช่ "ห้าม" #}
+{% set bad_criteria = h.matched_criteria_details|selectattr('tone', 'eq', 'warning')|list %}
+{# kalayok ห้าม (ubat / lokawinat) — นับเข้าใน bad_count ด้วย #}
+{% set bad_kalayok = h.kalayok_tags|select('in', ['ubat', 'lokawinat'])|list if h.kalayok_tags else [] %}
+{% set has_bad = bad_dithis or bad_roek or bad_criteria or bad_kalayok %}
+{% set bad_count = (bad_dithis|length) + (1 if bad_roek else 0) + (bad_criteria|length) + (bad_kalayok|length) %}
 {# ตำราขัด: มีดิถีมงคล (severity > 0) + ดิถีร้าย ในวันเดียวกัน → ต่างเล่มไม่ตรงกัน #}
 {% set good_dithis = h.dithi_classifications|selectattr('is_auspicious')|selectattr('severity', 'gt', 0)|list %}
 {% set has_text_conflict = good_dithis and bad_dithis %}
@@ -12,7 +15,8 @@
      data-iso="{{ h.iso }}"
      data-province="{{ form.province }}"
      data-event-key="{{ h.event_label and (result.event_keys[0] if result.event_keys|length == 1 else '') or '' }}"
-     data-period="{{ h.period }}">
+     data-period="{{ h.period }}"
+     data-wan="{{ h.wan_num }}">
 
   {# Period stripe — แถบบนแสดงช่วงเวลาเด่นชัด #}
   <div class="period-stripe period-stripe-{{ h.period }}">
@@ -57,43 +61,114 @@
 
   <div class="hit-summary-text">{{ h.summary }}</div>
 
+  {# กาลโยควาร (Kalayok wan) + วรโคตม chip #}
+  {% set KALAYOK_INFO = {
+    'thongchai': ('🏳️', 'วันธงชัย', 'good',
+      'มงคลสูงสุดของปี — เหมาะการเริ่มกิจการสำคัญ',
+      'วันธงชัย เป็นวารมงคลสูงสุดของปีจุลศักราช ตามตำราโหรไทยถือเป็นวันที่เทพยดารับเครื่องสักการะ ฤกษ์ดีพิเศษเหมาะกับการเริ่มกิจการสำคัญ พิธีมงคลทุกประเภท การยกเสาเอก ขึ้นบ้านใหม่ แต่งงาน เปิดร้าน เซ็นสัญญา. เกณฑ์นี้คิดให้ +2 คะแนน'),
+    'athibodi':  ('👑', 'วันอธิบดี', 'good',
+      'วันมงคล — เหมาะการเข้าพบผู้ใหญ่ รับตำแหน่ง',
+      'วันอธิบดี เป็นวารมงคลที่หนุนเรื่องอำนาจบารมี เหมาะการเข้าพบผู้ใหญ่ รับตำแหน่ง สาบานตน เซ็นสัญญากับผู้มีอำนาจ. เกณฑ์นี้คิดให้ +1 คะแนน'),
+    'ubat':      ('⚠️', 'วันอุบาทว์', 'warning',
+      'วันอัปมงคล — เลี่ยงงานมงคล',
+      'วันอุบาทว์ เป็นวารอัปมงคลตามกาลโยคของปีจุลศักราช ตำราโบราณห้ามใช้กับงานมงคลทุกประเภท การเริ่มต้นใหม่ พิธีกรรมสำคัญ จะติดขัด ขัดข้อง. เกณฑ์นี้หักคะแนน −2'),
+    'lokawinat': ('💀', 'วันโลกาวินาศ', 'warning',
+      'วันอันตรายของปี — เลี่ยงเด็ดขาด',
+      'วันโลกาวินาศ เป็นวารร้ายแรงที่สุดในกาลโยคของปี ถือเป็นวันที่มีพลังทำลายล้างสูง ครูโบราณห้ามใช้กับการมงคลทุกประเภทเด็ดขาด รวมถึงการเริ่มกิจการ การเดินทาง การสาบาน. เกณฑ์นี้หักคะแนน −3')
+  } %}
+  {% if h.kalayok_tags or (h.vargottama_planets and result.mode == 'personal') %}
+    <div class="hit-extra-tags">
+      {% for k in h.kalayok_tags %}
+        {% set ki = KALAYOK_INFO.get(k) %}
+        {% if ki %}
+          {% set k_cls = 'universal_good' if ki[2] == 'good' else 'universal_bad' %}
+          <button type="button" class="dithi-tag dithi-tag-{{ k_cls }}"
+                  data-name="กาลโยควาร — {{ ki[1] }}"
+                  data-icon="{{ ki[0] }}"
+                  data-short="{{ ki[3] }}"
+                  data-long="{{ ki[4] }}"
+                  data-suitable=""
+                  data-relevance="{{ k_cls }}"
+                  title="กดดูรายละเอียด">
+            <span class="dithi-tag-icon">{{ ki[0] }}</span><span class="dithi-tag-name">{{ ki[1] }}</span>
+          </button>
+        {% endif %}
+      {% endfor %}
+      {# วรโคตม chip แสดงเฉพาะโหมดเฉพาะบุคคล (ละเอียดกับลัคนาเจ้าชะตา) #}
+      {% if h.vargottama_planets and result.mode == 'personal' %}
+        <button type="button" class="dithi-tag dithi-tag-specific_match"
+                data-name="วรโคตม (Vargottama)"
+                data-icon="✨"
+                data-short="ดาวอยู่ราศีเดียวกันทั้งใน Rashi (ราศีจักร์) และ Navamsa (นวางค์จักร์) — กำลังดาวแรงเป็นพิเศษ"
+                data-long="วรโคตม คือดาวที่อยู่ในราศีเดียวกันทั้งในผัง Rashi (ราศีจักร์ — แบ่ง 12 ช่อง) และ Navamsa (นวางค์จักร์ — แบ่ง 108 ช่อง). เมื่อตำแหน่งทั้งสองตรงกัน ดาวนั้นมีพลังเข้มข้นเป็นพิเศษ ดวงตอนเริ่มจะหนุนเรื่องที่ดาวนั้นปกครอง. ในตำราพระเวทถือเป็นเกณฑ์ดาวแข็งระดับ \"อุจน์\" รองลงมา. ในฤกษ์นี้ ดาวที่เป็นวรโคตม: {{ h.vargottama_planets|join(', ') }}"
+                data-suitable="ใช้ประเมินกำลังดาวประกอบในการตั้งฤกษ์"
+                data-relevance="specific_match"
+                title="กดดูรายละเอียดวรโคตม">
+          <span class="dithi-tag-icon">✨</span><span class="dithi-tag-name">วรโคตม: {{ h.vargottama_planets[:3]|join(', ') }}</span>
+        </button>
+      {% endif %}
+    </div>
+  {% endif %}
+
   {# ฤกษ์ใหญ่ (Roek) + เกณฑ์พิเศษ (Special criteria) เป็น tag #}
   {% if h.roek or h.matched_criteria_details %}
     <div class="hit-extra-tags">
       {% if h.roek %}
-        {# logic: bad+match → specific_bad_match (แดง+ติ๊ก) ; bad+no-match → universal_bad (แดง) ;
-           good+match → specific_match (เขียว+ติ๊ก) ; good+no-match → universal_good (เขียวอ่อน) #}
-        {% set roek_rel = (
-          ('specific_bad_match' if h.roek.is_match else 'universal_bad') if not h.roek.is_auspicious else
-          ('specific_match' if h.roek.is_match else 'universal_good')
-        ) %}
+        {% if h.roek.is_auspicious %}
+          {% set roek_rel = 'specific_match' if h.roek.is_match else 'universal_good' %}
+          {% set roek_badge = '✓✓' if h.roek.is_match else '✓' %}
+          {% set roek_badge_title = 'ฤกษ์มงคล ตรงกิจกรรม' if h.roek.is_match else 'ฤกษ์มงคล ทั่วไป' %}
+        {% else %}
+          {% set roek_rel = 'specific_bad_match' if h.roek.is_match else 'universal_bad' %}
+          {% set roek_badge = '🚫' if h.roek.is_match else '✗' %}
+          {% set roek_badge_title = 'ฤกษ์อัปมงคล ตรงกิจกรรม' if h.roek.is_match else 'ฤกษ์อัปมงคล ทั่วไป' %}
+        {% endif %}
         <button type="button"
                 class="dithi-tag dithi-tag-{{ roek_rel }}"
                 data-name="{{ h.roek.name }} ({{ h.roek.nakshatra_number }}. {{ h.roek.nakshatra_name }})"
-                data-icon="{{ '🌟' if h.roek.is_auspicious else '☄️' }}"
+                data-icon="⭐"
                 data-short="{{ h.roek.suitable_for }}"
                 data-long="{{ h.roek.long_desc }}"
                 data-suitable="{{ h.roek.suitable_for }}"
                 data-relevance="{{ roek_rel }}"
                 title="ฤกษ์ใหญ่ — กดดูรายละเอียด">
-          <span class="dithi-tag-icon">{{ '🌟' if h.roek.is_auspicious else '☄️' }}</span><span class="dithi-tag-name">{{ h.roek.name }}</span>{% if h.roek.is_match %}<span class="dithi-tag-badge">✓</span>{% endif %}
+          <span class="dithi-tag-icon">⭐</span><span class="dithi-tag-name">{{ h.roek.name }}</span><span class="dithi-tag-badge" title="{{ roek_badge_title }}">{{ roek_badge }}</span>
         </button>
       {% endif %}
+      {# ไอคอน thematic ตามชื่อเกณฑ์ + badge 4 ระดับ ตามผ่าน/ไม่ผ่าน × ตรง/ทั่วไป #}
+      {% set CRITERION_ICONS = {'กนกนารี':'💃', 'กนกกุญชร':'🐘', 'จักขุมายา':'👁️'} %}
       {% for c in h.matched_criteria_details %}
-        {% set c_rel = (
-          ('specific_bad_match' if c.is_match else 'universal_bad') if c.tone != 'good' else
-          ('specific_match' if c.is_match else 'universal_good')
-        ) %}
+        {% if c.tone == 'good' %}
+          {% set c_rel = 'specific_match' if c.is_match else 'universal_good' %}
+          {% set c_badge = '✓✓' if c.is_match else '✓' %}
+          {% set c_badge_title = 'ผ่านเกณฑ์ตรงกิจกรรม' if c.is_match else 'ผ่านเกณฑ์ทั่วไป' %}
+        {% elif c.tone == 'warning' %}
+          {% set c_rel = 'specific_bad_match' if c.is_match else 'universal_bad' %}
+          {% set c_badge = '🚫' if c.is_match else '✗' %}
+          {% set c_badge_title = 'ไม่ผ่านเกณฑ์ตรงกิจกรรม' if c.is_match else 'ไม่ผ่านเกณฑ์ทั่วไป' %}
+        {% else %}
+          {% set c_rel = 'neutral' %}
+          {% set c_badge = '○' %}
+          {% set c_badge_title = 'ไม่ระบุชัด (ไม่กระทบคะแนน)' %}
+        {% endif %}
+        {% set c_icon = c.icon or CRITERION_ICONS.get(c.name, '🔮') %}
         <button type="button"
                 class="dithi-tag dithi-tag-{{ c_rel }}"
-                data-name="เกณฑ์ {{ c.name }}"
-                data-icon="{{ '★' if c.tone == 'good' else '⚠️' }}"
-                data-short="{{ c.suitable_for }}"
-                data-long="{{ c.long_desc }}"
-                data-suitable="{{ c.suitable_for }}"
+                data-layout="v2"
+                data-name="{{ c.name }}"
+                data-icon="{{ c_icon }}"
+                data-tone="{{ c.tone }}"
+                data-headline="{{ c.headline }}"
+                data-meaning="{{ c.meaning }}"
+                data-suitable-json="{{ c.suitable_events|tojson|forceescape }}"
+                data-score-line="{{ c.score_line }}"
+                data-tech-rule="{{ c.tech_rule }}"
+                data-tech-check="{{ c.tech_check }}"
+                data-tech-outcome="{{ c.tech_outcome }}"
+                data-tech-note="{{ c.tech_note }}"
                 data-relevance="{{ c_rel }}"
                 title="เกณฑ์พิเศษ — กดดูรายละเอียด">
-          <span class="dithi-tag-icon">{{ '★' if c.tone == 'good' else '⚠️' }}</span><span class="dithi-tag-name">{{ c.name }}</span>{% if c.is_match %}<span class="dithi-tag-badge">✓</span>{% endif %}
+          <span class="dithi-tag-icon">{{ c_icon }}</span><span class="dithi-tag-name">{{ c.name }}</span><span class="dithi-tag-badge" title="{{ c_badge_title }}">{{ c_badge }}</span>
         </button>
       {% endfor %}
     </div>
@@ -109,22 +184,30 @@
         </span>
       {% endif %}
       {% for dc in h.dithi_classifications %}
-        {% set icon = '📅' if dc.relevance == 'neutral' else (
-                      '🚫' if dc.relevance == 'universal_bad' else (
-                      '⛔' if dc.relevance == 'specific_bad_match' else (
-                      '✅' if dc.relevance == 'specific_match' else (
-                      '💡' if dc.relevance == 'specific_other' else (
-                      '✨' if dc.is_auspicious else '⚠️'))))) %}
+        {# ไอคอน thematic: 🌙 (ดิถี = ดวงจันทร์) ทุกตัว #}
+        {% if dc.relevance == 'specific_match' %}
+          {% set dc_badge = '✓✓' %}{% set dc_badge_title = 'ดิถีมงคล ตรงกิจกรรม' %}
+        {% elif dc.relevance == 'specific_bad_match' %}
+          {% set dc_badge = '🚫' %}{% set dc_badge_title = 'ดิถีร้าย ตรงกิจกรรม' %}
+        {% elif dc.relevance == 'universal_good' %}
+          {% set dc_badge = '✓' %}{% set dc_badge_title = 'ดิถีมงคลทั่วไป' %}
+        {% elif dc.relevance == 'universal_bad' %}
+          {% set dc_badge = '✗' %}{% set dc_badge_title = 'ดิถีร้ายทั่วไป' %}
+        {% elif dc.relevance == 'specific_other' %}
+          {% set dc_badge = '○' %}{% set dc_badge_title = 'ดิถีเฉพาะ (ไม่ตรงกิจกรรม)' %}
+        {% else %}
+          {% set dc_badge = '○' %}{% set dc_badge_title = 'ดิถีปกติ' %}
+        {% endif %}
         <button type="button"
                 class="dithi-tag dithi-tag-{{ dc.relevance }}"
                 data-name="{{ dc.name }}"
-                data-icon="{{ icon }}"
+                data-icon="🌙"
                 data-short="{{ dc.short_desc }}"
                 data-long="{{ dc.long_desc }}"
                 data-suitable="{{ dc.suitable_for }}"
                 data-relevance="{{ dc.relevance }}"
                 title="แตะเพื่อดูรายละเอียด">
-          <span class="dithi-tag-icon">{{ icon }}</span><span class="dithi-tag-name">{{ dc.name }}</span>{% if dc.relevance == 'specific_match' %}<span class="dithi-tag-badge">✓</span>{% endif %}
+          <span class="dithi-tag-icon">🌙</span><span class="dithi-tag-name">{{ dc.name }}</span><span class="dithi-tag-badge" title="{{ dc_badge_title }}">{{ dc_badge }}</span>
         </button>
       {% endfor %}
     </div>
@@ -144,6 +227,14 @@
       <span class="hit-expand">▾ คลิกเพื่อดูดวงราศีจักร์ / นวางค์จักร์ / รายละเอียดการคำนวณ</span>
     </div>
   {% endif %}
+
+  {# ===== Footer: event label + ปุ่มกลับขึ้นบน (ปิดกิจกรรมนี้) ===== #}
+  <div class="hit-footer">
+    <span class="hit-footer-event">
+      {% if h.event_label %}🎯 กิจกรรม: <strong>{{ h.event_label }}</strong>{% endif %}
+    </span>
+    <button type="button" class="hit-footer-btn" data-action="collapse-event" title="ย่อกิจกรรมนี้ + เลื่อนขึ้นไปที่หัวข้อ">▲ ย่อกิจกรรมนี้</button>
+  </div>
 </div>
 {% if result.mode == 'oracle' %}
   <div class="hit-detail"></div>

@@ -2383,16 +2383,18 @@ def _muhurta_events_by_category() -> list:
     return out
 
 
-MUHURTA_SCORE_MAX = 17    # ใช้เป็นเกณฑ์ 100% (จากการสำรวจ top hits จริง = 17)
+MUHURTA_SCORE_MAX = 19    # ใช้เป็นเกณฑ์ 100% — max ที่เป็นไปได้จริง (พฤหัส+เพ็ญ+มงคล+ธงชัย+3เกณฑ์ผ่าน+event)
 
+
+MUHURTA_SCORE_MIN = -14   # ต่ำสุดที่เป็นไปได้ — ใช้ shift ฐานให้เริ่มที่ 0
+MUHURTA_SCORE_RANGE = MUHURTA_SCORE_MAX - MUHURTA_SCORE_MIN  # = 33
 
 def _score_to_percent(score: int) -> float:
-    """แปลงคะแนนดิบเป็น % (0.00-100.00, 2 ทศนิยม).
-    score >= MAX → 100.00, score <= 0 → 0.00
+    """แปลงคะแนนดิบเป็น % โดย shift ฐานให้ MIN(-14) = 0% และ MAX(+19) = 100%
+    สูตร: (score - MIN) / RANGE * 100   →   (score + 14) / 33 * 100
     """
-    if score <= 0:
-        return 0.0
-    pct = score / MUHURTA_SCORE_MAX * 100
+    shifted = score - MUHURTA_SCORE_MIN
+    pct = shifted / MUHURTA_SCORE_RANGE * 100
     pct = min(100.0, max(0.0, pct))
     return round(pct, 2)
 
@@ -2406,28 +2408,28 @@ def _percent_to_stars(pct: float) -> float:
 
 
 def _score_to_grade(score: int) -> dict:
-    """แปลงคะแนนเป็น grade + tier (สำหรับสี/ระดับ)
-    หมายเหตุ: ดาวคิดจาก % แล้วแยก function (_percent_to_stars)
+    """แปลงคะแนนเป็น grade + tier + group สำหรับ UI
+    ฐาน MAX=19, ช่วงจริง = [-14, 19]
     """
-    if score >= 12:
-        return {"grade": "ดีเยี่ยม", "tier": "best",
+    if score >= 17:
+        return {"grade": "ดีเยี่ยม", "tier": "best", "group": "top",
                 "summary": "ฤกษ์ดีเยี่ยม เหมาะที่สุดสำหรับงานสำคัญ"}
-    if score >= 8:
-        return {"grade": "ดีมาก", "tier": "great",
+    if score >= 13:
+        return {"grade": "ดีมาก", "tier": "great", "group": "top",
                 "summary": "ฤกษ์ดีมาก องค์ประกอบเอื้ออำนวยส่วนใหญ่"}
-    if score >= 5:
-        return {"grade": "ดี", "tier": "good",
+    if score >= 7:
+        return {"grade": "ดี", "tier": "good", "group": "mid",
                 "summary": "ฤกษ์ดี เหมาะการเริ่มกิจมงคล"}
-    if score >= 2:
-        return {"grade": "พอใช้", "tier": "fair",
+    if score >= 3:
+        return {"grade": "พอใช้", "tier": "fair", "group": "mid",
                 "summary": "ฤกษ์พอใช้ ดีกว่าวันธรรมดา"}
     if score >= 0:
-        return {"grade": "กลาง", "tier": "neutral",
+        return {"grade": "กลาง", "tier": "neutral", "group": "mid",
                 "summary": "ฤกษ์กลาง ไม่ดีไม่ร้าย"}
-    if score >= -3:
-        return {"grade": "ระวัง", "tier": "warning",
+    if score >= -7:
+        return {"grade": "ระวัง", "tier": "warning", "group": "warn",
                 "summary": "ระวัง องค์ประกอบบางอย่างไม่เอื้อ"}
-    return {"grade": "ไม่เหมาะ", "tier": "bad",
+    return {"grade": "ไม่เหมาะ", "tier": "bad", "group": "warn",
             "summary": "ไม่เหมาะ มีปัจจัยขัดข้องหลายอย่าง"}
 
 
@@ -2513,19 +2515,129 @@ def _serialize_roek(h, event_key: Optional[str]) -> Optional[dict]:
     }
 
 
+# ============================================================
+# คอนเทนต์เพิ่มสำหรับ popover ใหม่ (ความหมาย + ไอคอน thematic)
+# ============================================================
+_CRITERION_CONTENT = {
+    "กนกนารี": {
+        "icon": "💃",
+        "meaning_good": (
+            "ส่งเสริมเสน่ห์ เมตตามหานิยม "
+            "ความรัก ความสัมพันธ์ "
+            "การเข้าสังคม และชีวิตคู่"
+        ),
+        "meaning_warning": (
+            "คู่วัน-ฤกษ์ห้ามด้านสตรี ความสัมพันธ์ การเข้าสังคม "
+            "อาจติดขัดในเรื่องคู่ครอง การสื่อสารกับเพศตรงข้าม"
+        ),
+    },
+    "กนกกุญชร": {
+        "icon": "🐘",
+        "meaning_good": (
+            "หนุนการเริ่มต้นใหม่ การเคลื่อนไหว เดินทาง "
+            "ฤกษ์มั่นคงดุจช้างทรงพระคชาธาร — พื้นฐานลัคนาแน่น"
+        ),
+        "meaning_warning": (
+            "ลัคนาขัดกับธาตุของฤกษ์ การเคลื่อนไหวติดขัด "
+            "พื้นฐานไม่แน่น — ไม่ควรวางลัคนาราศีนี้"
+        ),
+        "meaning_neutral": (
+            "ลัคนาไม่อยู่ในกลุ่มเด่น (ดี/ห้าม) ของฤกษ์นี้ "
+            "เกณฑ์ไม่หนุนและไม่ขัด"
+        ),
+    },
+    "จักขุมายา": {
+        "icon": "👁️",
+        "meaning_good": (
+            "เกณฑ์สอบฤกษ์ผ่านตามตำราโบราณ — เศษการคำนวณบ่งบอกพลังฤกษ์ "
+            "ลงตัวกับวันที่ทำการ มีผลจริง"
+        ),
+        "meaning_warning": (
+            "เกณฑ์สอบฤกษ์ไม่ผ่าน — เศษการคำนวณตกในตำแหน่งร้าย "
+            "(อุบาทว์ / กาลกิณี / มฤตยู) ครูโบราณห้ามทำการมงคล"
+        ),
+    },
+}
+
+
+def _parse_criterion_detail(detail: str) -> dict:
+    """แตก detail 5 บรรทัดเป็น dict {summary, check, rule, outcome, score, note}"""
+    parts = {"summary": "", "check": "", "rule": "", "outcome": "", "score": "", "note": ""}
+    if not detail:
+        return parts
+    for i, line in enumerate(detail.split("\n")):
+        line = line.strip()
+        if not line:
+            continue
+        if i == 0:
+            parts["summary"] = line
+            continue
+        for key, prefix in (("check", "ตรวจสอบ:"),
+                            ("rule", "ตำราระบุ:"),
+                            ("outcome", "ผลที่ได้:"),
+                            ("score", "คะแนน:"),
+                            ("note", "หมายเหตุ:")):
+            if line.startswith(prefix):
+                parts[key] = line[len(prefix):].strip()
+                break
+    return parts
+
+
+def _criterion_headline(name: str, tone: str) -> str:
+    if tone == "good":
+        return f"✓ พบเกณฑ์มงคล \"{name}\""
+    if tone == "warning":
+        return f"✗ ไม่ผ่านเกณฑ์ \"{name}\""
+    return f"○ เกณฑ์ \"{name}\" — ไม่ระบุชัด"
+
+
+def _suitable_events(relevant_events: tuple) -> list:
+    """คืน list of {icon, label} จาก event keys"""
+    return [
+        {"icon": _MUHURTA_EVENTS[k].icon, "label": _MUHURTA_EVENTS[k].label}
+        for k in relevant_events if k in _MUHURTA_EVENTS
+    ]
+
+
 def _serialize_criteria(h, event_key: Optional[str]) -> list:
-    """Serialize matched special criteria with details"""
+    """Serialize matched special criteria with details.
+
+    ใช้ per-hit tone จาก h.criteria_tones (ถ้ามี) — เพราะเกณฑ์อย่างกนกนารี
+    ผ่าน/ไม่ผ่าน ขึ้นอยู่กับวาร×นักษัตรของจุดเวลานั้น ไม่ใช่ค่าคงที่
+    """
     from thai_astro.muhurta_criteria import CRITERION_INFO
+    tones_map = getattr(h, "criteria_tones", None) or {}
+    details_map = getattr(h, "criteria_details", None) or {}
     out = []
     for name in (h.matched_criteria or []):
         info = CRITERION_INFO.get(name, {})
         relevant_events = info.get("relevant_events", ())
         is_match = bool(event_key and event_key in relevant_events)
+        # per-hit tone overrides CRITERION_INFO default (สำคัญสำหรับกนกนารี ห้าม)
+        tone = tones_map.get(name, info.get("tone", "good"))
+        detail = details_map.get(name, "")
+        # โครงสร้างใหม่สำหรับ popover layout
+        content = _CRITERION_CONTENT.get(name, {})
+        parts = _parse_criterion_detail(detail)
+        meaning_key = "meaning_good" if tone == "good" else (
+            "meaning_warning" if tone == "warning" else "meaning_neutral")
+        meaning = content.get(meaning_key, content.get("meaning_good", ""))
         out.append({
             "name": name,
+            "icon": content.get("icon", "🔮"),
             "long_desc": info.get("long_desc", ""),
-            "tone": info.get("tone", "good"),
+            "tone": tone,
             "is_match": is_match,
+            "detail": detail,
+            # ใหม่: structured fields
+            "headline": _criterion_headline(name, tone),
+            "meaning": meaning,
+            "suitable_events": _suitable_events(relevant_events),
+            "score_line": ("คะแนนฤกษ์ " + parts["score"]) if parts["score"] else "",
+            "tech_check": parts["check"],
+            "tech_rule": parts["rule"],
+            "tech_outcome": parts["outcome"],
+            "tech_note": parts["note"],
             "suitable_for": "เหมาะกับ " + ", ".join(
                 (_MUHURTA_EVENTS[k].label for k in relevant_events if k in _MUHURTA_EVENTS)
             ) if relevant_events else "",
@@ -2559,12 +2671,15 @@ def _serialize_hit(h, event_label: Optional[str] = None) -> dict:
         "grade": grade["grade"],
         "stars": stars,
         "tier": grade["tier"],
+        "group": grade.get("group", "mid"),
         "grade_summary": grade["summary"],
         "summary": h.summary,
         "event_label": event_label,
         "period": h.period,
         "period_icon": period_icon,
         "period_label": period_label,
+        "wan_num": ((h.when.weekday() + 1) % 7) + 1,   # 1=อา..7=ส (Mon=0 → wan 2)
+        "wan_label": ["อา","จ","อ","พุธ","พฤ","ศ","ส"][((h.when.weekday() + 1) % 7)],
         "lunar_pretty": h.lunar_pretty,
         "dithi_classifications": _serialize_dithi(h, event_label),
         "roek": _serialize_roek(h, event_key),
@@ -2573,6 +2688,8 @@ def _serialize_hit(h, event_label: Optional[str] = None) -> dict:
         "personal_bhava_quality": h.personal_bhava_quality,
         "personal_bhava_tone": h.personal_bhava_tone,
         "matched_criteria": h.matched_criteria or [],
+        "vargottama_planets": getattr(h, "vargottama_planets", None) or [],
+        "kalayok_tags": getattr(h, "kalayok_tags", None) or [],
     }
 
 
@@ -2833,11 +2950,11 @@ async def muhurta_calculate(
             province=province,
             step_minutes=step_min,
             top_n_per_event=999,         # ไม่ cap ด้วยจำนวน
-            min_score=11,                 # >= 60% ของคะแนนเต็ม 17 (เกรด "ดีเยี่ยม cutoff")
+            min_score=3,                  # >= 50% (สูตร (X+14)/33 = score 3 → 51.5%)
             birth_datetime=birth_dt, birth_province=bprov,
             max_days=max_days,
             time_periods=None,
-            max_per_day=2,
+            max_per_day=4,                # กระจาย 4 ฤกษ์/วัน
         )
 
         groups = []
@@ -3015,7 +3132,7 @@ def _wan_name_from_date(d: _date) -> str:
     return names[d.weekday()]
 
 
-_FORECAST_MIN_SCORE = 11    # ตรงกับ cutoff ของ scan ปกติ
+_FORECAST_MIN_SCORE = 3     # ตรงกับ cutoff ของ scan ปกติ (≥50% หลังสูตร (X+14)/33)
 _FORECAST_CACHE: Dict[tuple, dict] = {}     # (date_iso, province) → result
 
 

@@ -178,8 +178,11 @@ def compute_muhurta(
         "roek": match_roek(kalayok, nak.number),
     }
 
-    # เกณฑ์พิเศษ
-    specials = evaluate_special_criteria(chart)
+    # เกณฑ์พิเศษ (กนกนารีต้องการ wan + nakshatra เพื่อ lookup ตาราง)
+    specials = evaluate_special_criteria(
+        chart, wan=wan, nak_number=nak.number,
+        nak_name=nak.name, roek_name=nak.roek_name,
+    )
 
     # นวางค์
     nav_view = chart_to_navamsa_view(chart)
@@ -240,13 +243,17 @@ def compute_muhurta(
         score -= 3
         cautions.append("วันนี้เป็น \"วันโลกาวินาศ\" ของปี — อันตราย")
 
-    # เกณฑ์พิเศษ
+    # เกณฑ์พิเศษ (มาตราคะแนนเบา — เกณฑ์เป็น "ข้อมูลประกอบ" ไม่ใช่ตัวตัดสินหลัก)
+    # tone=good × strength=1 (ดี)     → +2
+    # tone=good × strength=2 (ดีนัก)  → +3
+    # tone=warning                     → -1 (เตือนเฉยๆ คะแนนรวมยังดีได้ถ้าปัจจัยอื่นดี)
     for sc in specials:
         if sc.matched and sc.tone == "good":
-            score += 2
+            bonus = 3 if getattr(sc, "strength", 1) >= 2 else 2
+            score += bonus
             suggestions.append(f"{sc.name}: {sc.detail}")
         elif sc.matched and sc.tone == "warning":
-            score -= 3
+            score -= 1
             cautions.append(f"{sc.name}: {sc.detail}")
 
     # ดิถีตามตำรา
@@ -318,6 +325,8 @@ class ScanHit:
     personal_bhava_quality: Optional[str] = None  # คำอธิบาย
     personal_bhava_tone: Optional[str] = None     # good/warning/neutral
     matched_criteria: Optional[List[str]] = None  # ชื่อเกณฑ์พิเศษที่ตก
+    criteria_tones: Optional[Dict[str, str]] = None  # name → tone ('good'/'warning')
+    criteria_details: Optional[Dict[str, str]] = None  # name → detail (per-hit reason)
     dithi_classifications: Optional[List[DithiClassification]] = None  # ดิถีตามตำรา
     lunar_pretty: Optional[str] = None           # ขึ้น/แรม X ค่ำ เดือน Y
     # ฤกษ์ใหญ่ + นักษัตร (สำหรับ tag UI)
@@ -325,6 +334,9 @@ class ScanHit:
     roek_auspicious: Optional[bool] = None
     nakshatra_name: Optional[str] = None         # เช่น "ปุษยะ"
     nakshatra_number: Optional[int] = None       # 1-27
+    # tag เพิ่มสำหรับ UI
+    vargottama_planets: Optional[List[str]] = None  # ดาวที่เป็น Vargottama (เช่น ["อาทิตย์", "ศุกร์"])
+    kalayok_tags: Optional[List[str]] = None        # ["thongchai", "athibodi", "ubat", "lokawinat"]
 
 
 def _period_of_hour(hour: int) -> str:
@@ -416,25 +428,26 @@ def scan_range(
                     score_eff -= 2
 
             if score_eff >= min_score:
-                summary_parts = [
-                    f"วัน{mr.wan_planet}",
-                    mr.lunar.pretty_short,
-                    mr.nakshatra.roek_name,
-                ]
-                if mr.vargottama_planets:
-                    summary_parts.append(
-                        f"วรโคตม: {', '.join(mr.vargottama_planets[:2])}"
-                    )
+                summary = f"วัน{mr.wan_planet} • {mr.lunar.pretty_short}"
+                wan_hits_old = mr.kalayok_matches.get("wan", {})
+                kalayok_tags_old = [k for k in ("thongchai", "athibodi", "ubat", "lokawinat")
+                                    if wan_hits_old.get(k)]
                 matched_specials = [s.name for s in mr.special_criteria if s.matched]
+                criteria_tones = {s.name: s.tone for s in mr.special_criteria if s.matched}
+                criteria_details = {s.name: s.detail for s in mr.special_criteria if s.matched}
                 hits.append(ScanHit(
                     when=cursor, score=score_eff, verdict=_to_verdict(score_eff),
-                    summary=" • ".join(summary_parts),
+                    summary=summary,
                     personal_bhava=personal_bhava,
                     personal_bhava_quality=bhava_q,
                     personal_bhava_tone=bhava_tone,
                     matched_criteria=matched_specials or None,
+                    criteria_tones=criteria_tones or None,
+                    criteria_details=criteria_details or None,
                     dithi_classifications=mr.dithi_classifications or None,
                     lunar_pretty=mr.lunar.pretty_short,
+                    vargottama_planets=list(mr.vargottama_planets) if mr.vargottama_planets else None,
+                    kalayok_tags=kalayok_tags_old or None,
                     roek_name=mr.nakshatra.roek_name,
                     roek_auspicious=mr.nakshatra.is_auspicious,
                     nakshatra_name=mr.nakshatra.name,
@@ -545,18 +558,16 @@ def scan_range_multi_events(
                 base_score -= 2
 
             matched_specials = [s.name for s in base.special_criteria if s.matched]
+            criteria_tones = {s.name: s.tone for s in base.special_criteria if s.matched}
+            criteria_details = {s.name: s.detail for s in base.special_criteria if s.matched}
 
-            # summary 1 ครั้ง (ใช้ร่วมทุก event)
-            summary_parts = [
-                f"วัน{base.wan_planet}",
-                base.lunar.pretty_short,
-                base.nakshatra.roek_name,
-            ]
-            if base.vargottama_planets:
-                summary_parts.append(
-                    f"วรโคตม: {', '.join(base.vargottama_planets[:2])}"
-                )
-            summary = " • ".join(summary_parts)
+            # summary สั้น 1 ครั้ง (ใช้ร่วมทุก event)
+            # ตัด roek_name + วรโคตม ออก เพราะแสดงเป็น tag แยกแล้ว
+            summary = f"วัน{base.wan_planet} • {base.lunar.pretty_short}"
+            # เก็บ kalayok wan tags
+            wan_hits = base.kalayok_matches.get("wan", {})
+            kalayok_tags = [k for k in ("thongchai", "athibodi", "ubat", "lokawinat")
+                            if wan_hits.get(k)]
 
             # ให้คะแนนแต่ละ event ที่ moment นี้
             for ek in keys:
@@ -586,12 +597,16 @@ def scan_range_multi_events(
                     personal_bhava_quality=bhava_q,
                     personal_bhava_tone=bhava_tone,
                     matched_criteria=matched_specials or None,
+                    criteria_tones=criteria_tones or None,
+                    criteria_details=criteria_details or None,
                     dithi_classifications=base.dithi_classifications or None,
                     lunar_pretty=base.lunar.pretty_short,
                     roek_name=base.nakshatra.roek_name,
                     roek_auspicious=base.nakshatra.is_auspicious,
                     nakshatra_name=base.nakshatra.name,
                     nakshatra_number=base.nakshatra.number,
+                    vargottama_planets=list(base.vargottama_planets) if base.vargottama_planets else None,
+                    kalayok_tags=kalayok_tags or None,
                 ))
         except Exception:
             pass
