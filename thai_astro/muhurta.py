@@ -337,6 +337,8 @@ class ScanHit:
     # tag เพิ่มสำหรับ UI
     vargottama_planets: Optional[List[str]] = None  # ดาวที่เป็น Vargottama (เช่น ["อาทิตย์", "ศุกร์"])
     kalayok_tags: Optional[List[str]] = None        # ["thongchai", "athibodi", "ubat", "lokawinat"]
+    # personal mode v2 (ใหม่)
+    personal_eval: Optional["PersonalEval"] = None  # ผลประเมินฤกษ์ต่อเจ้าชะตา
 
 
 def _period_of_hour(hour: int) -> str:
@@ -510,19 +512,21 @@ def scan_range_multi_events(
     """
     from .chart import Chart
     from .muhurta_criteria import EVENTS, event_score as _event_score
+    from .muhurta_personal import build_natal_context, evaluate_personal, analyze_event_key_planet
+    from dataclasses import replace as _dc_replace
 
     if (end - start).days > max_days:
         raise ValueError(f"ช่วงเวลาเกิน {max_days} วัน — แบ่งเป็นช่วงสั้นกว่า")
 
-    # natal cache
+    # natal context (cached) สำหรับ personal mode
+    natal_ctx = None
     natal_asc_rasi = None
     if birth_datetime is not None:
-        nc = Chart.calculate(
-            birth_datetime.year, birth_datetime.month, birth_datetime.day,
-            birth_datetime.hour, birth_datetime.minute,
-            province=birth_province or "กรุงเทพมหานคร",
+        natal_ctx = build_natal_context(
+            birth_datetime,
+            birth_province or "กรุงเทพมหานคร",
         )
-        natal_asc_rasi = nc.ascendant.zodiac.rasi
+        natal_asc_rasi = natal_ctx.asc_rasi
 
     # ลำดับ event ที่จะตรวจ — กรองที่อยู่ใน EVENTS
     keys = [k for k in event_keys if k in EVENTS]
@@ -542,20 +546,21 @@ def scan_range_multi_events(
             # compute base muhurta แค่ครั้งเดียว (ไม่มี event_key เพราะจะคำนวณ event_score ต่างหาก)
             base = compute_muhurta(cursor, province, event_key=None)
 
-            # personal bhava (ครั้งเดียวต่อ moment)
+            # personal eval (ครั้งเดียวต่อ moment) — bhava + วันกาลี + ทักษาจร + transit aspects
+            pe = None
             personal_bhava = None
             bhava_q = None
             bhava_tone = None
-            if natal_asc_rasi is not None:
-                asc_now = base.chart.ascendant.zodiac.rasi
-                personal_bhava = ((asc_now - natal_asc_rasi) % 12) + 1
-                bhava_q, bhava_tone = _bhava_quality_label(personal_bhava)
+            if natal_ctx is not None:
+                pe = evaluate_personal(
+                    cursor, base.chart, natal_ctx,
+                    vargottama_planets=list(base.vargottama_planets) if base.vargottama_planets else None,
+                )
+                personal_bhava = pe.bhava
+                bhava_q = pe.bhava_quality
+                bhava_tone = pe.bhava_tone
 
-            base_score = base.score
-            if bhava_tone == "good":
-                base_score += 2
-            elif bhava_tone == "warning":
-                base_score -= 2
+            base_score = base.score  # ไม่บวก personal เข้า base — แสดงแยกใน pe.total_score
 
             matched_specials = [s.name for s in base.special_criteria if s.matched]
             criteria_tones = {s.name: s.tone for s in base.special_criteria if s.matched}
@@ -589,6 +594,17 @@ def scan_range_multi_events(
                             final_score -= dc.severity
                 if final_score < min_score:
                     continue
+                # per-event PE: คำนวณ PE ใหม่ทั้งหมดต่อ event เพื่อให้ total_score รวม C
+                pe_event = pe
+                if natal_ctx is not None:
+                    try:
+                        pe_event = evaluate_personal(
+                            cursor, base.chart, natal_ctx,
+                            vargottama_planets=list(base.vargottama_planets) if base.vargottama_planets else None,
+                            event_key=ek,
+                        )
+                    except Exception:
+                        pe_event = pe
                 out[ek].append(ScanHit(
                     when=cursor, score=final_score, verdict=_to_verdict(final_score),
                     summary=summary,
@@ -607,6 +623,7 @@ def scan_range_multi_events(
                     nakshatra_number=base.nakshatra.number,
                     vargottama_planets=list(base.vargottama_planets) if base.vargottama_planets else None,
                     kalayok_tags=kalayok_tags or None,
+                    personal_eval=pe_event,
                 ))
         except Exception:
             pass

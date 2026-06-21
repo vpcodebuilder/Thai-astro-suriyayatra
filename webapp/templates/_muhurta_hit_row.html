@@ -11,12 +11,14 @@
 {# ตำราขัด: มีดิถีมงคล (severity > 0) + ดิถีร้าย ในวันเดียวกัน → ต่างเล่มไม่ตรงกัน #}
 {% set good_dithis = h.dithi_classifications|selectattr('is_auspicious')|selectattr('severity', 'gt', 0)|list %}
 {% set has_text_conflict = good_dithis and bad_dithis %}
-<div class="hit-card tier-{{ h.tier }} period-bg-{{ h.period }} {% if rank == 1 %}top{% endif %} {% if has_bad %}has-warning{% endif %}"
+{% set pe = h.personal_eval %}
+<div class="hit-card tier-{{ h.tier }} period-bg-{{ h.period }} {% if rank == 1 %}top{% endif %} {% if has_bad %}has-warning{% endif %} {% if pe and pe.has_warning %}has-personal-warning{% endif %}"
      data-iso="{{ h.iso }}"
      data-province="{{ form.province }}"
      data-event-key="{{ h.event_label and (result.event_keys[0] if result.event_keys|length == 1 else '') or '' }}"
      data-period="{{ h.period }}"
-     data-wan="{{ h.wan_num }}">
+     data-wan="{{ h.wan_num }}"
+     data-personal-suitable="{{ '1' if pe and pe.is_suitable else '0' }}">
 
   {# Period stripe — แถบบนแสดงช่วงเวลาเด่นชัด #}
   <div class="period-stripe period-stripe-{{ h.period }}">
@@ -36,6 +38,13 @@
     </div>
   {% endif %}
 
+  {# Personal warning banner — เฉพาะโหมดเฉพาะบุคคลและมี warning #}
+  {% if pe and pe.has_warning %}
+    <div class="personal-warning-banner">
+      👤 ⚠️ {{ pe.warning_lines|join(' · ') }}
+    </div>
+  {% endif %}
+
   <div class="hit-main">
     <div class="hit-datetime">
       <div class="hit-date-big">{{ h.be_date }}</div>
@@ -51,10 +60,21 @@
         {% endfor %}
       </div>
       <div class="grade-label tier-{{ h.tier }}">{{ h.grade }}</div>
-      <div class="grade-percent" title="คะแนนรวม {{ h.score }} จากเต็ม {{ h.score_max }} (วาร+ดิถี+นักษัตร+กาลโยค+เกณฑ์พิเศษ+กิจกรรม)">
-        <span class="grade-percent-num">{{ "%.2f"|format(h.score_percent) }}%</span>
-        <div class="grade-percent-bar"><div class="grade-percent-fill tier-{{ h.tier }}" style="width: {{ h.score_percent }}%"></div></div>
-        <span class="grade-percent-raw">{{ h.score }}/{{ h.score_max }}</span>
+      <div class="dual-score-block">
+        <div class="dual-score-row" title="คะแนนรวม {{ h.score }} จากเต็ม {{ h.score_max }}">
+          <span class="dual-score-label">📋 ดวงฤกษ์</span>
+          <span class="grade-percent-num">{{ "%.2f"|format(h.score_percent) }}%</span>
+          <div class="grade-percent-bar"><div class="grade-percent-fill tier-{{ h.tier }}" style="width: {{ h.score_percent }}%"></div></div>
+          <span class="grade-percent-raw">{{ h.score }}/{{ h.score_max }}</span>
+        </div>
+        {% if pe %}
+          <div class="dual-score-row" title="คะแนนต่อเจ้าชะตา {{ pe.total_score }} (range {{ pe.score_min }}..{{ pe.score_max }})">
+            <span class="dual-score-label">👤 ต่อเจ้าชะตา</span>
+            <span class="grade-percent-num">{{ "%.2f"|format(pe.score_percent) }}%</span>
+            <div class="grade-percent-bar"><div class="grade-percent-fill tier-{{ pe.tier }}" style="width: {{ pe.score_percent }}%"></div></div>
+            <span class="grade-percent-raw">{{ pe.total_score }}/{{ pe.score_max }}</span>
+          </div>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -125,14 +145,14 @@
         {% endif %}
         <button type="button"
                 class="dithi-tag dithi-tag-{{ roek_rel }}"
-                data-name="{{ h.roek.name }} ({{ h.roek.nakshatra_number }}. {{ h.roek.nakshatra_name }})"
+                data-name="{{ h.roek.name }}{% if h.roek.lord_planet %} — เจ้าฤกษ์: {{ h.roek.lord_planet }} ({{ h.roek.lord_number }}) {{ h.roek.lord_short }}{% endif %}"
                 data-icon="⭐"
-                data-short="{{ h.roek.suitable_for }}"
+                data-short="{% if h.roek.lord_meaning %}{{ h.roek.lord_meaning }}{% else %}{{ h.roek.suitable_for }}{% endif %}"
                 data-long="{{ h.roek.long_desc }}"
                 data-suitable="{{ h.roek.suitable_for }}"
                 data-relevance="{{ roek_rel }}"
                 title="ฤกษ์ใหญ่ — กดดูรายละเอียด">
-          <span class="dithi-tag-icon">⭐</span><span class="dithi-tag-name">{{ h.roek.name }}</span><span class="dithi-tag-badge" title="{{ roek_badge_title }}">{{ roek_badge }}</span>
+          <span class="dithi-tag-icon">⭐</span><span class="dithi-tag-name">{{ h.roek.name }}{% if h.roek.lord_planet %} · {{ h.roek.lord_planet }}{% endif %}</span><span class="dithi-tag-badge" title="{{ roek_badge_title }}">{{ roek_badge }}</span>
         </button>
       {% endif %}
       {# ไอคอน thematic ตามชื่อเกณฑ์ + badge 4 ระดับ ตามผ่าน/ไม่ผ่าน × ตรง/ทั่วไป #}
@@ -213,12 +233,79 @@
     </div>
   {% endif %}
 
-  {# personal_bhava only — criteria แสดงอยู่ใน extra-tags บนแล้ว (ไม่ซ้ำ) #}
-  {% if h.personal_bhava %}
-    <div class="hit-extras">
-      <span class="extra-tag extra-{{ h.personal_bhava_tone }}">
-        🎯 ตกภพ {{ h.personal_bhava }} ของดวงเจ้าชะตา — {{ h.personal_bhava_quality }}
-      </span>
+  {# ===== ผลต่อเจ้าชะตา (personal mode เท่านั้น) ===== #}
+  {% if pe %}
+    <div class="personal-block">
+      <div class="personal-block-title">
+        👤 ผลฤกษ์ต่อเจ้าชะตา
+      </div>
+      <div class="personal-stat-grid">
+        <div class="personal-stat tone-{{ pe.bhava_tone }}">
+          <div class="ps-section-label">
+            ลัคนาฤกษ์ตกภพของเจ้าชะตา
+            <span class="ps-score-pill">{% if pe.bhava_score > 0 %}+{% endif %}{{ pe.bhava_score }}</span>
+          </div>
+          <div class="ps-bullet">
+            {% if pe.bhava_tone == 'warning' %}⚠️{% else %}✓{% endif %}
+            ภพ {{ pe.bhava }} — {{ pe.bhava_label }}
+          </div>
+        </div>
+        <div class="personal-stat tone-{{ 'warning' if pe.is_dasa_kalee else 'neutral' }}">
+          <div class="ps-section-label">
+            วันกาลีจร (ปีอายุ {{ pe.year_of_life }} · ดาว{{ pe.dasa_kalee_planet }})
+            <span class="ps-score-pill">{% if pe.dasa_kalee_score > 0 %}+{% endif %}{{ pe.dasa_kalee_score }}</span>
+          </div>
+          <div class="ps-bullet">
+            {% if pe.is_dasa_kalee %}
+              ⚠️ ตรงวันกาลีจร ({{ pe.dasa_kalee_weekday_name }})
+            {% else %}
+              ✓ ปลอดวันกาลีจร
+              {% if pe.dasa_kalee_weekday_name %}<span class="ps-hint">(วันที่ควรเลี่ยง: {{ pe.dasa_kalee_weekday_name }})</span>{% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {# ★ Event key-planet analysis (C1 + C2 + C3) #}
+      {% if pe.event_analysis %}
+        {% set ea = pe.event_analysis %}
+        <div class="event-key-analysis tone-{{ ea.tone }}">
+          <div class="ps-section-label">
+            🎯 ดาวสำคัญของ "{{ ea.event_label }}" — {{ ea.key_planet }}
+            <span class="ps-score-pill">{% if ea.score >= 0 %}+{% endif %}{{ ea.score }}</span>
+          </div>
+          {% for line in ea.narrative_lines %}
+            <div class="ps-bullet">{{ line | safe }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {# ★ Chart health (D + E) — สุขภาพดวงฤกษ์ #}
+      {% if pe.chart_health %}
+        {% set ch = pe.chart_health %}
+        <div class="chart-health tone-{{ 'warning' if ch.score < 0 else 'neutral' }}">
+          <div class="ps-section-label">
+            🌟 สุขภาพดวงฤกษ์
+            <span class="ps-score-pill">{% if ch.score >= 0 %}+{% endif %}{{ ch.score }}</span>
+          </div>
+          <div class="ps-bullet">
+            {% if ch.d_score < 0 %}⚠️{% else %}✓{% endif %}
+            เจ้าเรือนตนุ ({{ ch.chart_lord_planet }}) อยู่ราศี{{ ch.chart_lord_rasi_name }} ภพ{{ ch.chart_lord_bhava }} {{ ch.chart_lord_bhava_label }}
+            {% if ch.d_score < 0 %} (ภพเสีย) — หัก {{ ch.d_score }}{% endif %}
+          </div>
+          <div class="ps-bullet">
+            {% if ch.e_score < 0 %}⚠️{% else %}✓{% endif %}
+            จันทร์ อยู่ราศี{{ ch.moon_rasi_name }} ภพ{{ ch.moon_bhava }} {{ ch.moon_bhava_label }}
+            {% if ch.e_score < 0 %} (ภพเสีย) — หัก {{ ch.e_score }}{% endif %}
+          </div>
+        </div>
+      {% endif %}
+
+      {% if pe.has_warning %}
+        <div class="personal-conclusion">
+          ⚠️ ฤกษ์นี้ติดเกณฑ์ไม่เหมาะกับเจ้าชะตา — พิจารณาฤกษ์อื่นถ้าเลือกได้
+        </div>
+      {% endif %}
     </div>
   {% endif %}
 

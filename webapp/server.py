@@ -2407,6 +2407,14 @@ def _percent_to_stars(pct: float) -> float:
     return max(0.0, min(5.0, stars))
 
 
+def _personal_score_to_percent(score: int) -> float:
+    """แปลงคะแนน personal (range -12..+7) เป็น %"""
+    from thai_astro.muhurta_personal import PERSONAL_SCORE_MIN, PERSONAL_SCORE_MAX
+    rng = PERSONAL_SCORE_MAX - PERSONAL_SCORE_MIN
+    pct = (score - PERSONAL_SCORE_MIN) / rng * 100
+    return round(min(100.0, max(0.0, pct)), 2)
+
+
 def _score_to_grade(score: int) -> dict:
     """แปลงคะแนนเป็น grade + tier + group สำหรับ UI
     ฐาน MAX=19, ช่วงจริง = [-14, 19]
@@ -2496,11 +2504,16 @@ def _serialize_roek(h, event_key: Optional[str]) -> Optional[dict]:
     """Serialize roek (ฤกษ์ใหญ่) for tag with relevance"""
     if not h.roek_name:
         return None
-    from thai_astro.nakshatra import ROEK_INFO
+    from thai_astro.nakshatra import ROEK_INFO, ROEK_LORDS
     info = ROEK_INFO.get(h.roek_name, {})
+    lord_info = ROEK_LORDS.get(h.roek_name, {})
     long_desc = info.get("long_desc", "")
     relevant_events = info.get("relevant_events", ())
     is_match = bool(event_key and event_key in relevant_events)
+    lord_planet = lord_info.get("planet", "")
+    lord_short = lord_info.get("lord_short", "")
+    lord_meaning = lord_info.get("lord_meaning", "")
+    lord_number = lord_info.get("number", 0)
     return {
         "name": h.roek_name,
         "is_auspicious": h.roek_auspicious,
@@ -2512,6 +2525,10 @@ def _serialize_roek(h, event_key: Optional[str]) -> Optional[dict]:
         "suitable_for": "เหมาะกับ " + ", ".join(
             (_MUHURTA_EVENTS[k].label for k in relevant_events if k in _MUHURTA_EVENTS)
         ) if relevant_events else "ไม่เฉพาะกิจกรรมใด",
+        "lord_planet": lord_planet,
+        "lord_short": lord_short,
+        "lord_meaning": lord_meaning,
+        "lord_number": lord_number,
     }
 
 
@@ -2690,6 +2707,95 @@ def _serialize_hit(h, event_label: Optional[str] = None) -> dict:
         "matched_criteria": h.matched_criteria or [],
         "vargottama_planets": getattr(h, "vargottama_planets", None) or [],
         "kalayok_tags": getattr(h, "kalayok_tags", None) or [],
+        "personal_eval": _serialize_personal_eval(getattr(h, "personal_eval", None)),
+    }
+
+
+def _serialize_personal_eval(pe) -> Optional[dict]:
+    """Convert PersonalEval → dict for template (None ถ้าไม่ใช่ personal mode)"""
+    if pe is None:
+        return None
+    from thai_astro.muhurta_personal import PERSONAL_SCORE_MIN, PERSONAL_SCORE_MAX
+    p_pct = _personal_score_to_percent(pe.total_score)
+    p_stars = _percent_to_stars(p_pct)
+    # tier mapping (เทียบคะแนน ฤกษ์ทั่วไป)
+    if p_pct >= 85:
+        p_tier = "best"
+    elif p_pct >= 70:
+        p_tier = "great"
+    elif p_pct >= 55:
+        p_tier = "good"
+    elif p_pct >= 40:
+        p_tier = "fair"
+    elif p_pct >= 25:
+        p_tier = "neutral"
+    else:
+        p_tier = "warning"
+    return {
+        "bhava": pe.bhava,
+        "bhava_label": pe.bhava_label,
+        "bhava_quality": pe.bhava_quality,
+        "bhava_tone": pe.bhava_tone,
+        "bhava_score": pe.bhava_score,
+        "year_of_life": pe.year_of_life,
+        "dasa_planet": pe.dasa_planet,
+        "dasa_position": pe.dasa_position,
+        "dasa_kalee_planet": pe.dasa_kalee_planet,
+        "dasa_kalee_weekday_name": pe.dasa_kalee_weekday_name,
+        "is_dasa_kalee": pe.is_dasa_kalee,
+        "dasa_kalee_score": pe.dasa_kalee_score,
+        "kalee_planet": pe.kalee_planet,
+        "kalee_weekday_name": pe.kalee_weekday_name,
+        "is_weekday_kalee": pe.is_weekday_kalee,
+        "weekday_kalee_score": pe.weekday_kalee_score,
+        "vargottama_planets": pe.vargottama_planets,
+        "event_analysis": (
+            {
+                "event_key": pe.event_analysis.event_key,
+                "event_label": pe.event_analysis.event_label,
+                "key_planet": pe.event_analysis.key_planet,
+                "moment_rasi_name": pe.event_analysis.moment_rasi_name,
+                "moment_dignity": pe.event_analysis.moment_dignity,
+                "moment_dignity_strength": pe.event_analysis.moment_dignity_strength,
+                "moment_bhava": pe.event_analysis.moment_bhava,
+                "moment_bhava_label": pe.event_analysis.moment_bhava_label,
+                "natal_bhava": pe.event_analysis.natal_bhava,
+                "natal_bhava_label": pe.event_analysis.natal_bhava_label,
+                "c1_score": pe.event_analysis.c1_score,
+                "c2_score": pe.event_analysis.c2_score,
+                "c3_score": pe.event_analysis.c3_score,
+                "score": pe.event_analysis.score,
+                "tone": pe.event_analysis.tone,
+                "narrative_lines": pe.event_analysis.narrative_lines,
+                "planet_chips": pe.event_analysis.planet_chips,
+                "bhava_chips": pe.event_analysis.bhava_chips,
+            }
+            if pe.event_analysis else None
+        ),
+        "chart_health": (
+            {
+                "chart_lord_planet": pe.chart_health.chart_lord_planet,
+                "chart_lord_rasi_name": pe.chart_health.chart_lord_rasi_name,
+                "chart_lord_bhava": pe.chart_health.chart_lord_bhava,
+                "chart_lord_bhava_label": pe.chart_health.chart_lord_bhava_label,
+                "d_score": pe.chart_health.d_score,
+                "moon_rasi_name": pe.chart_health.moon_rasi_name,
+                "moon_bhava": pe.chart_health.moon_bhava,
+                "moon_bhava_label": pe.chart_health.moon_bhava_label,
+                "e_score": pe.chart_health.e_score,
+                "score": pe.chart_health.score,
+            }
+            if pe.chart_health else None
+        ),
+        "total_score": pe.total_score,
+        "score_min": PERSONAL_SCORE_MIN,
+        "score_max": PERSONAL_SCORE_MAX,
+        "score_percent": p_pct,
+        "stars": p_stars,
+        "tier": p_tier,
+        "is_suitable": pe.is_suitable,
+        "has_warning": pe.has_warning,
+        "warning_lines": pe.warning_lines,
     }
 
 
@@ -2964,12 +3070,23 @@ async def muhurta_calculate(
             shown = hits  # filter ทำใน scan แล้ว
             if not shown:
                 continue
+            from thai_astro.muhurta_personal import PLANET_MEANINGS_SHORT, BHAVA_MEANINGS_SHORT, _BHAVA_NAME_12
+            planet_chips_ev = [
+                {"planet": p, "meaning": PLANET_MEANINGS_SHORT.get(p, "")}
+                for p in (ev.favored_planets or [])
+            ]
+            bhava_chips_ev = [
+                {"bhava": b, "name": _BHAVA_NAME_12[b - 1], "meaning": BHAVA_MEANINGS_SHORT.get(b, "")}
+                for b in (ev.favored_bhavas or [])
+            ]
             groups.append({
                 "event_key": ek,
                 "event_label": ev.label,
                 "event_icon": ev.icon,
                 "event_category": ev.category,
                 "event_description": ev.description,
+                "planet_chips": planet_chips_ev,
+                "bhava_chips": bhava_chips_ev,
                 "hits": [_serialize_hit(h, ev.label) for h in shown],
                 "total_found": len(shown),
             })
@@ -3042,29 +3159,35 @@ async def muhurta_check(
         ek = check_event_key if check_event_key in _MUHURTA_EVENTS else None
         mr = _compute_muhurta(when, check_province, ek)
 
-        natal_extra = None
+        # personal eval ใหม่ (เต็มรูปแบบ: bhava + วันกาลี + ทักษาจร + transit aspects)
+        pe_dict = None
+        bhava_info = None
         if birth_date_th.strip() and birth_time.strip():
             try:
-                natal_extra = _compute_personal_extras(
-                    birth_date_th, birth_time,
+                from thai_astro.muhurta_personal import build_natal_context, evaluate_personal
+                by, bm, bd = parse_thai_date(birth_date_th)
+                bhh, bmm = (birth_time.strip().split(":") + ["0"])[:2]
+                birth_dt = datetime(by, bm, bd, int(bhh), int(bmm))
+                natal_ctx = build_natal_context(
+                    birth_dt,
                     birth_province or "กรุงเทพมหานคร",
-                    mr.chart,
                 )
+                pe = evaluate_personal(
+                    when, mr.chart, natal_ctx,
+                    vargottama_planets=list(mr.vargottama_planets) if mr.vargottama_planets else None,
+                    event_key=ek,
+                )
+                pe_dict = _serialize_personal_eval(pe)
+                bhava_info = {
+                    "bhava": pe.bhava,
+                    "quality": pe.bhava_quality,
+                    "tone": pe.bhava_tone,
+                }
             except Exception:
                 pass
 
-        # ใช้ score เดียวกับ scan: ถ้ามี natal → +bhava modifier; ถ้ามี event → +event_score
+        # คะแนนหลัก = mr.score (base) — ไม่บวก personal เข้า (แสดงแยก)
         final_score = mr.score
-        bhava_info = None
-        if natal_extra:
-            bt = natal_extra["bhava_tone"]
-            if bt == "good": final_score += 2
-            elif bt == "warning": final_score -= 2
-            bhava_info = {
-                "bhava": natal_extra["target_bhava"],
-                "quality": natal_extra["bhava_quality"],
-                "tone": bt,
-            }
         event_extra_score = 0
         if ek:
             from thai_astro.muhurta_criteria import event_score as _es
@@ -3110,6 +3233,7 @@ async def muhurta_check(
             "suggestions": mr.activity_suggestions,
             "cautions": mr.cautions,
             "personal_bhava": bhava_info,
+            "personal_eval": pe_dict,
         })
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)

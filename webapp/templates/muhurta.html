@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260616k" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260620l" />
   <style>
     .muhurta-wrap { max-width: 1100px; margin: 0 auto; padding: 16px; color: #3a2a00; }
     .step { background: #fffbf0; border: 1.5px solid #b78b3a; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
@@ -51,8 +51,10 @@
     .form-cell label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 3px; color: #6d4c00; }
     .form-cell input, .form-cell select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #b8924a; font-family: inherit; font-size: 14px; color: #3a2a00; }
 
-    .birth-block { background: linear-gradient(135deg, #fff8e1, #fff3d2); padding: 10px; border-radius: 10px; border: 1px dashed #b78b3a; margin-top: 8px; }
-    .birth-block h4 { margin: 0 0 6px; color: #6d4c00; font-size: 14px; }
+    .birth-inline { margin-top: 12px; padding: 12px 14px; background: linear-gradient(135deg, #fff8e1, #fff3d2); border: 1.5px dashed #b78b3a; border-radius: 10px; animation: birthFadeIn 0.18s ease-out; }
+    .birth-inline-title { font-size: 13px; font-weight: 700; color: #6d4c00; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .birth-inline-title .step-hint { font-weight: 400; opacity: 0.75; }
+    @keyframes birthFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
     .btn-primary { background: linear-gradient(135deg, #d4a017, #b78b3a); color: #fff; padding: 14px 24px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 17px; font-family: inherit; width: 100%; box-shadow: 0 2px 6px rgba(183, 139, 58, 0.4); }
     .btn-primary:hover { background: linear-gradient(135deg, #c0900f, #9a7330); transform: translateY(-1px); }
@@ -79,9 +81,20 @@
 
     /* ===== Results ===== */
     .result-section { margin-top: 20px; }
-    .result-header { background: linear-gradient(135deg, #6d4c00, #b78b3a); color: #fff; border-radius: 12px; padding: 14px 18px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(109, 76, 0, 0.3); }
-    .result-header h2 { margin: 0; font-size: 20px; }
-    .result-header p { margin: 4px 0 0; font-size: 14px; opacity: 0.95; }
+    .result-header-bar {
+      position: sticky; top: 6px; z-index: 50;
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+      background: linear-gradient(135deg, #6d1414, #8b2c2c);
+      border: 2px solid #d4a017; border-radius: 12px;
+      padding: 12px 16px; margin-bottom: 14px;
+      box-shadow: 0 4px 14px rgba(109, 20, 20, 0.35);
+      color: #fff;
+    }
+    .result-header-content { flex: 1; min-width: 0; }
+    .result-header-content h2 { margin: 0; font-size: 20px; color: #ffd166; }
+    .result-header-content p { margin: 4px 0 0; font-size: 13px; opacity: 0.95; color: #fff8e1; }
+    .result-header-content p strong { color: #ffd166; }
+    .result-header-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
     /* Collapsible event panel */
     .event-panel { background: #fffbf0; border: 2px solid #d8b870; border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
@@ -137,6 +150,102 @@
     .warning-banner { background: linear-gradient(90deg, #ffe0b2, #ffccbc); border-bottom: 2px solid #d84315; color: #b71c1c; padding: 6px 16px; font-size: 13px; font-weight: 700; }
     .hit-card.has-warning { border-color: #d84315; box-shadow: 0 2px 8px rgba(216, 67, 21, 0.2); }
 
+    /* personal warning banner (โหมดเฉพาะบุคคล) */
+    .personal-warning-banner {
+      background: linear-gradient(90deg, #fef3c7, #fde68a);
+      border-bottom: 2px solid #b78b3a;
+      color: #92400e;
+      padding: 6px 16px; font-size: 13px; font-weight: 700;
+    }
+    .hit-card.has-personal-warning { box-shadow: 0 2px 8px rgba(183, 139, 58, 0.25); }
+
+    /* personal score pill ข้างเกรด */
+    .personal-score-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 14px;
+      font-size: 12px; font-weight: 600;
+      border: 1.5px solid;
+    }
+    .personal-score-pill strong { font-size: 14px; font-weight: 700; }
+    .personal-score-good    { background: #e8f5e9; color: #1b5e20; border-color: #2e7d32; }
+    .personal-score-warn    { background: #fde7d8; color: #b71c1c; border-color: #d32f2f; }
+    .personal-score-neutral { background: #f1ecd9; color: #6d4c00; border-color: #b78b3a; }
+
+    /* personal block (ผลฤกษ์ต่อเจ้าชะตา) */
+    .personal-block {
+      margin: 10px 16px 12px;
+      background: linear-gradient(135deg, #fff8e1, #fff3d2);
+      border: 1.5px solid #b78b3a;
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .personal-block-title {
+      font-size: 13px; font-weight: 700; color: #6d4c00;
+      margin-bottom: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .personal-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    @media (max-width: 600px) {
+      .personal-stat-grid { grid-template-columns: 1fr; }
+    }
+    .personal-stat {
+      background: #fff;
+      border-left: 3px solid #d8b870;
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .personal-stat.tone-good    { border-left-color: #2e7d32; background: #f0f8f0; }
+    .personal-stat.tone-warning { border-left-color: #d32f2f; background: #fff5f0; }
+    .personal-stat.tone-neutral { border-left-color: #b78b3a; background: #fffbf0; }
+    .personal-stat .ps-section-label { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; font-weight: 700; color: #6d4c00; margin-bottom: 4px; }
+    .personal-stat .ps-bullet { font-size: 12.5px; line-height: 1.55; color: #3a2a00; }
+    .personal-stat.tone-warning .ps-bullet { color: #b71c1c; }
+    .personal-stat.tone-good .ps-bullet { color: #1b5e20; }
+    .personal-stat .ps-score-pill { background: rgba(183, 139, 58, 0.18); color: #6d4c00; }
+    .personal-stat.tone-good .ps-score-pill { background: rgba(46, 125, 50, 0.18); color: #1b5e20; }
+    .personal-stat.tone-warning .ps-score-pill { background: rgba(211, 47, 47, 0.18); color: #b71c1c; }
+    .ps-hint { font-size: 11px; color: #6d4c00; opacity: 0.75; font-weight: 400; margin-left: 4px; }
+
+    /* Dual-score block (ดวงฤกษ์ + ต่อเจ้าชะตา) */
+    .dual-score-block { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
+    .dual-score-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+    .dual-score-label { font-weight: 700; color: #6d4c00; font-size: 11px; min-width: 75px; }
+    .dual-score-row .grade-percent-num { font-size: 14px; font-weight: 700; color: #6d4c00; font-family: 'Kanit', sans-serif; }
+    .dual-score-row .grade-percent-bar { flex: 1; min-width: 60px; height: 5px; background: #f1ecd9; border-radius: 3px; overflow: hidden; }
+    .dual-score-row .grade-percent-fill { height: 100%; }
+    .dual-score-row .grade-percent-raw { font-size: 10px; color: #777; }
+
+    /* Event key-planet analysis + Chart health */
+    .event-key-analysis, .chart-health { background: #fff; padding: 8px 10px; border-radius: 6px; margin: 8px 0; border-left: 3px solid #b78b3a; }
+    .event-key-analysis.tone-warning, .chart-health.tone-warning { border-left-color: #d32f2f; background: #fff5f0; }
+    .event-key-analysis.tone-neutral, .chart-health.tone-neutral { border-left-color: #b78b3a; background: #fffbf0; }
+    .ps-bullet { font-size: 12.5px; line-height: 1.65; color: #3a2a00; padding: 2px 0; }
+    .chart-health.tone-warning .ps-bullet, .event-key-analysis.tone-warning .ps-bullet { color: #b71c1c; }
+    .ps-score-pill { margin-left: auto; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 10px; background: rgba(183, 139, 58, 0.18); color: #6d4c00; }
+    .chart-health.tone-warning .ps-score-pill, .event-key-analysis.tone-warning .ps-score-pill { background: rgba(211, 47, 47, 0.18); color: #b71c1c; }
+    .event-key-analysis .ps-section-label, .chart-health .ps-section-label { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .ps-section-label { font-size: 12px; font-weight: 700; color: #6d4c00; margin-bottom: 4px; }
+    .ps-aspect { font-size: 12px; line-height: 1.55; padding: 3px 0; display: flex; gap: 6px; align-items: flex-start; }
+    .ps-aspect-marker { flex-shrink: 0; font-weight: 700; }
+    .ps-aspect-good { color: #1b5e20; }
+    .ps-aspect-good .ps-aspect-marker { color: #2e7d32; }
+    .ps-aspect-warning, .ps-aspect-heavy { color: #b71c1c; }
+    .ps-aspect-warning .ps-aspect-marker, .ps-aspect-heavy .ps-aspect-marker { color: #d32f2f; }
+    .ps-aspect-neutral { color: #555; }
+    .ps-aspect-neutral .ps-aspect-marker { color: #888; }
+
+    .personal-conclusion {
+      margin-top: 8px; padding: 6px 10px; border-radius: 6px;
+      background: #ffebee; border-left: 3px solid #d32f2f;
+      color: #b71c1c; font-size: 12px; font-weight: 600;
+    }
+    .personal-conclusion-mild { background: #fff8e1; border-left-color: #b78b3a; color: #6d4c00; }
+
     /* night cards: text contrast */
     .hit-card.period-bg-night .hit-date-big { color: #1a237e; }
     .hit-card.period-bg-night .hit-time-big { color: #1a237e; }
@@ -165,6 +274,12 @@
 
     /* ===== ตรวจสอบฤกษ์ที่ได้มา (check section) ===== */
     .check-section { margin-top: 30px; background: linear-gradient(135deg, #fff8e1, #ffe9a8); border: 2px solid #d4a017; border-radius: 16px; padding: 20px 22px; box-shadow: 0 4px 16px rgba(212, 160, 23, 0.25); }
+    .check-mode-info { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px 14px; background: rgba(183, 139, 58, 0.12); border: 1px dashed #b78b3a; border-radius: 10px; font-size: 13px; color: #6d4c00; flex-wrap: wrap; }
+    .check-mode-info-label { font-weight: 700; font-size: 14px; }
+    .check-mode-info-hint { opacity: 0.7; font-size: 12px; }
+    .check-birth-hint { display: flex; align-items: center; gap: 6px; margin: 12px 0 6px; font-size: 13px; font-weight: 700; color: #6d4c00; padding-top: 10px; border-top: 1px dashed #b78b3a; }
+    .check-birth-icon { font-size: 18px; }
+    .check-birth-sub { font-weight: 400; opacity: 0.75; font-size: 11px; }
     .check-header { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; }
     .check-icon { font-size: 40px; line-height: 1; flex-shrink: 0; }
     .check-header h2 { margin: 0; color: #6d4c00; font-size: 20px; font-family: 'Kanit', sans-serif; }
@@ -180,7 +295,9 @@
     .toast::before { content: '⚠️ '; }
 
     /* Score info button + modal */
-    .score-info-btn { margin-top: 20px; width: 100%; padding: 14px 20px; background: linear-gradient(135deg, #6d4c00, #b78b3a); color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(109, 76, 0, 0.3); font-family: inherit; transition: all 0.15s; }
+    .score-modal-buttons { margin: 24px 0 8px; display: flex; flex-direction: column; gap: 10px; }
+    .score-info-btn.personal-score-btn { background: linear-gradient(135deg, #6d1414, #8b2c2c); }
+    .score-info-btn { margin-top: 0; width: 100%; padding: 14px 20px; background: linear-gradient(135deg, #6d4c00, #b78b3a); color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(109, 76, 0, 0.3); font-family: inherit; transition: all 0.15s; }
     .score-info-btn:hover { background: linear-gradient(135deg, #5a3f00, #9a7330); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(109, 76, 0, 0.4); }
 
     .score-modal-bg { position: fixed; inset: 0; background: rgba(45, 30, 0, 0.7); backdrop-filter: blur(4px); z-index: 9998; display: none; align-items: flex-start; justify-content: center; padding: 30px 16px; overflow-y: auto; }
@@ -305,6 +422,21 @@
     /* ===== Sticky result toolbar (สีเด่นชัด: เลือดหมู-ทอง) ===== */
     .result-toolbar { position: sticky; top: 6px; z-index: 50; display: flex; gap: 8px; padding: 10px 14px; background: linear-gradient(135deg, #6d1414, #8b2c2c); border: 2px solid #d4a017; border-radius: 12px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(109, 20, 20, 0.35); flex-wrap: wrap; align-items: center; }
     .result-toolbar-title { font-weight: 700; color: #ffd166; margin-right: auto; font-size: 15px; }
+    /* Event meaning chips (ดาว/ภพ สำคัญของกิจกรรม) */
+    .event-meaning-row { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; margin-bottom: 10px; background: linear-gradient(135deg, #fffbf0, #fff8e1); border: 1px solid #d8b870; border-radius: 8px; }
+    .meaning-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; }
+    .meaning-label { font-weight: 700; color: #6d4c00; margin-right: 4px; flex-shrink: 0; }
+    .meaning-chip { padding: 3px 9px; border-radius: 12px; font-size: 12px; font-weight: 600; border: 1px solid; }
+    .meaning-chip-planet { background: #fff3d2; color: #6d4c00; border-color: #b78b3a; }
+    .meaning-chip-bhava { background: #e8f5e9; color: #1b5e20; border-color: #2e7d32; }
+
+    /* per-panel suitable filter */
+    .panel-suitable-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 8px; background: #fff8e1; border: 1px dashed #b78b3a; border-radius: 8px; }
+    .panel-suitable-toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; font-size: 13px; font-weight: 600; color: #6d4c00; flex-shrink: 0; }
+    .panel-suitable-toggle input { accent-color: #b78b3a; width: 16px; height: 16px; cursor: pointer; }
+    .panel-suitable-hint { font-size: 12px; color: #6d4c00; opacity: 0.85; flex: 1; min-width: 240px; line-height: 1.55; }
+    .panel-suitable-hint strong { color: #6d1414; }
+    .hit-card.personal-filtered-out { display: none !important; }
     .result-tool-btn { padding: 6px 14px; border-radius: 8px; background: #ffd166; border: none; color: #6d1414; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
     .result-tool-btn:hover { background: #fff; transform: translateY(-1px); }
 
@@ -441,8 +573,10 @@
       .form-cell input, .form-cell select { padding: 7px; font-size: 14px; }
       .btn-primary { padding: 12px 18px; font-size: 15px; }
 
-      .result-header { padding: 12px 14px; }
-      .result-header h2 { font-size: 17px; }
+      .result-header-bar { padding: 10px 12px; gap: 8px; }
+      .result-header-content h2 { font-size: 17px; }
+      .result-header-content p { font-size: 12px; }
+      .result-tool-btn { padding: 5px 10px; font-size: 11px; }
       .event-panel summary { padding: 10px 12px; font-size: 14px; gap: 6px; }
       .event-panel summary .event-icon { font-size: 18px; }
       .event-panel-body { padding: 10px 12px; }
@@ -741,7 +875,7 @@
 
     <form method="post" action="/muhurta" id="muhurta-form">
 
-      <!-- Step 1: Mode -->
+      <!-- Step 1: Mode (+ ข้อมูลเจ้าชะตา ขยายใน step เดียวกันเมื่อเลือก personal) -->
       <div class="step">
         <h3><span class="step-num">1</span>เลือกระดับการหาฤกษ์</h3>
         <div class="mode-row">
@@ -750,39 +884,39 @@
             <span class="mode-title">👤 หาฤกษ์ทั่วไป</span>
             <span class="mode-desc">ดูฤกษ์ดีตามดาวจร — ไม่ต้องใส่วันเกิด</span>
           </label>
-          <label class="mode-btn disabled" data-mode="personal" title="ฟีเจอร์นี้กำลังพัฒนา จะเปิดในอนาคต">
-            <span class="mode-title">💑 หาฤกษ์เฉพาะบุคคล <span class="coming-soon-badge">เร็วๆ นี้</span></span>
-            <span class="mode-desc">เทียบกับลัคนาเจ้าชะตา + วรโคตม (กำลังพัฒนา)</span>
+          <label class="mode-btn {% if form.mode == 'personal' %}active{% endif %}" data-mode="personal">
+            <input type="radio" name="mode" value="personal" {% if form.mode == 'personal' %}checked{% endif %} style="display:none">
+            <span class="mode-title">💑 หาฤกษ์เฉพาะบุคคล</span>
+            <span class="mode-desc">เทียบลัคนา · ทักษา · ดาวจร กับดวงเจ้าชะตา</span>
           </label>
           <label class="mode-btn disabled" data-mode="oracle" title="ฟีเจอร์นี้กำลังพัฒนา จะเปิดในอนาคต">
             <span class="mode-title">🔬 สำหรับโหราจารย์ <span class="coming-soon-badge">เร็วๆ นี้</span></span>
             <span class="mode-desc">ดวงราศีจักร์ + นวางค์จักร์ + การคำนวณ (กำลังพัฒนา)</span>
           </label>
         </div>
-      </div>
 
-      <!-- Step Personal: Birth info (show เมื่อ mode = personal) -->
-      <div class="step birth-block" id="birth-step" style="{% if form.mode != 'personal' %}display:none;{% endif %}">
-        <h3>
-          <span class="step-num">👤</span>ข้อมูลเจ้าชะตา
-          <span class="step-hint">(สำหรับเทียบฤกษ์กับลัคนาคุณ)</span>
-        </h3>
-        <div class="form-grid">
-          <div class="form-cell">
-            <label>วันเกิด (พ.ศ.)</label>
-            <input type="text" name="birth_date_th" id="birth-date-th" value="{{ form.birth_date_th }}" placeholder="DD/MM/YYYY">
+        {# ข้อมูลเจ้าชะตา — inline ใน step 1 เปิดเมื่อ personal #}
+        <div class="birth-inline" id="birth-step" style="{% if form.mode != 'personal' %}display:none;{% endif %}">
+          <div class="birth-inline-title">
+            👤 ข้อมูลเจ้าชะตา <span class="step-hint">(สำหรับเทียบฤกษ์กับลัคนาคุณ)</span>
           </div>
-          <div class="form-cell">
-            <label>เวลาเกิด</label>
-            <input type="time" name="birth_time" value="{{ form.birth_time }}">
-          </div>
-          <div class="form-cell">
-            <label>จังหวัดเกิด</label>
-            <select name="birth_province">
-              {% for p in provinces %}
-                <option value="{{ p }}" {% if p == form.birth_province %}selected{% endif %}>{{ p }}</option>
-              {% endfor %}
-            </select>
+          <div class="form-grid">
+            <div class="form-cell">
+              <label>วันเกิด (พ.ศ.)</label>
+              <input type="text" name="birth_date_th" id="birth-date-th" value="{{ form.birth_date_th }}" placeholder="DD/MM/YYYY">
+            </div>
+            <div class="form-cell">
+              <label>เวลาเกิด</label>
+              <input type="time" name="birth_time" value="{{ form.birth_time }}">
+            </div>
+            <div class="form-cell">
+              <label>จังหวัดเกิด</label>
+              <select name="birth_province">
+                {% for p in provinces %}
+                  <option value="{{ p }}" {% if p == form.birth_province %}selected{% endif %}>{{ p }}</option>
+                {% endfor %}
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -856,23 +990,24 @@
 
     <!-- ===== Results ===== -->
     {% if result %}
-      <div class="result-section" id="result-section">
-        {# Sticky toolbar — ย่อ/ขยายทั้งหมด #}
-        <div class="result-toolbar">
-          <span class="result-toolbar-title">📋 ผลการหาฤกษ์</span>
-          <button type="button" id="collapse-all-btn" class="result-tool-btn">▼ ย่อทั้งหมด</button>
-          <button type="button" id="expand-all-btn" class="result-tool-btn">▶ ขยายทั้งหมด</button>
-        </div>
-        <div class="result-header">
-          <h2>📋 ผลการหาฤกษ์</h2>
-          <p>พบฤกษ์ดี <strong>{{ result.total_events }}</strong> กิจกรรม (จากที่เลือก {{ result.total_requested }})
-            {% if result.total_events < result.total_requested %}
-              <span style="opacity:0.85">— กิจกรรมอื่นไม่มีฤกษ์ดีในช่วงเวลานี้</span>
+      <div class="result-section" id="result-section" data-result-mode="{{ result.mode }}">
+        {# Header + ปุ่ม ย่อ/ขยาย รวมไว้ใน sticky bar เดียวกัน (เลือดหมู-ทอง) #}
+        <div class="result-header-bar">
+          <div class="result-header-content">
+            <h2>📋 ผลการหาฤกษ์</h2>
+            <p>พบฤกษ์ดี <strong>{{ result.total_events }}</strong> กิจกรรม (จากที่เลือก {{ result.total_requested }})
+              {% if result.total_events < result.total_requested %}
+                <span style="opacity:0.85">— กิจกรรมอื่นไม่มีฤกษ์ดีในช่วงเวลานี้</span>
+              {% endif %}
+            </p>
+            {% if result.natal_info %}
+              <p>👤 ดวงเจ้าชะตา: {{ result.natal_info.date }} {{ result.natal_info.time }} — ลัคนา{{ result.natal_info.asc_rasi }} {{ result.natal_info.asc_deg }}°{{ result.natal_info.asc_min }}′</p>
             {% endif %}
-          </p>
-          {% if result.natal_info %}
-            <p>👤 ดวงเจ้าชะตา: {{ result.natal_info.date }} {{ result.natal_info.time }} — ลัคนา{{ result.natal_info.asc_rasi }} {{ result.natal_info.asc_deg }}°{{ result.natal_info.asc_min }}′</p>
-          {% endif %}
+          </div>
+          <div class="result-header-actions">
+            <button type="button" id="collapse-all-btn" class="result-tool-btn">▼ ย่อทั้งหมด</button>
+            <button type="button" id="expand-all-btn" class="result-tool-btn">▶ ขยายทั้งหมด</button>
+          </div>
         </div>
 
         {% for group in result.groups %}
@@ -884,6 +1019,28 @@
             </summary>
             <div class="event-panel-body">
               <div class="event-desc">{{ group.event_description }}</div>
+
+              {# Event meaning chips — ดาว/ภพ สำคัญของกิจกรรม #}
+              {% if group.planet_chips or group.bhava_chips %}
+                <div class="event-meaning-row">
+                  {% if group.planet_chips %}
+                    <div class="meaning-line">
+                      <span class="meaning-label">🪐 ดาวสำคัญ:</span>
+                      {% for c in group.planet_chips %}
+                        <span class="meaning-chip meaning-chip-planet">{{ c.planet }} ({{ c.meaning }})</span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                  {% if group.bhava_chips %}
+                    <div class="meaning-line">
+                      <span class="meaning-label">🏛 ภพสำคัญ:</span>
+                      {% for c in group.bhava_chips %}
+                        <span class="meaning-chip meaning-chip-bhava">{{ c.bhava }} {{ c.name }} ({{ c.meaning }})</span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+              {% endif %}
 
               {# Weekday tally — แสดงจำนวนฤกษ์แต่ละวันในสัปดาห์ + กดเพื่อกรอง #}
               {% set wan_tally = {1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0} %}
@@ -912,6 +1069,19 @@
                 <button type="button" class="period-tally-clear" style="margin-left:auto;display:none;">ล้างกรอง</button>
               </div>
 
+              {% if result.mode == 'personal' %}
+                {# Suitable-only filter ต่อ panel — เริ่มต้นติ๊กไว้ #}
+                <div class="panel-suitable-row">
+                  <label class="panel-suitable-toggle">
+                    <input type="checkbox" class="panel-suitable-cb" checked>
+                    <span>👤 เฉพาะที่เหมาะกับเจ้าชะตา</span>
+                  </label>
+                  <span class="panel-suitable-hint">
+                    🔍 ติ๊ก = แสดงเฉพาะฤกษ์ที่ <strong>"ผลต่อเจ้าชะตา ≥ 63%"</strong> (คะแนน ≥ 0) + เรียงคะแนนสูง→ต่ำ &nbsp;·&nbsp; ปลด = แสดงทั้งหมดเรียงตามลำดับฤกษ์
+                  </span>
+                </div>
+              {% endif %}
+
               {# Hit cards — 2-column grid on desktop, single column on mobile #}
               <div class="hit-grid">
                 {% for h in group.hits %}
@@ -933,10 +1103,6 @@
           </div>
         {% endif %}
 
-        <!-- Score legend popup trigger -->
-        <button type="button" id="open-score-info" class="score-info-btn">
-          💡 คะแนนและเกรดฤกษ์คำนวณจากอะไร? <span style="opacity:0.8">— กดเพื่ออ่าน</span>
-        </button>
       </div>
     {% endif %}
 
@@ -946,13 +1112,20 @@
         <div class="check-icon">🔍</div>
         <div>
           <h2>ตรวจสอบฤกษ์ที่ได้มาจากที่อื่น</h2>
-          <p>มีฤกษ์ที่อาจารย์ท่านอื่นให้มา? กรอกวันเวลาเพื่อดูคะแนนตามระบบนี้</p>
+          <p>มีฤกษ์ที่ได้มาจากที่อื่น? กรอกวันเวลาเพื่อดูคะแนนตามระบบนี้</p>
         </div>
       </div>
+
+      {# Badge แสดงโหมดที่ active อยู่ (ตามเมนูด้านบน) #}
+      <div class="check-mode-info" id="check-mode-info">
+        <span class="check-mode-info-label" id="check-mode-label">🌅 ฤกษ์ทั่วไป</span>
+        <span class="check-mode-info-hint">— เลือกเปลี่ยนโหมดได้ที่ Step 1 ด้านบน</span>
+      </div>
+
       <div class="check-body">
         <div class="form-grid">
           <div class="form-cell">
-            <label>วันที่ (พ.ศ.)</label>
+            <label>วันที่ฤกษ์ (พ.ศ.)</label>
             <input type="text" id="check-date" placeholder="DD/MM/YYYY">
           </div>
           <div class="form-cell">
@@ -969,9 +1142,46 @@
             </select>
           </div>
         </div>
+
+        {# กล่อง birth เปิดเมื่อโหมดด้านบน = personal #}
+        <div id="check-birth-block" style="display:none">
+          <div class="check-birth-hint">
+            <span class="check-birth-icon">👤</span>
+            <span>ข้อมูลเจ้าชะตา <span class="check-birth-sub">(ดึงจากด้านบนถ้ามี — แก้ได้)</span></span>
+          </div>
+          <div class="form-grid">
+            <div class="form-cell">
+              <label>วันเกิด (พ.ศ.)</label>
+              <input type="text" id="check-birth-date" placeholder="DD/MM/YYYY">
+            </div>
+            <div class="form-cell">
+              <label>เวลาเกิด</label>
+              <input type="time" id="check-birth-time">
+            </div>
+            <div class="form-cell">
+              <label>จังหวัดเกิด</label>
+              <select id="check-birth-prov">
+                {% for p in provinces %}
+                  <option value="{{ p }}">{{ p }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+
         <button type="button" id="check-btn" class="btn-check">⭐ ตรวจสอบคะแนนฤกษ์นี้</button>
         <div id="check-result"></div>
       </div>
+    </div>
+
+    <!-- ===== ปุ่ม Score modals (อยู่ล่างสุดเสมอ) ===== -->
+    <div class="score-modal-buttons">
+      <button type="button" id="open-score-info" class="score-info-btn">
+        💡 คะแนนและเกรดฤกษ์ทั่วไปคำนวณจากอะไร? <span style="opacity:0.8">— กดเพื่ออ่าน</span>
+      </button>
+      <button type="button" id="open-personal-score-info" class="score-info-btn personal-score-btn" style="display:none;">
+        👤 คะแนน "ผลต่อเจ้าชะตา" คำนวณยังไง? <span style="opacity:0.8">— กดเพื่ออ่าน</span>
+      </button>
     </div>
   </main>
 
@@ -1078,7 +1288,7 @@
         <p>เกณฑ์เหล่านี้บอกว่าฤกษ์ตรงตำราหรือไม่ — ผ่านได้คะแนนเสริมเล็กน้อย ไม่ผ่านลดคะแนนน้อยมาก เพื่อให้คะแนนรวมยังเป็นตัวตัดสินหลัก</p>
         <table class="score-tbl">
           <tr><th>เกณฑ์</th><th>คะแนน</th><th>เหตุผล</th></tr>
-          <tr><td>💃 กนกนารี — วาร × ฤกษ์ "ทำได้"</td><td class="sc-good">+2</td><td>คู่วัน-ฤกษ์อนุญาตตามตารางอ.หลวงวุฒิรณพัศตุ์</td></tr>
+          <tr><td>💃 กนกนารี — วาร × ฤกษ์ "ทำได้"</td><td class="sc-good">+2</td><td>คู่วัน-ฤกษ์อนุญาตตามตำราโบราณ (7 วาร × 27 ฤกษ์)</td></tr>
           <tr><td>💃 กนกนารี — วาร × ฤกษ์ "ห้าม"</td><td class="sc-bad">−1</td><td>คู่วัน-ฤกษ์ห้ามตามตำรา (เตือนเฉยๆ)</td></tr>
           <tr><td>🐘 กนกกุญชร — ลัคนา "ดีนัก"</td><td class="sc-best">+3</td><td>ลัคนาตรงราศีโดดเด่นของฤกษ์ (เด่นพิเศษ)</td></tr>
           <tr><td>🐘 กนกกุญชร — ลัคนา "ดี"</td><td class="sc-good">+2</td><td>ลัคนาตรงราศี "ดี" ของฤกษ์</td></tr>
@@ -1120,6 +1330,139 @@
     </div>
   </div>
 
+  <!-- ===== Personal score info modal (โหมดเฉพาะบุคคล) ===== -->
+  <div class="score-modal-bg" id="personal-score-modal-bg">
+    <div class="score-modal">
+      <button type="button" class="score-modal-close" id="close-personal-score-modal" aria-label="ปิด">✕</button>
+      <h2 class="score-modal-title">👤 คะแนน "ผลต่อเจ้าชะตา" คำนวณยังไง</h2>
+      <p class="score-modal-intro">
+        คะแนนนี้<strong>แยก</strong>จากคะแนนฤกษ์ทั่วไป — ประเมินว่าฤกษ์นี้
+        <strong>เหมาะกับเจ้าชะตา</strong> หรือไม่ โดยรวมจาก <strong>7 เกณฑ์</strong>
+        (มีทั้งบวกและลบ) ช่วงคะแนน <strong>−12 ถึง +7</strong>
+      </p>
+
+      <div class="score-factor">
+        <h3>1️⃣ ลัคนาฤกษ์ตกภพของเจ้าชะตา</h3>
+        <p>ดูราศีของลัคนาฤกษ์ ตกภพที่เท่าไหร่เมื่อนับจากลัคนาเดิมของเจ้าชะตา:</p>
+        <table class="score-tbl">
+          <tr><th>ภพที่ตก</th><th>คะแนน</th><th>เหตุผล</th></tr>
+          <tr><td>1 ตนุ</td><td class="sc-best">+2</td><td>ลัคนาตรงลัคนา — ส่งเสริมตัวคุณ</td></tr>
+          <tr><td>4 พันธุ · 7 ปัตนิ · 10 กัมมะ</td><td class="sc-good">+1</td><td>ภพหลัก (kendra) — มั่นคง</td></tr>
+          <tr><td>5 ปุตตะ · 9 ศุภะ</td><td class="sc-good">+1</td><td>ภพบุญ (trikona) — โชคลาภ</td></tr>
+          <tr><td>11 ลาภะ</td><td class="sc-good">+1</td><td>สมหวังในสิ่งที่ปรารถนา</td></tr>
+          <tr><td>2 กดุมภะ · 3 สหัชชะ</td><td class="sc-mid">0</td><td>ภพกลาง — ไม่บวกไม่ลบ</td></tr>
+          <tr><td>6 อริ</td><td class="sc-bad">−2</td><td>ภพศัตรู โรคภัย</td></tr>
+          <tr><td>8 มรณะ</td><td class="sc-bad">−3</td><td>ภพหนักสุด — เลี่ยง</td></tr>
+          <tr><td>12 วินาส</td><td class="sc-bad">−2</td><td>ภพเสียหาย</td></tr>
+        </table>
+        <div class="score-example">📌 ช่วงคะแนน: <strong>−3 ถึง +2</strong></div>
+      </div>
+
+      <div class="score-factor">
+        <h3>2️⃣ ฤกษ์ตรง "วันกาลีจร" ของเจ้าชะตา</h3>
+        <p>ในช่วงทักษาจรปัจจุบัน (12 ปีต่อรอบ) ดาวเสวยอายุ → ดาวกาลกิณีของช่วงนี้ → ตรงกับวันใดในสัปดาห์ → ฤกษ์วันนั้น = วันกาลีจร</p>
+        <table class="score-tbl">
+          <tr><th>เงื่อนไข</th><th>คะแนน</th></tr>
+          <tr><td>ฤกษ์ไม่ตรงวันกาลีจร</td><td class="sc-mid">0</td></tr>
+          <tr><td>ฤกษ์ตรงวันกาลีจร</td><td class="sc-bad">−2</td></tr>
+        </table>
+        <div class="score-example">📌 ตัวอย่าง: เกิดวันอาทิตย์ ปีอายุ 47 → ดาวกาลีจร = อังคาร → ฤกษ์วันอังคารตลอด 12 ปีนี้ไม่เหมาะ · ช่วงคะแนน <strong>−2 ถึง 0</strong></div>
+      </div>
+
+      <div class="score-factor">
+        <h3>3️⃣ ดาวสำคัญตกภพในดวงฤกษ์ (C1)</h3>
+        <p>แต่ละกิจกรรมมีดาวสำคัญ (ขึ้นบ้านใหม่ = พฤหัสบดี · ออกรถ = ศุกร์ · แข่งขัน = อังคาร ฯลฯ)<br>ตรวจดาวนั้นตกภพอะไรใน <strong>ดวงฤกษ์เอง</strong>:</p>
+        <table class="score-tbl">
+          <tr><th>ภพที่ตก</th><th>คะแนน</th></tr>
+          <tr><td>1 ตนุ · 4 พันธุ · 5 ปุตตะ · 7 ปัตนิ · 9 ศุภะ · 10 กัมมะ · 11 ลาภะ</td><td class="sc-good">+1</td></tr>
+          <tr><td>2 กดุมภะ · 3 สหัชชะ</td><td class="sc-mid">0</td></tr>
+          <tr><td>6 อริ · 8 มรณะ · 12 วินาส</td><td class="sc-bad">−2</td></tr>
+        </table>
+        <div class="score-example">📌 ช่วงคะแนน: <strong>−2 ถึง +1</strong></div>
+      </div>
+
+      <div class="score-factor">
+        <h3>4️⃣ ดาวสำคัญตกภพของเจ้าชะตา (C2)</h3>
+        <p>ราศีที่ดาวสำคัญอยู่ ตกภพอะไรในดวงเจ้าชะตา:</p>
+        <table class="score-tbl">
+          <tr><th>ภพที่ตก</th><th>คะแนน</th></tr>
+          <tr><td>1 ตนุ · 4 พันธุ · 5 ปุตตะ · 7 ปัตนิ · 9 ศุภะ · 10 กัมมะ · 11 ลาภะ</td><td class="sc-good">+1</td></tr>
+          <tr><td>2 กดุมภะ · 3 สหัชชะ</td><td class="sc-mid">0</td></tr>
+          <tr><td>6 อริ · 8 มรณะ · 12 วินาส</td><td class="sc-bad">−2</td></tr>
+        </table>
+        <div class="score-example">📌 ช่วงคะแนน: <strong>−2 ถึง +1</strong></div>
+      </div>
+
+      <div class="score-factor">
+        <h3>5️⃣ ดาวสำคัญได้ตำแหน่ง dignity อะไร (C3)</h3>
+        <p>กำลังดาว (เกษตร/อุจน์/นิจ/ประ ฯลฯ):</p>
+        <table class="score-tbl">
+          <tr><th>ตำแหน่ง</th><th>คะแนน</th></tr>
+          <tr><td>อุจน์ · มหาจักร · จุลจักร · ราชาโชค · เทวีโชค · เกษตร</td><td class="sc-good">+1</td></tr>
+          <tr><td>มิตร · สมพล · ศัตรู · อุจจาภิมุข · อุจจาวิลาส</td><td class="sc-mid">0</td></tr>
+          <tr><td>นิจ · ประ</td><td class="sc-bad">−1</td></tr>
+        </table>
+        <div class="score-example">📌 ช่วงคะแนน: <strong>−1 ถึง +1</strong></div>
+      </div>
+
+      <div class="score-factor">
+        <h3>6️⃣ ดาวเจ้าเรือนตนุของดวงฤกษ์</h3>
+        <p>ดาวเกษตรของลัคนาฤกษ์ (เจ้าเรือนตัวเอง) ตกภพในดวงฤกษ์เอง:</p>
+        <table class="score-tbl">
+          <tr><th>ภพที่ตก</th><th>คะแนน</th></tr>
+          <tr><td>1 ตนุ · 4 พันธุ · 5 ปุตตะ · 7 ปัตนิ · 9 ศุภะ · 10 กัมมะ · 11 ลาภะ</td><td class="sc-good">+1</td></tr>
+          <tr><td>2 กดุมภะ · 3 สหัชชะ</td><td class="sc-mid">0</td></tr>
+          <tr><td>6 อริ · 8 มรณะ · 12 วินาส</td><td class="sc-bad">−1</td></tr>
+        </table>
+        <div class="score-example">📌 ช่วงคะแนน: <strong>−1 ถึง +1</strong></div>
+      </div>
+
+      <div class="score-factor">
+        <h3>7️⃣ ดาวจันทร์ของดวงฤกษ์</h3>
+        <p>จันทร์ของฤกษ์ตกภพอะไรในดวงฤกษ์เอง:</p>
+        <table class="score-tbl">
+          <tr><th>ภพที่ตก</th><th>คะแนน</th></tr>
+          <tr><td>1 ตนุ · 4 พันธุ · 5 ปุตตะ · 7 ปัตนิ · 9 ศุภะ · 10 กัมมะ · 11 ลาภะ</td><td class="sc-good">+1</td></tr>
+          <tr><td>2 กดุมภะ · 3 สหัชชะ</td><td class="sc-mid">0</td></tr>
+          <tr><td>6 อริ · 8 มรณะ · 12 วินาส</td><td class="sc-bad">−1</td></tr>
+        </table>
+        <div class="score-example">📌 ช่วงคะแนน: <strong>−1 ถึง +1</strong></div>
+      </div>
+
+      <div class="score-grading">
+        <h3>📊 สรุปผลรวมและการตัดสิน</h3>
+        <table class="score-tbl">
+          <tr><th>เกณฑ์</th><th>ช่วงคะแนน</th></tr>
+          <tr><td>1️⃣ ลัคนาฤกษ์ตกภพของเจ้าชะตา</td><td>−3 ถึง +2</td></tr>
+          <tr><td>2️⃣ วันกาลีจร</td><td>−2 ถึง 0</td></tr>
+          <tr><td>3️⃣ ดาวสำคัญในดวงฤกษ์</td><td>−2 ถึง +1</td></tr>
+          <tr><td>4️⃣ ดาวสำคัญในดวงเจ้าชะตา</td><td>−2 ถึง +1</td></tr>
+          <tr><td>5️⃣ Dignity ของดาวสำคัญ</td><td>−1 ถึง +1</td></tr>
+          <tr><td>6️⃣ เจ้าเรือนตนุของฤกษ์</td><td>−1 ถึง +1</td></tr>
+          <tr><td>7️⃣ จันทร์ของฤกษ์</td><td>−1 ถึง +1</td></tr>
+          <tr class="grade-row-best"><td><strong>ผลรวม (Total)</strong></td><td><strong>−12 ถึง +7</strong></td></tr>
+        </table>
+        <div style="margin-top:12px; font-size:13px; color:#6d4c00;">
+          <strong>เปลี่ยนเป็น %:</strong> <code>(คะแนน + 12) ÷ 19 × 100</code><br>
+          • +7 (สูงสุด) = 100% (5 ดาว)<br>
+          • 0 = ~63% (~3 ดาว) — ผ่านเกณฑ์ "เหมาะ"<br>
+          • −12 (ต่ำสุด) = 0% (0 ดาว)
+        </div>
+        <table class="score-tbl" style="margin-top:12px;">
+          <tr><th>ผลรวม</th><th>%</th><th>ผลลัพธ์</th></tr>
+          <tr class="grade-row-best"><td>≥ 0</td><td>≥ 63%</td><td>✓ เหมาะ</td></tr>
+          <tr><td>&lt; 0</td><td>&lt; 63%</td><td>✗ ไม่เหมาะ</td></tr>
+        </table>
+      </div>
+
+      <p class="score-note">
+        ⚠️ คะแนนนี้แยกจากคะแนนฤกษ์ทั่วไป (ดวงฤกษ์เอง)
+        — ฤกษ์ "ดี" ในตัวเองอาจ "ไม่เหมาะ" กับเจ้าชะตาก็ได้ และในทางกลับกัน
+        ระบบแสดงทั้ง 2 คะแนนแยกกัน (📋 ดวงฤกษ์ + 👤 ต่อเจ้าชะตา) เพื่อพิจารณาประกอบ
+      </p>
+    </div>
+  </div>
+
   <script>
     // ===== Toast notification =====
     const toastEl = document.getElementById('toast');
@@ -1131,11 +1474,39 @@
       toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3500);
     }
 
-    // ===== Mode selector =====
+    // ===== Mode selector — ทั้ง form ด้านบน + กล่อง check ด้านล่าง sync ตามโหมดเดียว =====
     const birthStepEl = document.getElementById('birth-step');
-    function syncBirthStep(mode) {
-      if (!birthStepEl) return;
-      birthStepEl.style.display = (mode === 'personal') ? '' : 'none';
+    const checkBirthBlockEl = document.getElementById('check-birth-block');
+    const checkModeLabelEl = document.getElementById('check-mode-label');
+    function _currentMode() {
+      return document.querySelector('.mode-btn.active')?.dataset.mode || 'general';
+    }
+    function syncMode(mode) {
+      const isPersonal = (mode === 'personal');
+      if (birthStepEl) birthStepEl.style.display = isPersonal ? '' : 'none';
+      if (checkBirthBlockEl) checkBirthBlockEl.style.display = isPersonal ? '' : 'none';
+      if (checkModeLabelEl) checkModeLabelEl.textContent = isPersonal ? '👤 ฤกษ์เฉพาะบุคคล' : '🌅 ฤกษ์ทั่วไป';
+      // Toggle personal score modal button (always visible to general, hidden if not personal)
+      const psBtnEl = document.getElementById('open-personal-score-info');
+      if (psBtnEl) psBtnEl.style.display = isPersonal ? '' : 'none';
+      // Clear previous results when switching mode (so user doesn't see stale general results in personal mode)
+      const resSection = document.getElementById('result-section');
+      const submittedMode = resSection?.dataset.resultMode;
+      if (resSection && submittedMode && submittedMode !== mode) {
+        resSection.remove();
+      }
+      // Auto-prefill check-birth ตอนสลับเข้า personal
+      if (isPersonal) {
+        const bd = document.querySelector('input[name=birth_date_th]')?.value || '';
+        const bt = document.querySelector('input[name=birth_time]')?.value || '';
+        const bp = document.querySelector('[name=birth_province]')?.value || '';
+        const bdEl = document.getElementById('check-birth-date');
+        const btEl = document.getElementById('check-birth-time');
+        const bpEl = document.getElementById('check-birth-prov');
+        if (bdEl && bd && !bdEl.value) bdEl.value = bd;
+        if (btEl && bt && !btEl.value) btEl.value = bt;
+        if (bpEl && bp) bpEl.value = bp;
+      }
     }
     document.querySelectorAll('.mode-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -1148,10 +1519,10 @@
         btn.classList.add('active');
         const radio = btn.querySelector('input[type=radio]');
         if (radio) radio.checked = true;
-        syncBirthStep(btn.dataset.mode);
+        syncMode(btn.dataset.mode);
       });
     });
-    syncBirthStep(document.querySelector('.mode-btn.active')?.dataset.mode || 'general');
+    syncMode(_currentMode());
 
     // ===== Event chips + Time-period chips (multi-select via checkboxes) =====
     const eventCountEl = document.getElementById('event-count');
@@ -1295,6 +1666,48 @@
       });
     }
 
+    // ===== Per-panel suitable filter (personal mode) — กรอง + sort by personal score DESC =====
+    document.querySelectorAll('.panel-suitable-cb').forEach(cb => {
+      const panel = cb.closest('.event-panel');
+      if (!panel) return;
+      const grid = panel.querySelector('.hit-grid');
+      if (!grid) return;
+      // Remember original order on first apply
+      const originalOrder = [...grid.children];
+      function apply() {
+        const on = cb.checked;
+        const cards = [...grid.children];
+        cards.forEach(card => {
+          if (!card.classList || !card.classList.contains('hit-card')) return;
+          const ok = card.dataset.personalSuitable === '1';
+          if (on && !ok) card.classList.add('personal-filtered-out');
+          else card.classList.remove('personal-filtered-out');
+        });
+        // Sort: if filter on → personal score DESC (read from dual-score-row +N/M)
+        if (on) {
+          const visible = cards.filter(c => !c.classList.contains('personal-filtered-out'));
+          const hidden = cards.filter(c => c.classList.contains('personal-filtered-out'));
+          const getPersonalScore = (card) => {
+            const row = card.querySelectorAll('.dual-score-row')[1];   // 2nd row = ต่อเจ้าชะตา
+            if (!row) return -999;
+            const raw = row.querySelector('.grade-percent-raw');
+            if (!raw) return -999;
+            const m = raw.textContent.match(/(-?\d+)\//);
+            return m ? parseInt(m[1], 10) : -999;
+          };
+          visible.sort((a, b) => getPersonalScore(b) - getPersonalScore(a));
+          // re-append in new order; hidden cards go last
+          visible.forEach(c => grid.appendChild(c));
+          hidden.forEach(c => grid.appendChild(c));
+        } else {
+          // Restore original order
+          originalOrder.forEach(c => { if (c.parentNode === grid) grid.appendChild(c); });
+        }
+      }
+      cb.addEventListener('change', apply);
+      apply();
+    });
+
     // ===== Auto-scroll to result-section ถ้ามีผลลัพธ์ =====
     // (ไม่เด้งไปบนสุดหลังกดปุ่มหาฤกษ์)
     const _resultEl = document.getElementById('result-section');
@@ -1314,6 +1727,17 @@
       scoreClose.addEventListener('click', () => scoreBg.classList.remove('active'));
       scoreBg.addEventListener('click', (e) => { if (e.target === scoreBg) scoreBg.classList.remove('active'); });
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape') scoreBg.classList.remove('active'); });
+    }
+
+    // ===== Personal score modal =====
+    const psBtn = document.getElementById('open-personal-score-info');
+    const psBg = document.getElementById('personal-score-modal-bg');
+    const psClose = document.getElementById('close-personal-score-modal');
+    if (psBtn && psBg && psClose) {
+      psBtn.addEventListener('click', () => psBg.classList.add('active'));
+      psClose.addEventListener('click', () => psBg.classList.remove('active'));
+      psBg.addEventListener('click', (e) => { if (e.target === psBg) psBg.classList.remove('active'); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') psBg.classList.remove('active'); });
     }
 
     // ===== Filter per event panel (อิสระต่อกัน) =====
@@ -1478,26 +1902,73 @@
       }, stepMs);
     }
     document.getElementById('muhurta-form').addEventListener('submit', (e) => {
+      // 1) Personal mode → required birth date + time
+      if (_currentMode() === 'personal') {
+        const bd = document.querySelector('input[name=birth_date_th]')?.value?.trim() || '';
+        const bt = document.querySelector('input[name=birth_time]')?.value?.trim() || '';
+        if (!bd || !bt) {
+          e.preventDefault();
+          showToast('โหมดเฉพาะบุคคล: กรุณากรอกวันเกิด + เวลาเกิด ของเจ้าชะตา');
+          (document.getElementById('birth-date-th') || document.getElementById('birth-step'))
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+      }
+      // 2) Event must be selected
       const checked = document.querySelectorAll('.event-chip.active[data-event]').length;
       if (checked === 0) {
         e.preventDefault();
         showToast('กรุณาเลือกกิจกรรมอย่างน้อย 1 อย่าง');
-        // scroll ไปหา event section
         document.querySelector('[data-event]').scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
+      }
+      // 3) Date range — guard 90 days max
+      const sd = document.getElementById('start-date')?.value?.trim();
+      const ed = document.getElementById('end-date')?.value?.trim();
+      if (sd && ed) {
+        const parseTH = (s) => {
+          const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+          if (!m) return null;
+          const d = parseInt(m[1],10), mo = parseInt(m[2],10), y = parseInt(m[3],10) - 543;
+          return new Date(y, mo - 1, d);
+        };
+        const ds = parseTH(sd), de = parseTH(ed);
+        if (ds && de) {
+          const days = Math.round((de - ds) / 86400000);
+          if (days > 90) {
+            e.preventDefault();
+            showToast(`ช่วงเวลายาวเกินไป (${days} วัน) — สูงสุด 90 วัน เพื่อไม่ให้ระบบทำงานหนักเกิน`);
+            document.querySelector('[data-range]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+          }
+          if (days < 0) {
+            e.preventDefault();
+            showToast('วันสิ้นสุดต้องอยู่หลังวันเริ่ม');
+            return;
+          }
+        }
       }
       startLoading();
     });
 
-    // ===== ตรวจสอบฤกษ์ของฉัน =====
+    // ===== ตรวจสอบฤกษ์ของฉัน (mode ตามเมนูด้านบน) =====
     document.getElementById('check-btn').addEventListener('click', async () => {
+      const isPersonal = (_currentMode() === 'personal');
       const date = document.getElementById('check-date').value;
       const time = document.getElementById('check-time').value;
       const event = document.getElementById('check-event').value;
       const result = document.getElementById('check-result');
       if (!date || !time) {
-        result.innerHTML = '<p style="color:#b71c1c">⚠️ กรุณากรอกวันที่และเวลา</p>';
+        result.innerHTML = '<p style="color:#b71c1c">⚠️ กรุณากรอกวันที่และเวลาฤกษ์</p>';
         return;
+      }
+      if (isPersonal) {
+        const bd = document.getElementById('check-birth-date').value;
+        const bt = document.getElementById('check-birth-time').value;
+        if (!bd || !bt) {
+          result.innerHTML = '<p style="color:#b71c1c">⚠️ โหมดเฉพาะบุคคลต้องกรอกวันเกิด + เวลาเกิด</p>';
+          return;
+        }
       }
       result.innerHTML = '<p style="color:#6d4c00;text-align:center;padding:14px;">⏳ กำลังคำนวณ...</p>';
       const fd = new FormData();
@@ -1505,16 +1976,10 @@
       fd.append('check_time', time);
       fd.append('check_province', document.querySelector('select[name=province]').value);
       fd.append('check_event_key', event);
-      const birthDateEl = document.querySelector('input[name=birth_date_th]');
-      const birthTimeEl = document.querySelector('input[name=birth_time]');
-      const birthProvEl = document.querySelector('[name=birth_province]');
-      const birthDate = birthDateEl ? birthDateEl.value : '';
-      const birthTime = birthTimeEl ? birthTimeEl.value : '';
-      const birthProv = birthProvEl ? birthProvEl.value : '';
-      if (birthDate && birthTime) {
-        fd.append('birth_date_th', birthDate);
-        fd.append('birth_time', birthTime);
-        fd.append('birth_province', birthProv);
+      if (isPersonal) {
+        fd.append('birth_date_th', document.getElementById('check-birth-date').value);
+        fd.append('birth_time', document.getElementById('check-birth-time').value);
+        fd.append('birth_province', document.getElementById('check-birth-prov').value);
       }
       try {
         const res = await fetch('/muhurta/check', { method: 'POST', body: fd });
@@ -1556,7 +2021,45 @@
       if (d.event_label) {
         html += `<div class="hit-summary-text">🎯 กิจกรรม: <strong>${d.event_label}</strong> (คะแนนกิจกรรม ${d.event_extra_score >= 0 ? '+' : ''}${d.event_extra_score})</div>`;
       }
-      if (d.personal_bhava) {
+      if (d.personal_eval) {
+        const pe = d.personal_eval;
+        if (pe.has_warning) {
+          html += `<div class="personal-warning-banner" style="border-radius:6px;margin:8px 0;">👤 ⚠️ ${pe.warning_lines.join(' · ')}</div>`;
+        }
+        html += `<div class="dual-score-block" style="margin:8px 0;"><div class="dual-score-row"><span class="dual-score-label">👤 ต่อเจ้าชะตา</span><span class="grade-percent-num">${pe.score_percent.toFixed(2)}%</span><div class="grade-percent-bar"><div class="grade-percent-fill tier-${pe.tier}" style="width:${pe.score_percent}%"></div></div><span class="grade-percent-raw">${pe.total_score}/${pe.score_max}</span></div></div>`;
+        html += '<div class="personal-block" style="margin:8px 0;">';
+        html += '<div class="personal-block-title">👤 ผลฤกษ์ต่อเจ้าชะตา</div>';
+        html += '<div class="personal-stat-grid">';
+        const bSign = pe.bhava_score > 0 ? '+' : '';
+        const bIcon = pe.bhava_tone === 'warning' ? '⚠️' : '✓';
+        html += `<div class="personal-stat tone-${pe.bhava_tone}"><div class="ps-section-label">ลัคนาฤกษ์ตกภพของเจ้าชะตา<span class="ps-score-pill">${bSign}${pe.bhava_score}</span></div><div class="ps-bullet">${bIcon} ภพ ${pe.bhava} — ${pe.bhava_label}</div></div>`;
+        const dTone = pe.is_dasa_kalee ? 'warning' : 'neutral';
+        const dSign = pe.dasa_kalee_score > 0 ? '+' : '';
+        const dBody = pe.is_dasa_kalee
+          ? `⚠️ ตรงวันกาลีจร (${pe.dasa_kalee_weekday_name})`
+          : (pe.dasa_kalee_weekday_name ? `✓ ปลอดวันกาลีจร <span class="ps-hint">(วันที่ควรเลี่ยง: ${pe.dasa_kalee_weekday_name})</span>` : '✓ ปลอดวันกาลีจร');
+        html += `<div class="personal-stat tone-${dTone}"><div class="ps-section-label">วันกาลีจร (ปีอายุ ${pe.year_of_life} · ดาว${pe.dasa_kalee_planet})<span class="ps-score-pill">${dSign}${pe.dasa_kalee_score}</span></div><div class="ps-bullet">${dBody}</div></div>`;
+        html += '</div>';
+        if (pe.event_analysis) {
+          const ea = pe.event_analysis;
+          const eaSign = ea.score >= 0 ? '+' : '';
+          html += `<div class="event-key-analysis tone-${ea.tone}"><div class="ps-section-label">🎯 ดาวสำคัญของ "${ea.event_label}" — ${ea.key_planet}<span class="ps-score-pill">${eaSign}${ea.score}</span></div>`;
+          (ea.narrative_lines || []).forEach(line => {
+            html += `<div class="ps-bullet">${line}</div>`;
+          });
+          html += '</div>';
+        }
+        if (pe.chart_health) {
+          const ch = pe.chart_health;
+          const chTone = ch.score < 0 ? 'warning' : 'neutral';
+          const chSign = ch.score >= 0 ? '+' : '';
+          html += `<div class="chart-health tone-${chTone}"><div class="ps-section-label">🌟 สุขภาพดวงฤกษ์<span class="ps-score-pill">${chSign}${ch.score}</span></div>`;
+          html += `<div class="ps-bullet">${ch.d_score < 0 ? '⚠️' : '✓'} เจ้าเรือนตนุ (${ch.chart_lord_planet}) อยู่ราศี${ch.chart_lord_rasi_name} ภพ${ch.chart_lord_bhava} ${ch.chart_lord_bhava_label}${ch.d_score < 0 ? ` (ภพเสีย) — หัก ${ch.d_score}` : ''}</div>`;
+          html += `<div class="ps-bullet">${ch.e_score < 0 ? '⚠️' : '✓'} จันทร์ อยู่ราศี${ch.moon_rasi_name} ภพ${ch.moon_bhava} ${ch.moon_bhava_label}${ch.e_score < 0 ? ` (ภพเสีย) — หัก ${ch.e_score}` : ''}</div>`;
+          html += '</div>';
+        }
+        html += '</div>';
+      } else if (d.personal_bhava) {
         html += `<div class="hit-extras"><span class="extra-tag extra-${d.personal_bhava.tone}">🎯 ตกภพ ${d.personal_bhava.bhava} ของดวงเจ้าชะตา — ${d.personal_bhava.quality}</span></div>`;
       }
       const matched = d.specials.filter(s => s.matched);

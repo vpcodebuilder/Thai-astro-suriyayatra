@@ -3400,3 +3400,141 @@ ScanHit + `_serialize_hit`:
 ### สถานะ commit
 2026-06-16 push ครั้งใหญ่ — Muhurta UX overhaul ครบชุด (Sessions 21-24)
 
+
+
+# ===== Session 25 — หาฤกษ์เฉพาะบุคคล (ครบชุด) — 2026-06-21 =====
+
+## ภาพรวม
+ปลดล็อก + ทำให้ใช้งานจริง "👤 หาฤกษ์เฉพาะบุคคล" บน `/muhurta` —
+ระบบเทียบฤกษ์กับดวงเจ้าชะตาผ่าน 7 เกณฑ์ + UI overhaul + วิธีใช้ใหม่
++ ตัดชื่ออาจารย์ออกจาก UI
+
+## โมดูลใหม่
+- **`thai_astro/muhurta_personal.py`** ★ ใหม่ — orchestrator การประเมินฤกษ์ต่อเจ้าชะตา
+  - `build_natal_context(birth_dt, province)` — cache chart + taksa ครั้งเดียว
+  - `evaluate_personal(moment, chart, natal, event_key=...)` — ประเมิน 7 เกณฑ์
+  - `analyze_event_key_planet(event_key, chart, natal)` — multi-planet C1+C2+C3 averaged
+  - `analyze_chart_health(chart)` — D + E (chart_lord + จันทร์ ตกภพเสียของฤกษ์)
+  - `_rotated_kalee_planet(birth_planet, year_of_life)` — ดาวกาลีจรของ dasa ปัจจุบัน
+  - constants: `PLANET_MEANINGS_SHORT`, `BHAVA_MEANINGS_SHORT`, `GOOD_BHAVAS`, `DUSTHANA_BHAVAS`,
+    `PERSONAL_SCORE_MIN = -12`, `PERSONAL_SCORE_MAX = 7`
+
+## คะแนน "ผลต่อเจ้าชะตา" — 7 เกณฑ์ (range −12 ถึง +7)
+
+| # | เกณฑ์ | ช่วงคะแนน | กฎ |
+|---|------|----------|----|
+| 1 | A: ลัคนาฤกษ์ตกภพของเจ้าชะตา | −3 ถึง +2 | ตนุ +2 / kendra/trikona/ลาภะ +1 / 2,3=0 / อริ −2 / มรณะ −3 / วินาส −2 |
+| 2 | B: วันกาลีจร (rotated kalee) | −2 ถึง 0 | ตรงวันของ "ดาวกาลกิณีของ dasa ปัจจุบัน" → −2 |
+| 3 | C1: ดาวสำคัญตกภพในฤกษ์ | −2 ถึง +1 | good +1 / neutral 0 / bad −2 — average ทุก favored_planet |
+| 4 | C2: ราศีดาวสำคัญตกภพในเจ้าชะตา | −2 ถึง +1 | เหมือน C1 — average |
+| 5 | C3: dignity ดาวสำคัญ | −1 ถึง +1 | แข็ง (อุจน์/เกษตร/มหาจักร/จุลจักร/ราชา/เทวี) +1 / นิจ/ประ −1 — average |
+| 6 | D: เจ้าเรือนตนุของฤกษ์ | −1 ถึง +1 | good +1 / bad −1 — chart_lord ตกภพในดวงฤกษ์เอง |
+| 7 | E: จันทร์ของฤกษ์ | −1 ถึง +1 | good +1 / bad −1 — จันทร์ตกภพในดวงฤกษ์ |
+
+**สูตร %**: `(score + 12) / 19 × 100` — MIN=0%, MAX=100%, score=0 → 63%  
+**is_suitable** = (total_score ≥ 0 = ≥ 63%)
+
+## Multi-planet analysis
+- แต่ละ event ใน `muhurta_criteria.EVENTS` มี `favored_planets` (list 2-3 ดาว)
+- ระบบตรวจทุกดาว → average c1/c2/c3 → score เดียว (range เท่าเดิม)
+- Narrative แสดงแต่ละดาวแยก + บรรทัด "📊 เฉลี่ย N ดาว"
+- ตัวอย่าง: office_opening (พฤหัสบดี + พุธ + อาทิตย์) — แต่ละดวงได้ดี/เสียคนละแบบ → average
+
+## ดาวกาลีจร (rotated kalee)
+```
+ในช่วง dasa 12 ปี: ดาวเสวยอายุ = "บริวารใหม่"
+ดาวกาลีจร = TAKSA_CYCLE[(birth_idx + dasa_idx + 7) % 8]
+ถ้า dasa_idx เปลี่ยนทุก 12 ปี → ดาวกาลีจรก็เปลี่ยน
+```
+ตัวอย่าง: เกิดวันอาทิตย์ ปี 47 (dasa ศรี = พุธ) → กาลีจร = อังคาร → ฤกษ์วันอังคารตลอด 12 ปีนี้ −2
+
+## ROEK_LORDS (เพิ่ม `thai_astro/nakshatra.py`)
+9 ฤกษ์ × ดาวเจ้าฤกษ์ + ความหมาย (ทลิทโท-เกตุ / มหัทธโน-ศุกร์ / โจโร-อังคาร / ภูมิปาโล-จันทร์ /
+เทศาตรี-พุธ / เทวี-พฤหัสบดี / เพชฌฆาต-ราหู / ราชา-อาทิตย์ / สมโณ-เสาร์)
+แสดงท้าย chip "⭐ ฤกษ์ใหญ่ · {planet}" + popover ความหมาย + กิจกรรมที่เหมาะ
+
+## UI overhaul (`webapp/templates/muhurta.html` + `_muhurta_hit_row.html`)
+
+### Form
+- Step 1 มี mode 3 ปุ่ม: ทั่วไป / **เฉพาะบุคคล (เปิดแล้ว)** / โหร (disabled)
+- เมื่อกด personal → ข้อมูลเจ้าชะตา (วันเกิด/เวลา/จังหวัด) ขยาย inline ใน Step 1
+- ใช้โหมดเดียวกันกับกล่อง "ตรวจสอบฤกษ์ที่ได้มาจากที่อื่น" (sync auto)
+
+### Result section
+- **Header sticky** เลือดหมู-ทอง รวม "📋 ผลการหาฤกษ์ + N กิจกรรม + ดวงเจ้าชะตา" + ปุ่ม "▼ ย่อ / ▶ ขยาย"
+- **Chip 'ดาว/ภพ สำคัญของกิจกรรม'** บน panel header — แสดง favored_planets/favored_bhavas + meaning
+- **Per-panel filter** "เฉพาะที่เหมาะกับเจ้าชะตา" — กรอง + sort by personal score DESC
+- **Hit-card 2-col equal heights** — รายละเอียดผลฤกษ์ต่อเจ้าชะตา 4 การ์ดเรียงสม่ำเสมอ:
+  - ลัคนาฤกษ์ตกภพ (+ pill มุมขวา)
+  - วันกาลีจร (+ pill)
+  - 🎯 ดาวสำคัญของกิจกรรม (multi-planet narrative + pill)
+  - 🌟 สุขภาพดวงฤกษ์ (chart_lord + จันทร์ + pill)
+- **Dual-score block** ในการ์ด: "📋 ดวงฤกษ์ X%" + "👤 ต่อเจ้าชะตา Y%" — bar + raw score
+
+### Modals
+- "💡 คะแนนและเกรดฤกษ์ทั่วไป" (modal เดิม)
+- "👤 คะแนนผลต่อเจ้าชะตา" (modal ใหม่ — แสดงเฉพาะ mode=personal)
+- ปุ่ม modal ทั้งคู่ย้ายไปอยู่ **ล่างสุดของหน้า** เสมอ (ไม่ใช่ใน result section)
+
+### Form validation (Session 25 ใหม่)
+- โหมดเฉพาะบุคคลแต่ลืมวันเกิด/เวลาเกิด → toast เตือน + scroll ไปฟิลด์
+- ช่วงเวลาเกิน 90 วัน → toast เตือน (กันระบบโหลดหนัก)
+- วันสิ้นสุดก่อนวันเริ่ม → toast เตือน
+
+## ตัด user-visible "ชื่ออาจารย์/ตำราเฉพาะ"
+- ทุก template + changelog.py — แทนที่ด้วย "ตำราโหราศาสตร์ไทยมาตรฐาน" รวม
+- ยังคงเครดิตใน docstring/comments Python (ไม่กระทบ UI)
+
+## วิธีใช้ใหม่
+### หน้า `/`
+"ผูกดวงสุริยยาตร์คืออะไร" — อธิบายว่าเป็นวิธีคำนวณดวงไทยดั้งเดิม + สำคัญอย่างไร + วิธีใช้ 5 ขั้น
+แทน "Scrubber" → "กล่องเลื่อนเวลาดาวจร"
+
+### หน้า `/horathaynu`
+"โหรทายหนูคืออะไร" — อธิบาย prashna astrology + ต่างจากสุริยยาตร์ + วิธีใช้
+
+## ไฟล์ที่แตะ (Session 25)
+| ไฟล์ | สรุป |
+|------|------|
+| `thai_astro/muhurta_personal.py` ★ใหม่ | personal evaluator (7 เกณฑ์ + multi-planet) |
+| `thai_astro/muhurta.py` | wire `evaluate_personal()` per (moment, event) ใน scan loop |
+| `thai_astro/nakshatra.py` | + ROEK_LORDS dict (9 ฤกษ์ × planet + meaning) |
+| `webapp/server.py` | `_serialize_personal_eval` + personal_score % + tier + planet/bhava chips per group + `/muhurta/check` รับ birth params + `_personal_score_to_percent` |
+| `webapp/templates/muhurta.html` | mode UI / step 1 inline birth / dual-score / chip / sort+filter / 2 modals / validation / 2-row layout / score buttons at bottom |
+| `webapp/templates/_muhurta_hit_row.html` | personal-block 4 cards (uniform layout) + multi-planet narrative |
+| `webapp/templates/index.html` | howto ใหม่ + ตัดชื่ออาจารย์ |
+| `webapp/templates/horathaynu.html` | howto ใหม่ + ตัดชื่ออาจารย์ |
+| `webapp/templates/about.html` | ตัดเครดิตอาจารย์ใน footer |
+| `webapp/changelog.py` | entry 2026.06.21 + cleanup ชื่ออาจารย์ใน entries เดิม |
+
+## Cache version history (Session 25)
+| ver | เนื้อหา |
+|-----|---------|
+| `v=20260620a` | เปิด personal mode + 3 stat cards |
+| `v=20260620b` | tabs ใน check section |
+| `v=20260620c` | ลบ tabs, ผูก check กับ mode บน |
+| `v=20260620d` | merge result-header + sticky toolbar |
+| `v=20260620e` | personal scoring v2 (drop aspect, add chart-health) |
+| `v=20260620f` | event key-planet analysis (primary) |
+| `v=20260620g` | personal score modal (7 factors) |
+| `v=20260620h` | positive scoring + bhava names + dual % pill |
+| `v=20260620i` | multi-planet analysis + meaning chips |
+| `v=20260620j` | rewrite howto + ตัดชื่ออาจารย์ |
+| `v=20260620k` | polish: no +, plain Thai, filter hint, card uniform |
+| `v=20260620l` | form validation (personal birth + 90-day cap) |
+
+## Gotchas สำคัญ
+1. **scan_range_multi_events ต้องคำนวณ PE ต่อ event ใหม่** — ไม่ใช้ `dataclasses.replace`
+   เพราะ total_score ต้อง re-aggregate ทั้งหมด (รวม event_analysis.score)
+2. **document.write() กับ form submit handler** — handler ใหม่ binds เฉพาะตอน fresh page navigation
+   (ไม่ใช่ document.write replace) → ทดสอบต้อง location.href
+3. **ดาวกาลีจรเปลี่ยนทุก 12 ปี** (rotated kalee ตาม dasa cycle) ต่างจากดาวกาลีของวันเกิด (fixed)
+4. **Average per-planet score** ใช้ banker's round (Python `round()`) — c1/c2/c3 แต่ละตัว
+   round แยกแล้วบวก ไม่ใช่ round รวม
+5. **PE.aspects เก่าถูกถอด** — server.py ใช้ `_serialize_personal_eval` ใหม่ที่ไม่มี aspects fields
+6. **ROEK_LORDS dict ต่างจาก NAKSHATRA_LORDS** — ROEK_LORDS = 9 หมวดฤกษ์ × ดาว (ใช้ใน UI),
+   NAKSHATRA_LORDS = 27 entries Vimshottari (สำหรับ dasa)
+
+## Tests
+- 199/199 ผ่านอยู่ตลอด (ไม่เพิ่ม test ใหม่ session นี้ — verify ผ่าน browser)
+
