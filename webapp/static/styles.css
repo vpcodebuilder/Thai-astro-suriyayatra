@@ -5152,3 +5152,173 @@ strong.kw {
   line-height: 1.3;
   opacity: 0.78;
 }
+
+/* ===== 💫 ไส้ชะตา — เจาะลึกรายดาว ===== */
+.nav-deep-section { margin-top: 1.5rem; }
+.nav-deep-title {
+  font-size: 1rem;
+  color: var(--gold, #b78b3a);
+  margin: 0 0 0.35rem;
+  font-weight: 700;
+}
+.nav-deep-intro {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0 0 0.9rem;
+}
+.nav-deep-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 0.85rem;
+}
+.nav-deep-card {
+  background: var(--surface, #fffbf3);
+  border: 1px solid var(--border-color, #e3d4ad);
+  border-left: 4px solid var(--border-color, #e3d4ad);
+  border-radius: 0.55rem;
+  padding: 0.75rem 0.9rem;
+}
+/* แถบสีซ้ายตามโทนผลรวม */
+.nav-deep-tone-good       { border-left-color: #3e9d52; }
+.nav-deep-tone-warning    { border-left-color: #d49100; }
+.nav-deep-tone-heavy      { border-left-color: #c0392b; }
+.nav-deep-tone-neutral    { border-left-color: #b0a07a; }
+.nav-deep-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.45rem;
+}
+.nav-deep-planet { font-weight: 700; font-size: 0.95rem; }
+.nav-deep-governs {
+  font-size: 0.8rem;
+  color: var(--gold-deep, #6d4c00);
+  background: rgba(183, 139, 58, 0.08);
+  border-radius: 0.35rem;
+  padding: 0.35rem 0.5rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.45;
+  font-weight: 600;
+}
+.nav-deep-body {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-color, #3a2a00);
+}
+
+/* ===== 💫 Yoka chart modal — กดโยคดูในผังดวง ===== */
+.oracle-yoga-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0 0 0.6rem;
+  opacity: 0.9;
+}
+.yoka-clickable { cursor: pointer; position: relative; transition: transform .12s, box-shadow .12s; }
+.yoka-clickable:hover,
+.yoka-clickable:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 12px rgba(109, 20, 20, 0.18);
+  outline: none;
+}
+.yoka-view-chart {
+  display: inline-block;
+  font-size: 0.72rem;
+  color: var(--gold-deep, #6d4c00);
+  background: rgba(183, 139, 58, 0.12);
+  border: 1px solid rgba(183, 139, 58, 0.35);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  margin-top: 0.35rem;
+  white-space: nowrap;
+}
+
+.yoka-modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(40, 8, 8, 0.62);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+.yoka-modal-bg.show { display: flex; }
+.yoka-modal {
+  background: var(--surface, #fffbf3);
+  border: 2px solid var(--gold, #b78b3a);
+  border-radius: 0.85rem;
+  max-width: 760px;
+  width: 100%;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+.yoka-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1.5px solid var(--border-color, #e3d4ad);
+  background: linear-gradient(180deg, rgba(183,139,58,0.10), transparent);
+}
+.yoka-modal-code {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--gold-deep, #6d4c00);
+  border-radius: 0.35rem;
+  padding: 0.12rem 0.45rem;
+}
+.yoka-modal-title { margin: 0; font-size: 1.05rem; color: var(--gold-deep, #6d4c00); flex: 1; }
+.yoka-modal-close {
+  background: none; border: none; font-size: 1.2rem; cursor: pointer;
+  color: var(--text-muted); line-height: 1; padding: 0.2rem 0.4rem; border-radius: 0.3rem;
+}
+.yoka-modal-close:hover { background: rgba(0,0,0,0.06); }
+.yoka-modal-body {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1rem;
+  padding: 1.1rem;
+  align-items: start;
+}
+@media (max-width: 680px) {
+  .yoka-modal-body { grid-template-columns: 1fr; }
+}
+.yoka-modal-chart {
+  width: 100%;
+}
+.yoka-modal-chart svg { width: 100%; height: auto; display: block; }
+.yoka-modal-label { font-size: 0.8rem; color: var(--text-muted); }
+.yoka-modal-planets-row { margin-bottom: 0.8rem; }
+.yoka-modal-planets {
+  display: block;
+  margin-top: 0.25rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--gold-deep, #6d4c00);
+}
+.yoka-modal-sect { margin-bottom: 0.85rem; }
+.yoka-modal-sect-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--gold, #b78b3a);
+  margin-bottom: 0.25rem;
+}
+.yoka-modal-sect-body { font-size: 0.88rem; line-height: 1.55; color: var(--text-color, #3a2a00); }
+
+/* highlight/dim ดาวใน cloned chart */
+.yoka-chart-clone .yoka-dim { opacity: 0.22; filter: grayscale(0.6); transition: opacity .2s; }
+.yoka-chart-clone .yoka-hl .planet-chip-svg {
+  stroke: #d4a017;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 6px rgba(212, 160, 23, 0.95));
+}
+.yoka-chart-clone .yoka-hl {
+  animation: yokaPulse 1.4s ease-in-out infinite;
+}
+@keyframes yokaPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.78; }
+}

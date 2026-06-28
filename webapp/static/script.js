@@ -699,6 +699,102 @@ function setupAstroChat() {
   }
 }
 
+// ============================================================
+// 💫 Yoka chart modal — กดโยคแล้วเปิดผังดวง highlight ดาวที่ทำให้ได้โยค
+// ============================================================
+function setupYokaChartModal() {
+  const bg = document.getElementById("yoka-modal-bg");
+  const srcSvg = document.querySelector(".zodiac-svg");
+  if (!bg || !srcSvg) return;
+
+  const chartBox = document.getElementById("yoka-modal-chart");
+  const elCode = document.getElementById("yoka-modal-code");
+  const elTitle = document.getElementById("yoka-modal-title");
+  const elPlanets = document.getElementById("yoka-modal-planets");
+  const elDesc = document.getElementById("yoka-modal-desc");
+  const elMeaning = document.getElementById("yoka-modal-meaning");
+  const closeBtn = document.getElementById("yoka-modal-close");
+
+  function buildHighlightedChart(planets) {
+    // clone ผังดวงจริง แล้ว highlight เฉพาะดาวกำเนิดที่อยู่ใน list
+    chartBox.innerHTML = "";
+    const clone = srcSvg.cloneNode(true);
+    clone.classList.add("yoka-chart-clone");
+    clone.removeAttribute("style");
+    // เอา layer ที่ไม่เกี่ยวออก: ตรียางค์/ธาตุ/orbit (ลดความรก)
+    clone.querySelectorAll(".triyangka-layer, .orbit-mode-layer").forEach((n) => n.remove());
+    const want = new Set(planets.map((p) => p.trim()).filter(Boolean));
+    let hitCount = 0;
+    clone.querySelectorAll(".planet-svg-group").forEach((g) => {
+      const isTransit = g.classList.contains("transit-chip-group");
+      const name = g.getAttribute("data-tip-planet");
+      if (!isTransit && want.has(name)) {
+        g.classList.add("yoka-hl");
+        hitCount++;
+      } else {
+        g.classList.add("yoka-dim");
+      }
+    });
+    chartBox.appendChild(clone);
+    return hitCount;
+  }
+
+  function open(data) {
+    elCode.textContent = data.code || "";
+    elCode.style.display = data.code ? "" : "none";
+    elTitle.textContent = data.name || "เกณฑ์โยค";
+    elDesc.textContent = data.desc || "—";
+    elMeaning.textContent = data.meaning || "—";
+    const planets = (data.planets || "").split(",").map((s) => s.trim()).filter(Boolean);
+    if (planets.length) {
+      elPlanets.textContent = planets.join("  ·  ");
+      elPlanets.parentElement.style.display = "";
+    } else {
+      elPlanets.parentElement.style.display = "none";
+    }
+    buildHighlightedChart(planets);
+    bg.classList.add("show");
+    bg.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+  }
+
+  function close() {
+    bg.classList.remove("show");
+    bg.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+    chartBox.innerHTML = "";
+  }
+
+  function handler(el) {
+    open({
+      name: el.getAttribute("data-yoka-name"),
+      code: el.getAttribute("data-yoka-code"),
+      category: el.getAttribute("data-yoka-category"),
+      desc: el.getAttribute("data-yoka-desc"),
+      meaning: el.getAttribute("data-yoka-meaning"),
+      planets: el.getAttribute("data-yoka-planets"),
+    });
+  }
+
+  document.querySelectorAll(".yoka-clickable").forEach((el) => {
+    el.addEventListener("click", () => handler(el));
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handler(el);
+      }
+    });
+  });
+
+  closeBtn.addEventListener("click", close);
+  bg.addEventListener("click", (e) => {
+    if (e.target === bg) close();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && bg.classList.contains("show")) close();
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   setupDateSync("birth_date_th", "birth_date_picker");
   setupDatePickerButtons();
@@ -708,4 +804,5 @@ document.addEventListener("DOMContentLoaded", () => {
   setupTransitScrubber();
   setupScrollRestore();
   setupAstroChat();
+  setupYokaChartModal();
 });

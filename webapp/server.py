@@ -897,6 +897,9 @@ def chart_to_view(
                 "nav_combined_meaning": _na.combined_meaning,
                 "nav_combined_tone": _na.combined_tone,
                 "nav_special_note": _na.special_note,
+                "nav_governs": _na.governs,
+                "nav_deep_meaning": _na.deep_meaning,
+                "nav_ruled_bhavas": _na.ruled_bhavas,
             })
     _nav_planet_meta = {
         a.planet: {

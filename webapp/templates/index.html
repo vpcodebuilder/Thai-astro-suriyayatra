@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260628d" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260628f" />
 </head>
 <body class="view-general" data-scroll-target="{% if scroll_target == '1' %}transit{% endif %}">
   <header class="site-header">
@@ -1337,6 +1337,34 @@
           </div>
         </div>
 
+        {# --- 💫 ไส้ชะตา: เจาะลึกรายดาว (navamsa × เจ้าเรือนภพ) --- #}
+        <div class="nav-deep-section">
+          <h3 class="nav-deep-title">💫 ไส้ชะตา — ดาวแต่ละดวงดูแลเรื่องอะไร และนวางค์บอกอะไร</h3>
+          <p class="nav-deep-intro">
+            นวางค์จักรคือ "ไส้ใน" ของชะตา — บอกแก่นแท้และบั้นปลายของเรื่องที่ดาวแต่ละดวงดูแล
+            (ดาวเป็น<b>เจ้าเรือนภพ</b>ใด = ดูแลเรื่องนั้น) เทียบกับราศีจักรที่เป็น "เปลือกนอก"
+          </p>
+          <div class="nav-deep-grid">
+            {% for p in result.planets %}
+            {% if p.nav_deep_meaning %}
+            <div class="nav-deep-card nav-deep-tone-{{ p.nav_combined_tone }}">
+              <div class="nav-deep-head">
+                <span class="nav-planet-chip {{ p.color_class }}">{{ p.abbr }}</span>
+                <span class="nav-deep-planet">{{ p.name }}</span>
+                {% if p.nav_combined_label %}
+                <span class="nav-combined-pill {{ p.nav_combined_color_class }}" style="margin-left:auto;font-size:0.7rem">
+                  {{ p.nav_combined_icon }} {{ p.nav_combined_label }}
+                </span>
+                {% endif %}
+              </div>
+              <div class="nav-deep-governs">{{ p.nav_governs }}</div>
+              <div class="nav-deep-body">{{ p.nav_deep_meaning }}</div>
+            </div>
+            {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+
         <p class="oracle-footer" style="margin-top:0.75rem">
           <small>* นวางค์จักร (D9) = กายละเอียด ราศีจักรคือรูปลักษณ์ภายนอก นวางค์คือจิตใจ/โชคชะตาภายใน
           ดาวแข็งในนวางค์แต่อ่อนในราศี = "ยิ่งตกยิ่งดี" · ดาวแข็งในราศีแต่อ่อนในนวางค์ = "ท่าดีทีเหลว"</small>
@@ -1431,9 +1459,18 @@
         {% if o.yoga_messages %}
           <div class="oracle-yogas">
             <h3>⭐ เกณฑ์ดวงพื้นฐานของคุณ</h3>
+            <p class="oracle-yoga-hint">👆 แตะที่เกณฑ์โยคเพื่อดูในผังดวงว่าได้มาจากดาวดวงไหน</p>
             {% for y in o.yoga_messages %}
-              <div class="oracle-yoga sev-{{ y.severity }}">
+              <div class="oracle-yoga sev-{{ y.severity }} yoka-clickable"
+                   role="button" tabindex="0"
+                   data-yoka-name="{{ y.name }}"
+                   data-yoka-code="{{ y.code }}"
+                   data-yoka-category="{{ y.category }}"
+                   data-yoka-desc="{{ y.desc }}"
+                   data-yoka-meaning="{{ y.effect }}"
+                   data-yoka-planets="{{ y.planets | join(',') }}">
                 <div class="oracle-yoga-text">{{ y.text | safe }}</div>
+                <span class="yoka-view-chart">🔍 ดูในผังดวง</span>
               </div>
             {% endfor %}
           </div>
@@ -1455,13 +1492,21 @@
                 <div class="ap-category">
                   <h4 class="ap-cat-title">{{ grp.category }}</h4>
                   {% for p in grp.patterns %}
-                    <div class="ap-card ap-tone-{{ p.tone }}">
+                    <div class="ap-card ap-tone-{{ p.tone }} {% if p.planets_involved %}yoka-clickable{% endif %}"
+                         {% if p.planets_involved %}role="button" tabindex="0"
+                         data-yoka-name="{{ p.name }}"
+                         data-yoka-code="{{ p.code }}"
+                         data-yoka-category="{{ p.category }}"
+                         data-yoka-desc="{{ p.description }}"
+                         data-yoka-meaning="{{ p.meaning }}"
+                         data-yoka-planets="{{ p.planets_involved | join(',') }}"{% endif %}>
                       <div class="ap-head">
                         <span class="ap-code">{{ p.code }}</span>
                         <span class="ap-name">{{ p.name }}</span>
                         {% if p.tone == 'good' %}<span class="ap-badge ap-badge-good">✓ ได้เกณฑ์</span>
                         {% elif p.tone == 'warning' %}<span class="ap-badge ap-badge-warn">⚠ เข้าโยคเสีย</span>
                         {% endif %}
+                        {% if p.planets_involved %}<span class="yoka-view-chart">🔍 ดูในผังดวง</span>{% endif %}
                       </div>
                       <div class="ap-desc">{{ p.description }}</div>
                       <div class="ap-meaning">{{ p.meaning }}</div>
@@ -1672,10 +1717,38 @@
   <!-- tooltip for planet hover (ปรากฎเมื่อ hover ดาว) -->
   <div id="planet-tooltip" class="planet-tooltip" role="tooltip" aria-hidden="true"></div>
 
+  <!-- modal: ดูโยคในผังดวง (highlight ดาวที่ทำให้ได้โยค) -->
+  <div id="yoka-modal-bg" class="yoka-modal-bg" aria-hidden="true">
+    <div class="yoka-modal" role="dialog" aria-modal="true" aria-labelledby="yoka-modal-title">
+      <div class="yoka-modal-head">
+        <span id="yoka-modal-code" class="yoka-modal-code"></span>
+        <h3 id="yoka-modal-title" class="yoka-modal-title"></h3>
+        <button id="yoka-modal-close" class="yoka-modal-close" aria-label="ปิด">✕</button>
+      </div>
+      <div class="yoka-modal-body">
+        <div id="yoka-modal-chart" class="yoka-modal-chart"><!-- cloned SVG --></div>
+        <div class="yoka-modal-info">
+          <div class="yoka-modal-planets-row">
+            <span class="yoka-modal-label">ดาวที่ประกอบเป็นโยค:</span>
+            <span id="yoka-modal-planets" class="yoka-modal-planets"></span>
+          </div>
+          <div class="yoka-modal-sect">
+            <div class="yoka-modal-sect-title">📐 นับยังไงถึงได้โยค</div>
+            <div id="yoka-modal-desc" class="yoka-modal-sect-body"></div>
+          </div>
+          <div class="yoka-modal-sect">
+            <div class="yoka-modal-sect-title">💫 ความหมาย</div>
+            <div id="yoka-modal-meaning" class="yoka-modal-sect-body"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <footer>
     <p>คำนวณตามคัมภีร์สุริยยาตร์ของไทย · port มาจาก Devtino.Astrology</p>
   </footer>
 
-  <script src="/static/script.js?v=20260627x"></script>
+  <script src="/static/script.js?v=20260628a"></script>
 </body>
 </html>

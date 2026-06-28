@@ -3669,3 +3669,84 @@ for it in items:
 | `webapp/changelog.py` | เพิ่ม v2026.06.28 |
 | `webapp/templates/index.html` | title attributes + nav-glossary accordion |
 | `webapp/static/styles.css` | navamsa-grid/wrap 360→260px |
+
+---
+
+# ===== Session 27 — ไส้ชะตานวางค์ (deep) + กดโยคดูในผังดวง — 2026-06-28 =====
+
+## ภาพรวม
+2 ฟีเจอร์เชิงคำทำนาย/UX บนหน้าผูกดวง (`/`):
+1. **ไส้ชะตานวางค์** — เจาะลึกรายดาว: นวางค์จักร × เจ้าเรือนภพ
+2. **กดโยคดูในผังดวง** — popup highlight ดาวที่ทำให้ได้โยค + วิธีนับ
+
+## ฟีเจอร์ 1: ไส้ชะตา (deep interpretation)
+
+### หลักการ
+- ราศีจักร = เปลือกนอก/ช่วงต้นชีวิต; นวางค์ = ไส้ใน/แก่นแท้/ดอกผล/บั้นปลาย
+- ดาวเป็น "เจ้าเรือนภพ" ใด = ดูแลเรื่องนั้นในชีวิต
+- กำลังนวางค์ของดาว → บอกไส้ในของเรื่องที่ดาวนั้นดูแล
+- เดิมการ์ดบอกแค่ strong/weak โดยไม่บอกว่าดาวดูแลเรื่องอะไร → user ต้องการให้เชื่อมกับชีวิตจริง
+
+### `thai_astro/navamsa.py`
+- `BHAVA_DOMAIN_SHORT[1..12]` — เรื่องที่แต่ละภพดูแล (ฉบับสั้น)
+- `PLANET_NATURAL_DOMAIN` — โดเมนธรรมชาติของดาว (ใช้กับดาวลอย เกตุ/มฤตยู ที่ไม่ครองภพ)
+- `BHAVA_NAMES_TH` — ชื่อภพไทย 12
+- `_DEEP_NARRATIVE[(rashi_str, nav_str)]` — 9 บทเล่าไส้ชะตาตามคู่กำลัง (weak/neutral/strong)
+- `build_deep_meaning(analysis, ruled_bhavas)` → (governs, deep_meaning)
+  - special override: vargottama / uttamanamsa / prakshtra มีบทเฉพาะ
+  - ปิดท้ายด้วย "(ในนวางค์ดาวตก{rashi} ได้ตำแหน่ง{dignity})"
+- `NavamsaAnalysis` + 3 field: `ruled_bhavas`, `governs`, `deep_meaning`
+- `analyze_chart_navamsa`: inverse ของ `chart.house_lords` → ruled_map[planet]=[bhava] → set ต่อ analysis
+
+### `webapp/server.py`
+- planet_positions update +3 key: `nav_governs`, `nav_deep_meaning`, `nav_ruled_bhavas`
+
+### `webapp/templates/index.html`
+- section `.nav-deep-section` ใต้ตารางนวางค์ — การ์ดรายดาว (governs + deep_meaning)
+
+### `webapp/static/styles.css`
+- `.nav-deep-*` — border-left สีตามโทน (good/warning/heavy/neutral)
+
+## ฟีเจอร์ 2: กดโยคดูในผังดวง
+
+### แนวทาง (สำคัญ)
+**Clone ผังดวงจริงที่ render อยู่แล้ว** (`.zodiac-svg`) มาใส่ popup แทนการ generate SVG ใหม่ —
+หรี่ดาวอื่น (`.yoka-dim`) + เรืองแสงดาวที่ประกอบเป็นโยค (`.yoka-hl` pulse + gold glow)
+- ใช้ `data-tip-planet` ที่ chip ดาวกำเนิดมีอยู่แล้ว match กับ `planets_involved`
+- ตัด `.triyangka-layer` + `.orbit-mode-layer` ออกจาก clone ให้สะอาด
+- เลือก natal-only: `.planet-svg-group:not(.transit-chip-group)`
+
+### ข้อมูลที่ใช้ (มีอยู่แล้ว ไม่ต้องคำนวณใหม่)
+- ทุก `AstroPattern.planets_involved` เก็บดาวที่ทำให้เข้าเกณฑ์อยู่แล้ว
+- `description` = วิธีนับ (เช่น "ศุภเคราะห์ในภพ 10: ...", "เจ้าเรือนเกณฑ์-โกณสัมพันธ์: อังคาร↔จันทร์...")
+
+### `thai_astro/oracle_narrative.py`
+- `_build_yoga_messages_from_patterns`: +`code`, `category`, `desc` ใน message dict
+  (เดิมมี `planets` แล้ว) เพื่อให้ ⭐ section กดได้แบบ self-contained
+
+### `webapp/templates/index.html`
+- ⭐ "เกณฑ์ดวงพื้นฐานของคุณ" + 📜 ap-card (28 กฎ): เพิ่ม `.yoka-clickable` + data-attr
+  (`data-yoka-name/code/category/desc/meaning/planets`)
+- modal `#yoka-modal-bg` — chart clone + planets line + "📐 นับยังไง" + "💫 ความหมาย"
+
+### `webapp/static/script.js`
+- `setupYokaChartModal()` — bind click/Enter/Space, clone+highlight, close (✕/backdrop/Esc)
+- **สำคัญ**: handler bind ตอน DOMContentLoaded → ทดสอบต้อง navigate จริง (form submit)
+  ไม่ใช่ document.write (ไม่ refire DOMContentLoaded)
+
+### `webapp/static/styles.css`
+- `.yoka-modal-*` (grid 320px/1fr, responsive 1-col ≤680px)
+- `.yoka-hl` (gold stroke + drop-shadow + pulse animation), `.yoka-dim` (opacity .22 + grayscale)
+
+## ทดสอบ (2/9/2522 14:18, ลัคนาพิจิก) — ผ่าน ไม่มีบั๊ก
+- ไส้ชะตา 10 ดาว: เสาร์เจ้าเรือนภพ3 นวางค์มหาอุจน์ = "ยิ่งตกยิ่งดี" ✓
+- โยคกด: อมลโยค (3 ดาวกระจุกสิงห์) + ราชาโยค (6 ดาวข้าม เมถุน/สิงห์/ธนู) highlight ถูก ✓
+
+## Cache version
+- `styles.css?v=20260628f`, `script.js?v=20260628a`
+
+## Gotchas
+1. `.zodiac-svg` มีทั้ง zodiac chips + orbit chips (เป็น `.planet-svg-group` เหมือนกัน) —
+   clone แล้วตัด `.orbit-mode-layer`; orbit chips ไม่มี `data-tip-planet` จึงไม่ถูก highlight ซ้ำ
+2. oracle_narrative.py แก้แล้ว uvicorn --reload จับ — แต่ถ้า ⭐ section desc ว่าง ให้ restart manual
+3. ดาวลอย (เกตุ/มฤตยู) ไม่ครองภพ → governs ใช้ "ดาวลอย — มีอิทธิพลด้าน{โดเมนธรรมชาติ}"

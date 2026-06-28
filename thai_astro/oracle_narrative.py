@@ -307,6 +307,9 @@ def _build_yoga_messages_from_patterns(matched_patterns: List) -> List[dict]:
             "effect": p.meaning,
             "planets": p.planets_involved,
             "severity": 3 if p.category in ("ปัญจมหาบุรุษ", "โยคสำคัญ") else 2,
+            "code": p.code,
+            "category": p.category,
+            "desc": p.description,
         })
     return msgs
 
