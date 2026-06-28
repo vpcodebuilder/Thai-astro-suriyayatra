@@ -16,6 +16,7 @@
      data-iso="{{ h.iso }}"
      data-province="{{ form.province }}"
      data-event-key="{{ h.event_label and (result.event_keys[0] if result.event_keys|length == 1 else '') or '' }}"
+     data-event-label="{{ h.event_label or '' }}"
      data-period="{{ h.period }}"
      data-wan="{{ h.wan_num }}"
      data-personal-suitable="{{ '1' if pe and pe.is_suitable else '0' }}">
@@ -323,6 +324,4 @@
     <button type="button" class="hit-footer-btn" data-action="collapse-event" title="ย่อกิจกรรมนี้ + เลื่อนขึ้นไปที่หัวข้อ">▲ ย่อกิจกรรมนี้</button>
   </div>
 </div>
-{% if result.mode == 'oracle' %}
-  <div class="hit-detail"></div>
-{% endif %}
+{# Note: oracle mode opens detail in modal (JS-driven) — no inline accordion needed #}

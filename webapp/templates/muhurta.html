@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260620l" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260624k" />
   <style>
     .muhurta-wrap { max-width: 1100px; margin: 0 auto; padding: 16px; color: #3a2a00; }
     .step { background: #fffbf0; border: 1.5px solid #b78b3a; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
@@ -526,23 +526,51 @@
     .planet-mini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 4px; margin-top: 6px; }
     .planet-mini { padding: 4px 6px; border-radius: 6px; background: #fff; border: 1px solid #d8b870; font-size: 12px; }
 
-    /* SVG */
+    /* ===== SVG — ดวงจักราศี ธีมเดียวกับหน้าผูกดวง (เลือดหมู-ทอง-ครีม) ===== */
     .chart-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
     @media (max-width: 700px) { .chart-pair { grid-template-columns: 1fr; } }
     .chart-cell { background: #fff; border: 1px solid #d8b870; border-radius: 8px; padding: 6px; text-align: center; }
     .chart-cell h4 { margin: 4px 0 6px; color: #6d4c00; font-size: 14px; }
-    .m-svg { width: 100%; height: auto; max-width: 420px; }
-    .m-divider { stroke: #b78b3a; stroke-width: 1; opacity: 0.5; }
-    .m-tri-divider { stroke: #b78b3a; stroke-width: 0.6; opacity: 0.25; stroke-dasharray: 2,2; }
-    .m-nak-divider { stroke: #8b5a00; stroke-width: 0.5; opacity: 0.5; }
-    .m-nak-label { font-family: 'Sarabun', sans-serif; font-size: 9.5px; fill: #6d4c00; text-anchor: middle; dominant-baseline: middle; font-weight: 600; }
-    .m-nak-label.active { fill: #b71c1c; font-weight: 700; font-size: 10.5px; }
-    .m-nak-num { font-family: 'Sarabun', sans-serif; font-size: 9px; fill: #8b5a00; text-anchor: middle; dominant-baseline: middle; font-weight: 700; opacity: 0.85; }
-    .m-nak-num.active { fill: #b71c1c; opacity: 1; font-size: 10px; }
-    .m-rim { stroke: #b78b3a; stroke-width: 1.5; fill: none; }
-    .m-rasi-label { font-family: 'Mali', serif; font-size: 14px; fill: #6d4c00; text-anchor: middle; dominant-baseline: middle; }
-    .m-chip { fill: #fff3d2; stroke: #b78b3a; stroke-width: 1.5; }
-    .m-chip.varg { stroke: #8b5a00; stroke-width: 3; }
+
+    .m-svg { width: 100%; height: auto; max-width: 100%; filter: drop-shadow(0 12px 22px rgba(40, 8, 8, 0.35)); }
+
+    /* รัศมีพื้นหลังของผัง — เพิ่มมิติให้เห็นวงราศี/นักษัตร */
+    .m-bg-disk { fill: url(#m-paper-gradient); }
+    .m-bg-rashi-ring { fill: url(#m-rashi-gradient); }
+    .m-bg-nak-ring { fill: url(#m-nak-gradient); opacity: 0.55; }
+
+    /* รั้ว (rim) — gold-deep หนากว่าเดิม + เพิ่มความเข้ม */
+    .m-rim { stroke: #b8860b; stroke-width: 2.5; fill: none; }
+    .m-rim-inner { stroke: #a8780a; stroke-width: 2; fill: none; }
+    .m-rim-nak { stroke: #c9a227; stroke-width: 1.5; fill: none; stroke-dasharray: 3 2; opacity: 0.85; }
+
+    /* เส้นแบ่ง 12 ราศี — gold-deep */
+    .m-divider { stroke: #a8780a; stroke-width: 1.3; stroke-opacity: 0.7; }
+    .m-tri-divider { stroke: #b8860b; stroke-width: 0.6; stroke-opacity: 0.35; stroke-dasharray: 2,2; }
+    .m-nak-divider { stroke: #8b5a00; stroke-width: 0.6; stroke-opacity: 0.5; }
+
+    /* ป้ายนักษัตร */
+    .m-nak-label { font-family: 'Sarabun', sans-serif; font-size: 9.5px; fill: #5d3a00; text-anchor: middle; dominant-baseline: middle; font-weight: 700; }
+    .m-nak-label.active { fill: #6d1414; font-size: 10.5px; }
+    .m-nak-num { font-family: 'Sarabun', sans-serif; font-size: 9px; fill: #8b5a00; text-anchor: middle; dominant-baseline: middle; font-weight: 700; opacity: 0.9; }
+    .m-nak-num.active { fill: #6d1414; opacity: 1; font-size: 10.5px; }
+
+    /* ป้ายราศี */
+    .m-rasi-label {
+      font-family: 'Mali', 'Sarabun', serif;
+      font-size: 15px;
+      font-weight: 700;
+      fill: #6d1414;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      paint-order: stroke;
+      stroke: rgba(255, 248, 225, 0.8);
+      stroke-width: 3;
+    }
+
+    /* hit chip (ดาวฤกษ์ — เลขอารบิก) */
+    .m-chip { fill: #fff3d2; stroke: rgba(255, 255, 255, 0.7); stroke-width: 1.5; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35)); }
+    .m-chip.varg { stroke: #d4a017; stroke-width: 3; }
     .m-chip.planet-sun     { fill: #d24a13; }
     .m-chip.planet-moon    { fill: #d4b34c; }
     .m-chip.planet-mars    { fill: #b71c1c; }
@@ -553,10 +581,111 @@
     .m-chip.planet-rahu    { fill: #424242; }
     .m-chip.planet-ketu    { fill: #6a1b9a; }
     .m-chip.planet-uranus  { fill: #0d47a1; }
-    .m-chip-text { font-family: 'Sarabun', sans-serif; font-size: 13px; font-weight: 700; fill: #fff; text-anchor: middle; dominant-baseline: middle; }
+    .m-chip-text { font-family: 'Mali', 'Sarabun', serif; font-size: 14px; font-weight: 700; fill: #fff8e7; text-anchor: middle; dominant-baseline: middle; }
     .m-chip-text.on-moon { fill: #4a3500; }
-    .m-lagna { fill: #c0392b; stroke: #fff; stroke-width: 2; }
-    .m-lagna-text { font-family: 'Mali', serif; font-size: 11px; fill: #fff; text-anchor: middle; dominant-baseline: middle; font-weight: 700; }
+
+    /* lagna (ลั) — แดงเลือดหมู */
+    .m-lagna { fill: #c0392b; stroke: #fff8e7; stroke-width: 2; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4)); }
+    .m-lagna-text { font-family: 'Mali', serif; font-size: 12px; fill: #fff8e7; text-anchor: middle; dominant-baseline: middle; font-weight: 700; }
+
+    /* natal chip (ดาวเจ้าชะตา — เลขไทย ๑-๙) สีเดียวกัน drop-shadow เหมือนกัน */
+    .m-chip-natal { fill: #fff3d2; stroke: rgba(255, 255, 255, 0.7); stroke-width: 1.5; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35)); }
+    .m-chip-natal.planet-sun     { fill: #d24a13; }
+    .m-chip-natal.planet-moon    { fill: #d4b34c; }
+    .m-chip-natal.planet-mars    { fill: #b71c1c; }
+    .m-chip-natal.planet-mercury { fill: #2e7d32; }
+    .m-chip-natal.planet-jupiter { fill: #e65100; }
+    .m-chip-natal.planet-venus   { fill: #1976d2; }
+    .m-chip-natal.planet-saturn  { fill: #3e2723; }
+    .m-chip-natal.planet-rahu    { fill: #424242; }
+    .m-chip-natal.planet-ketu    { fill: #6a1b9a; }
+    .m-chip-natal.planet-uranus  { fill: #0d47a1; }
+    .m-chip-natal-text { font-family: 'Mali', 'Sarabun', serif; font-size: 13px; font-weight: 700; fill: #fff8e7; text-anchor: middle; dominant-baseline: middle; }
+    .m-chip-natal-text.on-moon { fill: #4a3500; }
+    .m-natal-lagna { fill: #c0392b; stroke: #fff8e7; stroke-width: 1.8; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35)); }
+    .m-natal-lagna-text { font-family: 'Mali', serif; font-size: 11px; fill: #fff8e7; text-anchor: middle; dominant-baseline: middle; font-weight: 700; }
+
+    /* ===== Tooltip z-index — ต้องสูงกว่า modal (9998) ===== */
+    .planet-tooltip { z-index: 99999 !important; }
+    /* ===== Modal chart — ใช้สไตล์เดียวกับหน้าผูกดวง ===== */
+    .muhurta-modal-svg { filter: drop-shadow(0 12px 22px rgba(40, 8, 8, 0.35)); overflow: visible; }
+    .muhurta-modal-svg .transit-chip-svg { /* hit chip ใหญ่กว่าเดิมหน่อย ให้เลขชัด */ }
+    .muhurta-modal-svg .transit-abbr-svg { font-size: 13px; }
+    .muhurta-modal-svg .transit-chip-group.is-vargottama .planet-chip-svg { stroke: #d4a017; stroke-width: 3; }
+    /* nakshatra ring */
+    .muhurta-modal-svg .mh-nak-divider { stroke: #8b5a00; stroke-width: 0.6; opacity: 0.5; }
+    .muhurta-modal-svg .mh-nak-label { font-family: 'Sarabun', sans-serif; font-size: 9.5px; fill: #5d3a00; text-anchor: middle; dominant-baseline: middle; font-weight: 700; }
+    .muhurta-modal-svg .mh-nak-label.active { fill: #6d1414; font-size: 10.5px; }
+    .muhurta-modal-svg .mh-nak-num { font-family: 'Sarabun', sans-serif; font-size: 9px; fill: #8b5a00; text-anchor: middle; dominant-baseline: middle; font-weight: 700; opacity: 0.9; }
+    .muhurta-modal-svg .mh-nak-num.active { fill: #6d1414; opacity: 1; font-size: 10.5px; }
+    /* center text (เขียนดวง) */
+    .muhurta-modal-svg .mh-center-om { font-family: 'Mali', serif; font-size: 22px; fill: #8a6a1f; font-weight: 700; }
+    .muhurta-modal-svg .mh-center-birth { font-family: 'Kanit', sans-serif; font-size: 11px; fill: #4a0712; }
+    .muhurta-modal-svg .mh-center-lakkana { font-family: 'Kanit', sans-serif; font-size: 12px; font-weight: 700; fill: #6b0e1b; }
+    .muhurta-modal-svg .mh-center-sep { stroke: rgba(138, 106, 31, 0.5); stroke-width: 1; }
+    /* rashi lord ring (navamsa mode — เลขเกษตร 1-7) */
+    .muhurta-modal-svg .rashi-lord-marker { cursor: help; }
+    .muhurta-modal-svg .rashi-lord-bg { fill: #fff8e1; stroke: #8a6a1f; stroke-width: 1.5; opacity: 0.92; }
+    .muhurta-modal-svg .rashi-lord-text { font-family: 'Mali', serif; font-size: 16px; font-weight: 700; fill: #6b0e1b; }
+    .muhurta-modal-svg .rashi-lord-marker:hover .rashi-lord-bg { fill: #d4a017; }
+    /* natal lagna ใน modal — แดงเลือดหมูเหมือนหน้าผูกดวง (อาศัย styles.css เดิม)
+       hit lagna ทำให้ใหญ่กว่านิดเดียว เพื่อแยกชั้นด้วยขนาด */
+    .muhurta-modal-svg .natal-lagna-group .lagna-marker-circle { stroke-dasharray: 4 3; }
+    .muhurta-modal-svg .hit-lagna-group .lagna-marker-circle { stroke-width: 3; }
+
+    /* ===== Chart Detail Modal — ธีมเดียวกับหน้าผูกดวง (เลือดหมู-ทอง-ครีม) ===== */
+    .chart-detail-modal { max-width: 1180px; background: linear-gradient(180deg, #fff8e1 0%, #fffbf0 100%); border-color: #6d1414; border-width: 3px; }
+    .chart-detail-modal .score-modal-close { background: linear-gradient(135deg, #6d1414, #8b2c2c); border: 2px solid #d4a017; }
+    .chart-detail-modal .score-modal-title { color: #6d1414; font-family: 'Mali', serif; font-size: 22px; }
+    .chart-detail-modal .score-modal-intro { background: linear-gradient(90deg, #6d1414, #8b2c2c); color: #fff8e1; border: none; border-radius: 10px; padding: 10px 16px; font-size: 13px; }
+
+    .chart-tabs { display: flex; gap: 4px; margin: 12px 0 14px; border-bottom: 2px solid #d4a017; padding-bottom: 0; flex-wrap: wrap; }
+    .chart-tab-btn { background: transparent; border: 2px solid transparent; border-bottom: none; padding: 8px 14px; cursor: pointer; color: #6d1414; font-family: 'Kanit', sans-serif; font-size: 14px; border-radius: 8px 8px 0 0; font-weight: 600; transition: all 0.15s; }
+    .chart-tab-btn:hover { background: rgba(212, 160, 23, 0.18); }
+    .chart-tab-btn.active { background: linear-gradient(180deg, #fff3d2 0%, #fffbf0 100%); border-color: #d4a017; color: #6d1414; }
+    .chart-tab-pane { display: none; }
+    .chart-tab-pane.active { display: block; }
+
+    /* 2-col side-by-side rashi + navamsa */
+    .chart-dual-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+    .chart-dual-col { display: flex; flex-direction: column; align-items: center; }
+    .chart-dual-col h4 { font-family: 'Mali', serif; color: #6d1414; margin: 0 0 8px; font-size: 16px; }
+    .chart-modal-svg-wrap {
+      width: 100%;
+      background: linear-gradient(180deg, #6b0e1b 0%, #4a0712 100%);
+      border: 3px solid #d4a017;
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 8px 24px rgba(20, 5, 5, 0.55), inset 0 0 0 1px rgba(232, 197, 112, 0.35);
+      position: relative;
+    }
+    .chart-modal-svg-wrap svg { width: 100%; height: auto; display: block; max-width: 100%; }
+    /* center text ในผัง — ลอกจากหน้าผูกดวง */
+    .m-svg-center-text {
+      font-family: 'Kanit', 'Sarabun', sans-serif;
+      fill: #4a0712;
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
+    .m-svg-center-om { font-family: 'Mali', serif; font-size: 18px; fill: #8a6a1f; font-weight: 700; }
+    .m-svg-center-name { font-size: 13px; font-weight: 700; fill: #2e0008; }
+    .m-svg-center-birth { font-size: 11px; fill: #4a0712; }
+    .m-svg-center-lakkana { font-size: 12px; font-weight: 700; fill: #6b0e1b; }
+    .m-svg-center-sep { stroke: rgba(138, 106, 31, 0.6); stroke-width: 1; }
+    .chart-legend { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 14px; font-size: 12px; color: #4a1818; padding: 10px 14px; background: rgba(212, 160, 23, 0.12); border: 1px solid #d4a017; border-radius: 10px; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .chart-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+    .chart-legend-marker { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; font-weight: 700; font-size: 12px; }
+    .chart-legend-marker.natal { background: linear-gradient(135deg, #8b2c2c, #6d1414); color: #fff8e1; border: 1.5px solid #6d4c00; }
+    .chart-legend-marker.hit { background: linear-gradient(135deg, #b78b3a, #d4a017); color: #fff; border: 1.5px solid #6d4c00; }
+    @media (max-width: 900px) {
+      .chart-dual-row { grid-template-columns: 1fr; gap: 24px; }
+    }
+    @media (max-width: 600px) {
+      .chart-detail-modal { max-width: 100%; padding: 16px 12px 12px; }
+      .chart-tab-btn { padding: 6px 10px; font-size: 12px; }
+      .chart-modal-svg-wrap { padding: 4px; }
+      .chart-legend { font-size: 11px; gap: 10px; padding: 8px 10px; }
+    }
 
     /* ===== Mobile (<= 600px) responsive fine-tune ===== */
     @media (max-width: 600px) {
@@ -889,9 +1018,10 @@
             <span class="mode-title">💑 หาฤกษ์เฉพาะบุคคล</span>
             <span class="mode-desc">เทียบลัคนา · ทักษา · ดาวจร กับดวงเจ้าชะตา</span>
           </label>
-          <label class="mode-btn disabled" data-mode="oracle" title="ฟีเจอร์นี้กำลังพัฒนา จะเปิดในอนาคต">
-            <span class="mode-title">🔬 สำหรับโหราจารย์ <span class="coming-soon-badge">เร็วๆ นี้</span></span>
-            <span class="mode-desc">ดวงราศีจักร์ + นวางค์จักร์ + การคำนวณ (กำลังพัฒนา)</span>
+          <label class="mode-btn {% if form.mode == 'oracle' %}active{% endif %}" data-mode="oracle">
+            <input type="radio" name="mode" value="oracle" {% if form.mode == 'oracle' %}checked{% endif %} style="display:none">
+            <span class="mode-title">🔬 สำหรับโหราจารย์ <span class="coming-soon-badge" style="background:#a31621">BETA</span></span>
+            <span class="mode-desc">ดวงราศีจักร์ + นวางค์จักร์ + ตำแหน่งดาวละเอียด</span>
           </label>
         </div>
 
@@ -1077,7 +1207,7 @@
                     <span>👤 เฉพาะที่เหมาะกับเจ้าชะตา</span>
                   </label>
                   <span class="panel-suitable-hint">
-                    🔍 ติ๊ก = แสดงเฉพาะฤกษ์ที่ <strong>"ผลต่อเจ้าชะตา ≥ 63%"</strong> (คะแนน ≥ 0) + เรียงคะแนนสูง→ต่ำ &nbsp;·&nbsp; ปลด = แสดงทั้งหมดเรียงตามลำดับฤกษ์
+                    🔍 ติ๊ก = แสดงเฉพาะฤกษ์ที่ <strong>"ผลต่อเจ้าชะตา ≥ 63%"</strong> (คะแนน ≥ 0) + เรียงคะแนนสูงไปต่ำ &nbsp;·&nbsp; ปลด = แสดงทั้งหมดเรียงตามลำดับฤกษ์
                   </span>
                 </div>
               {% endif %}
@@ -1266,7 +1396,7 @@
           <tr><td>ภูมิปาโล / เทศาตรี / สมโณ</td><td class="sc-good">+2</td><td>บ้าน / เดินทาง / พิธีกรรม</td></tr>
           <tr><td>ทลิทโท / โจโร / เพชฌฆาต</td><td class="sc-bad">−2</td><td>เลี่ยงโดยเด็ดขาด</td></tr>
         </table>
-        <div class="score-example">📌 ตัวอย่าง: จันทร์อยู่ในนักษัตร "ปุษยะ" → ราชาฤกษ์ = <strong>+2</strong></div>
+        <div class="score-example">📌 ตัวอย่าง: จันทร์อยู่ในนักษัตร "ปุษยะ" = ราชาฤกษ์ = <strong>+2</strong></div>
       </div>
 
       <div class="score-factor">
@@ -1279,7 +1409,7 @@
           <tr><td>⚠️ วันอุบาทว์</td><td class="sc-bad">−2</td><td>อัปมงคล</td></tr>
           <tr><td>💀 วันโลกาวินาศ</td><td class="sc-bad">−3</td><td>อันตราย — เลี่ยงเด็ดขาด</td></tr>
         </table>
-        <div class="score-example">📌 ตัวอย่าง: จ.ศ. 1387 วันธงชัย = ศุกร์ → ฤกษ์ตรงวันศุกร์ = <strong>+2</strong></div>
+        <div class="score-example">📌 ตัวอย่าง: จ.ศ. 1387 วันธงชัย = ศุกร์ ดังนั้น ฤกษ์ตรงวันศุกร์ = <strong>+2</strong></div>
         <div class="score-example" style="background:#fff;border-left-color:#777">ℹ️ <em>ระบบยังไม่นับ "ดิถี/ราศี/ฤกษ์อุบาทว์" จากตำราจริง (เช่น ดิถีมหาสูญ ดิถีอัคนิโรธ) — รอ implement ในรุ่นถัดไป</em></div>
       </div>
 
@@ -1360,13 +1490,13 @@
 
       <div class="score-factor">
         <h3>2️⃣ ฤกษ์ตรง "วันกาลีจร" ของเจ้าชะตา</h3>
-        <p>ในช่วงทักษาจรปัจจุบัน (12 ปีต่อรอบ) ดาวเสวยอายุ → ดาวกาลกิณีของช่วงนี้ → ตรงกับวันใดในสัปดาห์ → ฤกษ์วันนั้น = วันกาลีจร</p>
+        <p>ในช่วงทักษาจรปัจจุบัน (12 ปีต่อรอบ) ดาวเสวยอายุ ▸ ดาวกาลกิณีของช่วงนี้ ▸ ตรงกับวันใดในสัปดาห์ ▸ ฤกษ์วันนั้น = วันกาลีจร</p>
         <table class="score-tbl">
           <tr><th>เงื่อนไข</th><th>คะแนน</th></tr>
           <tr><td>ฤกษ์ไม่ตรงวันกาลีจร</td><td class="sc-mid">0</td></tr>
           <tr><td>ฤกษ์ตรงวันกาลีจร</td><td class="sc-bad">−2</td></tr>
         </table>
-        <div class="score-example">📌 ตัวอย่าง: เกิดวันอาทิตย์ ปีอายุ 47 → ดาวกาลีจร = อังคาร → ฤกษ์วันอังคารตลอด 12 ปีนี้ไม่เหมาะ · ช่วงคะแนน <strong>−2 ถึง 0</strong></div>
+        <div class="score-example">📌 ตัวอย่าง: เกิดวันอาทิตย์ ปีอายุ 47 ดาวกาลีจร = อังคาร จึงระวังฤกษ์วันอังคารตลอด 12 ปีนี้ · ช่วงคะแนน <strong>−2 ถึง 0</strong></div>
       </div>
 
       <div class="score-factor">
@@ -1463,6 +1593,40 @@
     </div>
   </div>
 
+  <!-- Planet tooltip (สำหรับ hover ดาวในผังจักร) -->
+  <div id="planet-tooltip" class="planet-tooltip" role="tooltip" aria-hidden="true"></div>
+
+  <!-- ===== Chart Detail Modal (โหมดโหร — ราศีจักร์ + นวางค์จักร์ + รายละเอียด) ===== -->
+  <div class="score-modal-bg" id="chart-modal-bg">
+    <div class="score-modal chart-detail-modal">
+      <button type="button" class="score-modal-close" id="close-chart-modal" aria-label="ปิด">✕</button>
+      <h2 class="score-modal-title" id="chart-modal-title">ดวงราศีจักร์ + นวางค์จักร์</h2>
+      <p class="score-modal-intro" id="chart-modal-subtitle"></p>
+
+      <div class="chart-tabs">
+        <button type="button" class="chart-tab-btn active" data-chart-tab="charts">🎯 ผังจักรราศี + นวางค์</button>
+        <button type="button" class="chart-tab-btn" data-chart-tab="details">📋 รายละเอียดการคำนวณ</button>
+      </div>
+
+      <div class="chart-tab-pane active" data-chart-tab="charts">
+        <div class="chart-dual-row">
+          <div class="chart-dual-col">
+            <h4>🎯 ราศีจักร์</h4>
+            <div class="chart-modal-svg-wrap" id="chart-modal-rashi"></div>
+          </div>
+          <div class="chart-dual-col">
+            <h4>🔬 นวางค์จักร์</h4>
+            <div class="chart-modal-svg-wrap" id="chart-modal-navamsa"></div>
+          </div>
+        </div>
+        <div class="chart-legend" id="chart-modal-legend"></div>
+      </div>
+      <div class="chart-tab-pane" data-chart-tab="details">
+        <div id="chart-modal-details"></div>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ===== Toast notification =====
     const toastEl = document.getElementById('toast');
@@ -1483,20 +1647,26 @@
     }
     function syncMode(mode) {
       const isPersonal = (mode === 'personal');
-      if (birthStepEl) birthStepEl.style.display = isPersonal ? '' : 'none';
-      if (checkBirthBlockEl) checkBirthBlockEl.style.display = isPersonal ? '' : 'none';
-      if (checkModeLabelEl) checkModeLabelEl.textContent = isPersonal ? '👤 ฤกษ์เฉพาะบุคคล' : '🌅 ฤกษ์ทั่วไป';
-      // Toggle personal score modal button (always visible to general, hidden if not personal)
+      const isOracle = (mode === 'oracle');
+      const needsBirth = isPersonal || isOracle;
+      if (birthStepEl) birthStepEl.style.display = needsBirth ? '' : 'none';
+      if (checkBirthBlockEl) checkBirthBlockEl.style.display = needsBirth ? '' : 'none';
+      if (checkModeLabelEl) {
+        checkModeLabelEl.textContent = isOracle ? '🔬 ฤกษ์สำหรับโหราจารย์'
+                                      : isPersonal ? '👤 ฤกษ์เฉพาะบุคคล'
+                                      : '🌅 ฤกษ์ทั่วไป';
+      }
+      // Toggle personal score modal button (มีผลกับ personal/oracle ที่ใช้ scoring เดียวกัน)
       const psBtnEl = document.getElementById('open-personal-score-info');
-      if (psBtnEl) psBtnEl.style.display = isPersonal ? '' : 'none';
-      // Clear previous results when switching mode (so user doesn't see stale general results in personal mode)
+      if (psBtnEl) psBtnEl.style.display = needsBirth ? '' : 'none';
+      // Clear previous results when switching mode
       const resSection = document.getElementById('result-section');
       const submittedMode = resSection?.dataset.resultMode;
       if (resSection && submittedMode && submittedMode !== mode) {
         resSection.remove();
       }
-      // Auto-prefill check-birth ตอนสลับเข้า personal
-      if (isPersonal) {
+      // Auto-prefill check-birth ตอนสลับเข้า personal/oracle
+      if (needsBirth) {
         const bd = document.querySelector('input[name=birth_date_th]')?.value || '';
         const bt = document.querySelector('input[name=birth_time]')?.value || '';
         const bp = document.querySelector('[name=birth_province]')?.value || '';
@@ -1902,13 +2072,15 @@
       }, stepMs);
     }
     document.getElementById('muhurta-form').addEventListener('submit', (e) => {
-      // 1) Personal mode → required birth date + time
-      if (_currentMode() === 'personal') {
+      // 1) Personal/Oracle mode → required birth date + time
+      const _m = _currentMode();
+      if (_m === 'personal' || _m === 'oracle') {
         const bd = document.querySelector('input[name=birth_date_th]')?.value?.trim() || '';
         const bt = document.querySelector('input[name=birth_time]')?.value?.trim() || '';
         if (!bd || !bt) {
           e.preventDefault();
-          showToast('โหมดเฉพาะบุคคล: กรุณากรอกวันเกิด + เวลาเกิด ของเจ้าชะตา');
+          const modeLabel = _m === 'oracle' ? 'โหมดสำหรับโหราจารย์' : 'โหมดเฉพาะบุคคล';
+          showToast(modeLabel + ': กรุณากรอกวันเกิด + เวลาเกิด ของเจ้าชะตา');
           (document.getElementById('birth-date-th') || document.getElementById('birth-step'))
             ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
           return;
@@ -2083,16 +2255,57 @@
       return html;
     }
 
-    // ===== Accordion (oracle mode) =====
+    // ===== Chart Modal (โหมดโหร) =====
+    const chartModalBg = document.getElementById('chart-modal-bg');
+    const chartModalClose = document.getElementById('close-chart-modal');
+    const chartModalRashi = document.getElementById('chart-modal-rashi');
+    const chartModalNavamsa = document.getElementById('chart-modal-navamsa');
+    const chartModalLegend = document.getElementById('chart-modal-legend');
+    const chartModalDetails = document.getElementById('chart-modal-details');
+    const chartModalTitle = document.getElementById('chart-modal-title');
+    const chartModalSubtitle = document.getElementById('chart-modal-subtitle');
+
+    function openChartModal() {
+      if (chartModalBg) chartModalBg.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeChartModal() {
+      if (chartModalBg) chartModalBg.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+    chartModalClose?.addEventListener('click', closeChartModal);
+    chartModalBg?.addEventListener('click', (e) => { if (e.target === chartModalBg) closeChartModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && chartModalBg?.classList.contains('active')) closeChartModal(); });
+
+    // chart tab switcher
+    document.querySelectorAll('.chart-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.chartTab;
+        document.querySelectorAll('.chart-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.chartTab === tab));
+        document.querySelectorAll('.chart-tab-pane').forEach(p => p.classList.toggle('active', p.dataset.chartTab === tab));
+      });
+    });
+
+    // ===== Hit-card click → open modal =====
     document.querySelectorAll('.hit-card').forEach(card => {
       card.addEventListener('click', async (e) => {
-        if (e.target.tagName === 'A' || e.target.tagName === 'INPUT') return;
-        const detail = card.nextElementSibling;
-        if (!detail || !detail.classList.contains('hit-detail')) return;
-        if (detail.classList.contains('open')) { detail.classList.remove('open'); return; }
-        detail.classList.add('open');
-        if (detail.dataset.loaded) return;
-        detail.innerHTML = '<div class="detail-loading">⏳ กำลังโหลดรายละเอียดดวงราศีจักร์ + นวางค์จักร์…</div>';
+        if (e.target.tagName === 'A' || e.target.tagName === 'INPUT' || e.target.closest('a, input, button')) return;
+        // reset to charts tab
+        document.querySelectorAll('.chart-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.chartTab === 'charts'));
+        document.querySelectorAll('.chart-tab-pane').forEach(p => p.classList.toggle('active', p.dataset.chartTab === 'charts'));
+
+        chartModalRashi.innerHTML = '<div class="detail-loading">⏳ กำลังโหลด…</div>';
+        chartModalNavamsa.innerHTML = '<div class="detail-loading">⏳ กำลังโหลด…</div>';
+        chartModalDetails.innerHTML = '<div class="detail-loading">⏳ กำลังโหลด…</div>';
+        chartModalLegend.innerHTML = '';
+        // ใช้ข้อมูลจาก hit-card เพื่อ header (จาก data attributes ที่ฝังในการ์ด)
+        const evLabel = card.dataset.eventLabel || card.dataset.eventKey || '';
+        const isoRaw = card.dataset.iso || '';
+        const dtLabel = isoRaw ? isoRaw.replace('T', ' เวลา ').replace(/:00$/, '') + ' น.' : '';
+        chartModalTitle.textContent = (evLabel ? ('🔮 ฤกษ์ ' + evLabel) : '🔬 รายละเอียดดวงฤกษ์');
+        chartModalSubtitle.textContent = dtLabel + (card.dataset.province ? ' · ' + card.dataset.province : '');
+        openChartModal();
+
         const params = new URLSearchParams({
           iso: card.dataset.iso,
           province: card.dataset.province,
@@ -2112,16 +2325,64 @@
         try {
           const res = await fetch('/muhurta/detail?' + params.toString());
           const data = await res.json();
-          if (data.error) { detail.innerHTML = '<p style="color:#b71c1c">❌ ' + data.error + '</p>'; return; }
-          detail.innerHTML = renderDetail(data);
-          detail.dataset.loaded = '1';
+          if (data.error) {
+            chartModalRashi.innerHTML = '<p style="color:#b71c1c">❌ ' + data.error + '</p>';
+            chartModalNavamsa.innerHTML = '';
+            chartModalDetails.innerHTML = '';
+            return;
+          }
+          // เตรียม center text + lagna data ถ้ามีดวงเจ้าชะตา
+          let centerInfo = {
+            hitAscRasi: data.ascendant?.rasi_name || '',
+            hitAscDeg: data.ascendant?.degree,
+            hitAscArcmin: data.ascendant?.arcminute,
+          };
+          if (data.natal) {
+            Object.assign(centerInfo, {
+              birthDate: data.natal.birth_date || '',
+              birthTime: data.natal.birth_time || '',
+              province: data.natal.birth_province || '',
+              ascRasi: data.natal.natal_asc_rasi_name || '',
+              ascDeg: data.natal.natal_asc_degree,
+              ascArcmin: data.natal.natal_asc_arcminute,
+              natalAscRasi: data.natal.natal_asc_rasi_name || '',
+              natalAscDeg: data.natal.natal_asc_degree,
+              natalAscArcmin: data.natal.natal_asc_arcminute,
+            });
+          }
+          chartModalRashi.innerHTML = renderSvgChart(data.svg_rashi, centerInfo);
+          chartModalNavamsa.innerHTML = renderSvgChart(data.svg_navamsa, centerInfo);
+          // ผูก tooltip ใหม่หลัง inject
+          bindModalChartTooltips();
+          chartModalLegend.innerHTML = buildChartLegend(data);
+          chartModalDetails.innerHTML = renderDetailText(data);
+          // Enrich title with นักษัตร info
+          if (data.nakshatra) {
+            const nk = data.nakshatra;
+            const base = chartModalTitle.textContent;
+            chartModalTitle.textContent = base + ' · ' + nk.number + '. ' + nk.name + ' (' + nk.roek_name + ')';
+          }
         } catch (err) {
-          detail.innerHTML = '<p style="color:#b71c1c">❌ ' + err.message + '</p>';
+          chartModalRashi.innerHTML = '<p style="color:#b71c1c">❌ ' + err.message + '</p>';
         }
       });
     });
 
-    function renderDetail(d) {
+    function buildChartLegend(d) {
+      const hasNatal = d.svg_rashi && d.svg_rashi.has_natal;
+      let html = '';
+      if (hasNatal) {
+        html += '<div class="chart-legend-item"><span class="chart-legend-marker natal">๑</span><span>ดาวเจ้าชะตา (เลขไทย ๑-๙) · ในวงราศี</span></div>';
+      }
+      html += '<div class="chart-legend-item"><span class="chart-legend-marker hit">1</span><span>ดาวฤกษ์ (เลขอารบิก 1-9) · ขอบนอก</span></div>';
+      if (hasNatal) {
+        html += '<div class="chart-legend-item"><span class="chart-legend-marker natal" style="background:#c0392b">ลั</span><span>ลัคนาเจ้าชะตา</span></div>';
+      }
+      html += '<div class="chart-legend-item"><span class="chart-legend-marker hit" style="background:#c0392b">ลั</span><span>ลัคนาฤกษ์</span></div>';
+      return html;
+    }
+
+    function renderDetailText(d) {
       let html = '<div class="detail-grid"><div>';
       html += '<h4 style="color:#6d4c00;margin-top:0">องค์ประกอบฤกษ์</h4>';
       html += `<div class="factor-mini"><strong>วาร:</strong> ${d.wan_planet} (${d.wan_quality})</div>`;
@@ -2140,7 +2401,7 @@
         html += `<div class="factor-mini"><span class="extra-tag ${cls}">${s.matched ? (s.tone==='good'?'✓':'⚠') : '—'} ${s.name}</span> ${s.detail}</div>`;
       });
       html += '</div><div>';
-      html += '<h4 style="color:#6d4c00;margin-top:0">ตำแหน่งดาว 10 ดวง</h4>';
+      html += '<h4 style="color:#6d4c00;margin-top:0">ตำแหน่งดาว 10 ดวง (ฤกษ์)</h4>';
       html += '<div class="planet-mini-grid">';
       d.planets.forEach(p => {
         const varg = d.vargottama.indexOf(p.name) >= 0;
@@ -2155,43 +2416,315 @@
         if (d.natal.aspects && d.natal.aspects.length) {
           html += '<h5 style="margin:8px 0 4px">ดาวจรกระทบดาวเดิม</h5>';
           d.natal.aspects.forEach(a => {
-            html += `<div class="factor-mini"><strong>${a.kind}</strong>: ${a.transit} (${a.rasi}) → ${a.natal}<br><span style="color:#555;font-size:12px">${a.text}</span></div>`;
+            html += `<div class="factor-mini"><strong>${a.kind}</strong>: ${a.transit} (${a.rasi}) กระทบ ${a.natal}<br><span style="color:#555;font-size:12px">${a.text}</span></div>`;
           });
         }
       }
       html += '</div></div>';
-      html += '<div class="chart-pair" style="margin-top:14px">';
-      html += '<div class="chart-cell"><h4>🎯 ราศีจักร์</h4>' + renderSvgChart(d.svg_rashi) + '</div>';
-      html += '<div class="chart-cell"><h4>🔬 นวางค์จักร์</h4>' + renderSvgChart(d.svg_navamsa) + '</div>';
-      html += '</div>';
       return html;
     }
 
-    function renderSvgChart(v) {
+    function renderSvgChart(v, centerInfo) {
       const c = v.center;
-      let s = `<svg class="m-svg" viewBox="0 0 ${v.size} ${v.size}" xmlns="http://www.w3.org/2000/svg">`;
-      if (v.show_nakshatra) { s += `<circle cx="${c}" cy="${c}" r="${v.r_nak_out}" class="m-rim"/><circle cx="${c}" cy="${c}" r="${v.r_nak_in}" class="m-rim"/>`; }
-      s += `<circle cx="${c}" cy="${c}" r="${v.r_outer}" class="m-rim"/><circle cx="${c}" cy="${c}" r="${v.r_inner}" class="m-rim"/>`;
-      v.dividers.forEach(d => s += `<line x1="${c+d.x1}" y1="${c-d.y1}" x2="${c+d.x2}" y2="${c-d.y2}" class="m-divider"/>`);
-      (v.triyangka_dividers || []).forEach(d => s += `<line x1="${c+d.x1}" y1="${c-d.y1}" x2="${c+d.x2}" y2="${c-d.y2}" class="m-tri-divider"/>`);
+      const esc = (str) => String(str ?? '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+      const POISON_TH = {'sunak': 'สุนัข', 'naga': 'นาค', 'krut': 'ครุฑ'};
+      const poisonTh = (key) => POISON_TH[key] || key;
+      // ใช้ class .zodiac-svg + .muhurta-modal-svg → ได้สไตล์จาก styles.css (เลือดหมู-ทอง-ครีม)
+      let s = `<svg class="zodiac-svg muhurta-modal-svg" viewBox="0 0 ${v.size} ${v.size}" xmlns="http://www.w3.org/2000/svg">`;
+      s += `<defs>
+        <radialGradient id="mh-paper-bg" cx="50%" cy="50%" r="60%">
+          <stop offset="0%" stop-color="#fff9ed"/>
+          <stop offset="100%" stop-color="#f1e2bb"/>
+        </radialGradient>
+      </defs>`;
+      const outerMax = v.show_nakshatra ? v.r_nak_out : v.r_outer;
+      // พื้นหลัง paper
+      s += `<circle cx="${c}" cy="${c}" r="${outerMax + 4}" fill="url(#mh-paper-bg)" class="rim-outer"/>`;
+      // วงนักษัตร rim
+      if (v.show_nakshatra) {
+        s += `<circle cx="${c}" cy="${c}" r="${v.r_nak_out}" class="rim-line rim-transit"/>`;
+        s += `<circle cx="${c}" cy="${c}" r="${v.r_nak_in}" class="rim-line"/>`;
+      }
+      // dividers (12 เส้นแบ่งราศี)
+      v.dividers.forEach(d => s += `<line x1="${c+d.x1}" y1="${c-d.y1}" x2="${c+d.x2}" y2="${c-d.y2}" class="divider-line"/>`);
+      // triyangka dividers + rim (rashi mode)
+      if (v.show_triyangka) {
+        s += `<g class="triyangka-layer">`;
+        (v.triyangka_dividers || []).forEach(d => s += `<line x1="${c+d.x1}" y1="${c-d.y1}" x2="${c+d.x2}" y2="${c-d.y2}" class="triyangka-divider"/>`);
+        s += `</g>`;
+      }
+      // rim main
+      s += `<circle cx="${c}" cy="${c}" r="${v.r_outer}" class="rim-line"/>`;
+      s += `<circle cx="${c}" cy="${c}" r="${v.r_inner}" class="rim-line rim-inner"/>`;
+      // เส้นแบ่ง navamsa 3 ชั้น (natal / เกษตร / transit)
+      (v.navamsa_divider_rs || []).forEach(dr => {
+        s += `<circle cx="${c}" cy="${c}" r="${dr}" class="rim-line rim-navamsa-divider"/>`;
+      });
+      // nakshatra cells (rashi mode)
       (v.nakshatra_cells || []).forEach(n => {
-        s += `<line x1="${c+n.div_x1}" y1="${c-n.div_y1}" x2="${c+n.div_x2}" y2="${c-n.div_y2}" class="m-nak-divider"/>`;
+        s += `<line x1="${c+n.div_x1}" y1="${c-n.div_y1}" x2="${c+n.div_x2}" y2="${c-n.div_y2}" class="mh-nak-divider"/>`;
         const cls = n.highlight ? 'active' : '';
-        s += `<text x="${c+n.num_x}" y="${c-n.num_y}" class="m-nak-num ${cls}" transform="rotate(${n.label_rotation} ${c+n.num_x} ${c-n.num_y})">${n.number_th}</text>`;
-        s += `<text x="${c+n.name_x}" y="${c-n.name_y}" class="m-nak-label ${cls}" transform="rotate(${n.label_rotation} ${c+n.name_x} ${c-n.name_y})">${n.name}</text>`;
+        s += `<text x="${c+n.num_x}" y="${c-n.num_y}" class="mh-nak-num ${cls}" transform="rotate(${n.label_rotation} ${c+n.num_x} ${c-n.num_y})">${esc(n.number_th)}</text>`;
+        s += `<text x="${c+n.name_x}" y="${c-n.name_y}" class="mh-nak-label ${cls}" transform="rotate(${n.label_rotation} ${c+n.name_x} ${c-n.name_y})">${esc(n.name)}</text>`;
       });
-      v.rasis.forEach(r => {
-        s += `<text x="${c+r.label_x}" y="${c-r.label_y}" class="m-rasi-label">${r.name}</text>`;
-        r.chips.forEach(ch => {
-          const vargCls = ch.varg ? 'varg' : '';
-          s += `<circle cx="${c+ch.x}" cy="${c-ch.y}" r="13" class="m-chip ${ch.color_class} ${vargCls}"><title>${ch.name}${ch.varg?' (วรโคตม)':''}</title></circle>`;
-          const tcls = ch.color_class === 'planet-moon' ? 'on-moon' : '';
-          s += `<text x="${c+ch.x}" y="${c-ch.y}" class="m-chip-text ${tcls}">${ch.abbr}</text>`;
+      // rasi labels (ซ่อนในนวางค์จักร เพราะเป็นการขยาย ไม่ใช่ตำแหน่งจริง)
+      if (!v.is_navamsa) {
+        v.rasis.forEach(r => {
+          s += `<text x="${c+r.label_x}" y="${c-r.label_y}" class="rasi-label" text-anchor="middle" dominant-baseline="middle">${esc(r.name)}</text>`;
         });
+      }
+      // element markers (rashi mode)
+      if (v.element_markers && v.element_markers.length) {
+        s += `<g class="element-layer">`;
+        v.element_markers.forEach(em => {
+          s += `<g class="element-marker element-${em.key}" data-tip-element="${esc(em.name_th)}">
+            <circle cx="${c+em.x}" cy="${c-em.y}" r="9" class="element-bg"/>
+            <text x="${c+em.x}" y="${c-em.y}" class="element-symbol" text-anchor="middle" dominant-baseline="central">${esc(em.symbol)}</text>
+          </g>`;
+        });
+        s += `</g>`;
+      }
+      // triyangka lord markers (rashi mode)
+      if (v.triyangka_markers && v.triyangka_markers.length) {
+        s += `<g class="triyangka-lords-layer triyangka-layer">`;
+        v.triyangka_markers.forEach(m => {
+          const poisonAttr = m.is_poison ? ` data-tri-poison="${esc(m.poison_icon)} ${esc(poisonTh(m.poison_type))}"` : '';
+          s += `<g class="triyangka-marker-group ${m.is_poison ? 'triyangka-poison triyangka-poison-' + m.poison_type : ''}"
+                 data-tri-rasi="${esc(m.rashi_name)}"
+                 data-tri-decanate="${m.decanate_num}"
+                 data-tri-lord="${esc(m.lord)}"
+                 data-tri-deg-from="${m.deg_from}"
+                 data-tri-deg-to="${m.deg_to}"${poisonAttr}>
+            <circle cx="${c+m.x}" cy="${c-m.y}" r="10" class="triyangka-hit-area"/>`;
+          if (m.is_poison) {
+            s += `<circle cx="${c+m.x}" cy="${c-m.y}" r="9" class="triyangka-poison-bg"/>`;
+          }
+          s += `<text x="${c+m.x}" y="${c-m.y}" class="triyangka-lord-text" text-anchor="middle" dominant-baseline="central">${esc(m.short)}</text>`;
+          if (m.is_poison) {
+            s += `<text x="${c+m.x+10}" y="${c-m.y-8}" class="triyangka-poison-icon" text-anchor="middle" dominant-baseline="central">${esc(m.poison_icon)}</text>`;
+          }
+          s += `</g>`;
+        });
+        s += `</g>`;
+      }
+      // rashi lord ring (navamsa mode) — ตี border 2 วง + เลขดาวเกษตร 1-7 ในวงนอก
+      if (v.show_rashi_lord_ring) {
+        // วงในของ lord ring (= ขอบนอกของ rashi)
+        s += `<circle cx="${c}" cy="${c}" r="${v.r_nak_in}" class="rim-line"/>`;
+        // วงนอกของ lord ring
+        s += `<circle cx="${c}" cy="${c}" r="${v.r_nak_out}" class="rim-line"/>`;
+        v.rasis.forEach(r => {
+          if (r.rashi_lord_marker) {
+            const m = r.rashi_lord_marker;
+            s += `<g class="rashi-lord-marker" data-rashi-lord="${esc(m.lord_planet)}" data-rashi="${esc(r.name)}">
+              <circle cx="${c+m.x}" cy="${c-m.y}" r="12" class="rashi-lord-bg"/>
+              <text x="${c+m.x}" y="${c-m.y}" class="rashi-lord-text" text-anchor="middle" dominant-baseline="central">${m.lord_num}</text>
+            </g>`;
+          }
+        });
+      }
+      // helper สร้าง chip group + poison shadow + badge
+      function _chipGroup(ch, isTransit, rashiName) {
+        const r = isTransit ? 11 : 13;
+        const groupCls = isTransit ? `planet-svg-group transit-chip-group${ch.varg ? ' is-vargottama' : ''}` : 'planet-svg-group';
+        const chipCls = isTransit ? 'planet-chip-svg transit-chip-svg planet-hoverable' : 'planet-chip-svg planet-hoverable';
+        const abbrCls = isTransit ? 'planet-abbr-svg transit-abbr-svg' : 'planet-abbr-svg';
+        const poisonAttrs = ch.is_poison ? `
+                 data-tip-poison-icon="${esc(ch.poison_icon)}"
+                 data-tip-poison-name="${esc(poisonTh(ch.poison_type))}"
+                 data-tip-poison-severity="${esc(ch.poison_severity)}"` : '';
+        const poisonCls = ch.is_poison ? ` planet-poisoned planet-poisoned-${ch.poison_type} planet-poisoned-${ch.poison_severity}` : '';
+        const navAttrs = v.is_navamsa ? `
+                 data-tip-is-navamsa="1"
+                 data-tip-tri-decanate="${ch.triyangka_decanate || 0}"
+                 data-tip-nav-index="${ch.nav_index || 0}"
+                 data-tip-nav-rasi="${esc(ch.nav_rasi_name || '')}"
+                 data-tip-nav-lord="${esc(ch.nav_lord_planet || '')}"
+                 data-tip-nav-lord-num="${ch.nav_lord_num || 0}"` : '';
+        let out = `<g class="${groupCls}${poisonCls}"
+                 data-tip-planet="${esc(ch.name)}"
+                 data-tip-source="${esc(ch.source || (isTransit ? 'ฤกษ์' : 'เจ้าชะตา'))}"
+                 data-tip-rasi="${esc(ch.rasi_name || rashiName)}"
+                 data-tip-degree="${ch.degree || 0}"
+                 data-tip-arcmin="${ch.arcminute || 0}"
+                 data-tip-arcsec="${ch.arcsecond || 0}"
+                 data-tip-retro="${ch.retrograde ? '1' : '0'}"
+                 data-tip-dignity="${esc(ch.dignity_label || '')}"
+                 data-tip-strength="${ch.dignity_strength || 0}"
+                 data-tip-varg="${(ch.varg || ch.is_vargottama) ? '1' : '0'}"${poisonAttrs}${navAttrs}>`;
+        if (ch.is_poison) {
+          out += `<circle cx="${c+ch.x}" cy="${c-ch.y}" r="${r+5}" class="poison-shadow poison-shadow-${esc(ch.poison_type)}"/>`;
+        }
+        out += `<circle cx="${c+ch.x}" cy="${c-ch.y}" r="${r}" class="${chipCls} ${esc(ch.color_class)}"/>
+                <text x="${c+ch.x}" y="${c-ch.y}" class="${abbrCls}" text-anchor="middle" dominant-baseline="central">${esc(ch.abbr)}</text>`;
+        if (ch.is_poison) {
+          out += `<text x="${c+ch.x+r-2}" y="${c-ch.y-r+2}" class="poison-badge-svg${isTransit ? ' poison-badge-transit' : ''}" text-anchor="middle" dominant-baseline="central">${esc(ch.poison_icon)}</text>`;
+        }
+        out += `</g>`;
+        return out;
+      }
+      // natal chips (เลขไทย ๑-๙)
+      v.rasis.forEach(r => {
+        (r.natal_chips || []).forEach(ch => { s += _chipGroup(ch, false, r.name); });
       });
-      if (v.lagna) { s += `<circle cx="${c+v.lagna.x}" cy="${c-v.lagna.y}" r="12" class="m-lagna"/><text x="${c+v.lagna.x}" y="${c-v.lagna.y}" class="m-lagna-text">ลั</text>`; }
+      // hit chips (เลขอารบิก) — ขอบนอก
+      v.rasis.forEach(r => {
+        r.chips.forEach(ch => { s += _chipGroup(ch, true, r.name); });
+      });
+      // natal lagna marker — เส้นประวิ่งจากศูนย์ (เฉพาะ rashi mode)
+      if (v.natal_lagna) {
+        const L = v.natal_lagna;
+        const lineHtml = v.is_navamsa ? '' :
+          `<line x1="${c+(L.line_x1||0)}" y1="${c-(L.line_y1||0)}" x2="${c+L.line_x2}" y2="${c-L.line_y2}" class="lagna-line"/>`;
+        s += `<g class="lagna-group natal-lagna-group"
+               data-tip-planet="ลัคนาเจ้าชะตา"
+               data-tip-source="เจ้าชะตา"
+               data-tip-rasi="${esc((centerInfo && centerInfo.natalAscRasi) || '')}"
+               data-tip-degree="${(centerInfo && centerInfo.natalAscDeg) || 0}"
+               data-tip-arcmin="${(centerInfo && centerInfo.natalAscArcmin) || 0}"
+               data-tip-arcsec="0">
+          ${lineHtml}
+          <circle cx="${c+L.x}" cy="${c-L.y}" r="14" class="lagna-marker-circle planet-hoverable"/>
+          <text x="${c+L.x}" y="${c-L.y}" class="lagna-marker-text" text-anchor="middle" dominant-baseline="central">ลั</text>
+        </g>`;
+      }
+      // hit lagna marker
+      if (v.lagna) {
+        const L = v.lagna;
+        const lineHtml = v.is_navamsa ? '' :
+          `<line x1="${c+(L.line_x1||0)}" y1="${c-(L.line_y1||0)}" x2="${c+L.line_x2}" y2="${c-L.line_y2}" class="lagna-line"/>`;
+        s += `<g class="lagna-group hit-lagna-group"
+               data-tip-planet="ลัคนาฤกษ์"
+               data-tip-source="ฤกษ์"
+               data-tip-rasi="${esc((centerInfo && centerInfo.hitAscRasi) || '')}"
+               data-tip-degree="${(centerInfo && centerInfo.hitAscDeg) || 0}"
+               data-tip-arcmin="${(centerInfo && centerInfo.hitAscArcmin) || 0}"
+               data-tip-arcsec="0">
+          ${lineHtml}
+          <circle cx="${c+L.x}" cy="${c-L.y}" r="15" class="lagna-marker-circle planet-hoverable"/>
+          <text x="${c+L.x}" y="${c-L.y}" class="lagna-marker-text" text-anchor="middle" dominant-baseline="central">ลั</text>
+        </g>`;
+      }
+      // center text — "เขียนดวง" สำหรับเจ้าชะตา
+      if (centerInfo && centerInfo.birthDate) {
+        s += `<text x="${c}" y="${c - 42}" class="mh-center-om" text-anchor="middle" dominant-baseline="central">๛</text>`;
+        s += `<text x="${c}" y="${c - 22}" class="mh-center-birth" text-anchor="middle" dominant-baseline="central">${esc(centerInfo.birthDate)}</text>`;
+        if (centerInfo.birthTime) {
+          s += `<text x="${c}" y="${c - 8}" class="mh-center-birth" text-anchor="middle" dominant-baseline="central">เวลา ${esc(centerInfo.birthTime)} น.</text>`;
+        }
+        if (centerInfo.province) {
+          s += `<text x="${c}" y="${c + 6}" class="mh-center-birth" text-anchor="middle" dominant-baseline="central">${esc(centerInfo.province)}</text>`;
+        }
+        if (centerInfo.ascRasi) {
+          s += `<line x1="${c - 52}" y1="${c + 16}" x2="${c + 52}" y2="${c + 16}" class="mh-center-sep"/>`;
+          const deg = (centerInfo.ascDeg != null) ? centerInfo.ascDeg : '';
+          const arcm = (centerInfo.ascArcmin != null) ? String(centerInfo.ascArcmin).padStart(2, '0') : '';
+          s += `<text x="${c}" y="${c + 30}" class="mh-center-lakkana" text-anchor="middle" dominant-baseline="central">ลัคนา ${esc(centerInfo.ascRasi)} ${deg}°${arcm}′</text>`;
+        }
+      }
       s += '</svg>';
       return s;
+    }
+
+    // ============ Tooltip handler (modal SVG) ============
+    function bindModalChartTooltips() {
+      const tip = document.getElementById('planet-tooltip');
+      if (!tip) return;
+      const svgList = document.querySelectorAll('.muhurta-modal-svg');
+      if (!svgList.length) return;
+
+      function getGroup(el) {
+        return el.closest('.planet-svg-group[data-tip-planet], .lagna-group[data-tip-planet], .triyangka-marker-group[data-tri-rasi], .rashi-lord-marker[data-rashi-lord]');
+      }
+      function buildTip(g) {
+        const d = g.dataset;
+        // ดาวเกษตรประจำราศี
+        if (d.rashiLord) {
+          return `<div class="tip-title"><span class="tip-planet">ดาวเกษตร</span><span class="tip-source">(${d.rashi || ''})</span></div>
+            <div class="tip-row"><span class="tip-label">ดาวครอง</span>${d.rashiLord}</div>
+            <div class="tip-row" style="font-size:11px;opacity:0.85">เลขที่แสดงในวง = เลขดาวเกษตร 1-7 ของราศีนั้น</div>`;
+        }
+        // ตรียางค์
+        if (!d.tipPlanet && d.triRasi) {
+          let poisonHtml = '';
+          if (d.triPoison) {
+            const parts = d.triPoison.split(' ');
+            poisonHtml = `<div class="tip-row tip-poison"><span class="tip-label">⚠️ พิษ</span>${d.triPoison}</div>`;
+          }
+          return `<div class="tip-title"><span class="tip-planet">ตรียางค์ ${d.triDecanate}/3</span><span class="tip-source">(${d.triRasi})</span></div>
+            <div class="tip-row"><span class="tip-label">ดาวครอง</span>${d.triLord}</div>
+            <div class="tip-row"><span class="tip-label">ช่วง</span>${d.triDegFrom}°-${d.triDegTo}°</div>${poisonHtml}`;
+        }
+        // ดาว / ลัคนา
+        const retro = d.tipRetro === '1' ? '<span class="retro">(พักร์)</span>' : '';
+        let dignityHtml = '';
+        if (d.tipDignity) {
+          const s = parseInt(d.tipStrength || '0', 10);
+          let cls = 'tip-dignity-neutral', icon = '';
+          if (s >= 4) { cls = 'tip-dignity-very-strong'; icon = '★'; }
+          else if (s >= 2) { cls = 'tip-dignity-strong'; icon = '✦'; }
+          else if (s >= 1) { cls = 'tip-dignity-mild'; icon = '•'; }
+          else if (s <= -2) { cls = 'tip-dignity-weak'; icon = '✖'; }
+          else if (s < 0) { cls = 'tip-dignity-low'; icon = '▾'; }
+          const sign = s > 0 ? '+' + s : s;
+          const dignityLabelName = d.tipIsNavamsa === '1' ? 'กำลังในนวางค์' : 'กำลัง';
+          dignityHtml = `<div class="tip-row tip-dignity ${cls}"><span class="tip-label">${icon} ${dignityLabelName}</span>${d.tipDignity} <span class="tip-strength">(${sign})</span></div>`;
+        }
+        let vargHtml = '';
+        if (d.tipVarg === '1') {
+          vargHtml = '<div class="tip-row tip-dignity tip-dignity-strong"><span class="tip-label">✨</span>วรโคตม — ดาวอยู่ราศีเดียวกันทั้งในราศีจักรและนวางค์จักร กำลังแข็งมาก</div>';
+        }
+        let poisonHtml = '';
+        if (d.tipPoisonName) {
+          poisonHtml = `<div class="tip-row tip-poison"><span class="tip-label">⚠️ พิษ</span>${d.tipPoisonIcon || ''} ${d.tipPoisonName} (${d.tipPoisonSeverity || ''})</div>`;
+        }
+        // กรณี Navamsa: แสดง "ตำแหน่งจริง + ตรียางค์ + ลูกนวางค์" — ไม่มี "ราศี/องศา" ของนวางค์
+        if (d.tipIsNavamsa === '1') {
+          const tri = d.tipTriDecanate || '?';
+          const navIdx = d.tipNavIndex || '?';
+          const navLord = d.tipNavLord || '';
+          const navLordNum = d.tipNavLordNum || '';
+          return `<div class="tip-title"><span class="tip-planet">${d.tipPlanet}</span><span class="tip-source">(${d.tipSource || ''})</span>${retro}</div>
+            <div class="tip-row"><span class="tip-label">ตำแหน่งจริง</span>${d.tipRasi} ${d.tipDegree}°${d.tipArcmin}′${d.tipArcsec}″</div>
+            <div class="tip-row"><span class="tip-label">ตรียางค์</span>${tri}/3 ของ${d.tipRasi}</div>
+            <div class="tip-row"><span class="tip-label">นวางค์</span>${navIdx}/9 ลูกนวางค์${navLord} (${navLordNum})</div>
+            ${dignityHtml}${vargHtml}${poisonHtml}`;
+        }
+        return `<div class="tip-title"><span class="tip-planet">${d.tipPlanet}</span><span class="tip-source">(${d.tipSource || ''})</span>${retro}</div>
+          <div class="tip-row"><span class="tip-label">ราศี</span>${d.tipRasi}</div>
+          <div class="tip-row"><span class="tip-label">องศา</span>${d.tipDegree}°</div>
+          <div class="tip-row"><span class="tip-label">ลิปดา</span>${d.tipArcmin}′</div>
+          <div class="tip-row"><span class="tip-label">ฟิลิปดา</span>${d.tipArcsec}″</div>
+          ${dignityHtml}${vargHtml}${poisonHtml}`;
+      }
+      function moveTip(e) {
+        const pad = 14;
+        const tw = tip.offsetWidth, th = tip.offsetHeight;
+        let x = e.clientX + pad, y = e.clientY + pad;
+        if (x + tw > window.innerWidth - 10) x = e.clientX - tw - pad;
+        if (y + th > window.innerHeight - 10) y = e.clientY - th - pad;
+        tip.style.left = x + 'px';
+        tip.style.top = y + 'px';
+      }
+      svgList.forEach(svg => {
+        svg.addEventListener('mouseover', e => {
+          const g = getGroup(e.target);
+          if (!g) return;
+          tip.innerHTML = buildTip(g);
+          tip.classList.add('visible');
+          tip.setAttribute('aria-hidden', 'false');
+          moveTip(e);
+        });
+        svg.addEventListener('mousemove', e => {
+          if (tip.classList.contains('visible')) moveTip(e);
+        });
+        svg.addEventListener('mouseout', e => {
+          const g = getGroup(e.target);
+          if (g && getGroup(e.relatedTarget)) return;
+          tip.classList.remove('visible');
+          tip.setAttribute('aria-hidden', 'true');
+        });
+      });
     }
 
     // ============ ฤกษ์ 7 วัน strip ============

@@ -468,6 +468,12 @@ body::before {
   stroke-dasharray: 4 3;
   opacity: 0.85;
 }
+.rim-line.rim-navamsa-divider {
+  stroke-width: 1;
+  stroke: var(--gold);
+  stroke-dasharray: 3 3;
+  opacity: 0.5;
+}
 .rim-outer {
   stroke: var(--gold);
   stroke-width: 1;
@@ -4461,4 +4467,688 @@ body.view-student .view-general { display: none !important; }
     font-size: 1.5rem;
     width: 40px; height: 40px;
   }
+}
+
+/* ============================================================ */
+/* Floating Chat Widget (FAB + Panel)                           */
+/* ============================================================ */
+
+/* --- FAB button ขวาล่าง --- */
+.chat-fab {
+  position: fixed;
+  bottom: 1.75rem;
+  right: 1.75rem;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1.1rem 0.65rem 0.9rem;
+  border-radius: 999px;
+  border: 2px solid var(--gold);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(60, 30, 0, 0.55);
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+.chat-fab--active {
+  background: linear-gradient(135deg, var(--maroon) 0%, var(--maroon-dark) 100%);
+  color: var(--gold-bright);
+}
+.chat-fab--locked {
+  background: rgba(60, 30, 0, 0.55);
+  color: rgba(201, 162, 74, 0.45);
+  border-color: rgba(201, 162, 74, 0.3);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.chat-fab--dev {
+  background: linear-gradient(135deg, rgba(107, 14, 27, 0.85) 0%, rgba(60, 8, 16, 0.85) 100%);
+  color: rgba(232, 197, 112, 0.75);
+  border-color: rgba(201, 162, 74, 0.55);
+  cursor: pointer;
+  opacity: 0.78;
+}
+.chat-fab--dev:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+.chat-dev-toast {
+  position: fixed;
+  bottom: 6rem;
+  right: 1.75rem;
+  z-index: 950;
+  background: linear-gradient(135deg, var(--maroon) 0%, var(--maroon-dark) 100%);
+  color: var(--gold-bright);
+  padding: 0.7rem 1.1rem;
+  border-radius: 12px;
+  border: 1px solid var(--gold);
+  box-shadow: 0 8px 24px rgba(20, 5, 5, 0.55);
+  font-size: 0.88rem;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.chat-dev-toast--show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.chat-fab--active:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(60, 30, 0, 0.7);
+}
+.chat-fab-icon { font-size: 1.15rem; line-height: 1; }
+.chat-fab-label { letter-spacing: 0.02em; }
+
+/* เมื่อ panel เปิด — icon กลายเป็น × */
+.chat-fab--open .chat-fab-icon::before { content: "✕"; }
+.chat-fab--open .chat-fab-icon { font-style: normal; }
+.chat-fab--open .chat-fab-icon { font-size: 1rem; }
+
+/* --- Backdrop --- */
+.chat-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 5, 5, 0.45);
+  z-index: 910;
+  backdrop-filter: blur(2px);
+}
+.chat-backdrop.chat-backdrop--visible { display: block; }
+
+/* --- Floating Panel --- */
+/* panel ซ่อนอยู่จนกว่าจะ open */
+.chat-panel {
+  display: none;
+}
+/* เมื่อเปิด: ใช้ animation แทน transition — fire ทันทีที่ add class */
+.chat-panel.chat-panel--open {
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  bottom: 5.5rem;
+  right: 1.75rem;
+  z-index: 920;
+  width: 400px;
+  max-width: calc(100vw - 2rem);
+  max-height: 78vh;
+  overflow: hidden;             /* บังคับให้ max-height clip จริง ประวัติถึงจะ scroll ได้ */
+  background: linear-gradient(180deg, var(--paper) 0%, var(--cream-soft) 100%);
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  box-shadow:
+    0 16px 48px rgba(20, 5, 5, 0.65),
+    inset 0 0 0 1px rgba(232, 197, 112, 0.3);
+  pointer-events: auto;
+  animation: chatPanelOpen 0.22s ease both;
+}
+@keyframes chatPanelOpen {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* ปิด: fade-out ก่อน display:none */
+.chat-panel.chat-panel--closing {
+  animation: chatPanelClose 0.18s ease both;
+  pointer-events: none;
+}
+@keyframes chatPanelClose {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(16px) scale(0.97); }
+}
+
+/* --- Panel header --- */
+.chat-panel-header {
+  padding: 0.85rem 1rem 0.7rem;
+  border-bottom: 1px solid rgba(201, 162, 74, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+.chat-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: "Mali", serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--maroon-dark);
+}
+.chat-panel-subtitle {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  opacity: 0.7;
+  padding-left: 1.6rem;
+}
+.chat-panel-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.85rem;
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background 0.12s;
+}
+.chat-panel-close:hover { background: rgba(107, 14, 27, 0.12); }
+.chat-badge {
+  font-size: 0.58rem;
+  background: var(--maroon);
+  color: var(--gold-bright);
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 1px solid var(--gold-deep);
+}
+
+/* --- Chat history (scroll ภายใน panel) --- */
+.chat-history {
+  flex: 1;
+  min-height: 0;        /* สำคัญ: ให้ flex item ย่อได้และ scroll แทนที่จะขยาย parent */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  scrollbar-width: auto;
+  scrollbar-color: var(--gold-deep) rgba(60, 30, 0, 0.1);
+}
+.chat-history::-webkit-scrollbar { width: 10px; }
+.chat-history::-webkit-scrollbar-track {
+  background: rgba(60, 30, 0, 0.08);
+  border-radius: 5px;
+}
+.chat-history::-webkit-scrollbar-thumb {
+  background: var(--gold-deep);
+  border-radius: 5px;
+  border: 2px solid var(--paper);
+}
+.chat-history::-webkit-scrollbar-thumb:hover {
+  background: var(--maroon);
+}
+.chat-history:empty::after {
+  content: "กดหัวข้อด้านล่าง หรือพิมพ์คำถามได้เลย";
+  display: block;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  padding: 2rem 0 1rem;
+  opacity: 0.5;
+}
+
+/* ข้อความตอนล็อค */
+.chat-locked-msg {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--ink-soft);
+}
+.chat-locked-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+.chat-locked-msg p { font-size: 0.88rem; line-height: 1.65; margin: 0; }
+
+/* --- bubbles --- */
+.chat-bubble {
+  padding: 0.6rem 0.85rem;
+  border-radius: 12px;
+  font-size: 0.86rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.chat-bubble-user {
+  align-self: flex-end;
+  max-width: 78%;
+  background: var(--maroon);
+  color: var(--cream);
+  border: 1px solid var(--gold-deep);
+  border-bottom-right-radius: 3px;
+}
+.chat-bubble-ai {
+  align-self: flex-start;
+  max-width: 85%;
+  background: var(--paper);
+  border: 1px solid rgba(201, 162, 74, 0.55);
+  color: var(--ink);
+  border-radius: 14px;
+  border-bottom-left-radius: 4px;     /* หาง bubble ซ้าย */
+  box-shadow: 0 1px 6px rgba(60, 30, 0, 0.12);
+  padding: 0.7rem 0.9rem;
+}
+.chat-bubble-ai .chat-meta {
+  font-size: 0.68rem;
+  color: var(--ink-soft);
+  margin-bottom: 0.35rem;
+  opacity: 0.65;
+  display: block;
+}
+.chat-bubble-preview {
+  align-self: flex-start;
+  max-width: 85%;
+  background: rgba(30, 10, 0, 0.78);
+  border: 1px dashed rgba(201, 162, 74, 0.5);
+  color: var(--cream-soft);
+  font-size: 0.72rem;
+  font-family: "Courier New", monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: 14px;
+  border-bottom-left-radius: 4px;
+  padding: 0.7rem 0.9rem;
+  /* ขยายตามเนื้อหา → panel หลักจะ scroll ให้ */
+}
+.chat-bubble-preview::-webkit-scrollbar { width: 3px; }
+.chat-bubble-preview::-webkit-scrollbar-thumb { background: var(--gold-deep); border-radius: 2px; }
+.chat-bubble-preview .chat-meta {
+  color: var(--gold);
+  font-size: 0.68rem;
+  margin-bottom: 0.4rem;
+  display: block;
+  border-bottom: 1px dashed rgba(201, 162, 74, 0.3);
+  padding-bottom: 0.35rem;
+}
+.chat-bubble-error {
+  align-self: stretch;
+  background: #3a0d0d;
+  border: 1px solid #7a2020;
+  color: #f4a0a0;
+  border-radius: 12px;
+}
+
+/* --- loading dots --- */
+.chat-loading {
+  display: flex;
+  gap: 4px;
+  padding: 0.4rem 0.1rem;
+  align-self: flex-start;
+}
+.chat-loading span {
+  width: 7px; height: 7px;
+  background: var(--gold-deep);
+  border-radius: 50%;
+  animation: chatBounce 0.9s infinite ease-in-out;
+}
+.chat-loading span:nth-child(2) { animation-delay: 0.15s; }
+.chat-loading span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes chatBounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+  40%           { transform: translateY(-6px); opacity: 1; }
+}
+
+/* --- Panel footer: chips + input --- */
+.chat-panel-footer {
+  flex-shrink: 0;
+  border-top: 1px solid rgba(201, 162, 74, 0.3);
+  padding: 0.65rem 0.85rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.chat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.chat-chip {
+  background: var(--cream-soft);
+  border: 1.5px solid var(--gold-deep);
+  color: var(--maroon-dark);
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+.chat-chip:hover {
+  background: var(--maroon);
+  color: var(--gold-bright);
+  border-color: var(--gold);
+}
+.chat-form { display: flex; flex-direction: column; gap: 0; }
+.chat-input-row { display: flex; gap: 0.45rem; }
+.chat-input {
+  flex: 1;
+  background: #fff8ee;
+  border: 1.5px solid var(--gold-deep);
+  color: var(--ink);
+  padding: 0.55rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.chat-input::placeholder { color: var(--ink-soft); opacity: 0.5; }
+.chat-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201, 162, 74, 0.18);
+}
+.chat-send-btn {
+  padding: 0.55rem 1rem;
+  background: linear-gradient(135deg, var(--maroon) 0%, var(--maroon-dark) 100%);
+  color: var(--gold-bright);
+  border: 1.5px solid var(--gold-deep);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: box-shadow 0.15s;
+}
+.chat-send-btn:hover { box-shadow: 0 2px 8px rgba(60, 30, 0, 0.4); }
+.chat-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* mobile: panel เต็มจอ */
+@media (max-width: 480px) {
+  .chat-panel.chat-panel--open {
+    right: 0; left: 0; bottom: 0;
+    width: 100%; max-width: 100%;
+    max-height: 88vh;
+    border-radius: 16px 16px 0 0;
+  }
+  .chat-fab { bottom: 1.25rem; right: 1.25rem; }
+}
+
+/* ============================================================
+   Zodiac SVG shared styles (used by _muhurta_zodiac.html in
+   both muhurta page and navamsa section of index page)
+   ============================================================ */
+.m-svg { width: 100%; height: auto; max-width: 100%; filter: drop-shadow(0 8px 16px rgba(40,8,8,.3)); }
+.m-rim { stroke: #b8860b; stroke-width: 2.5; fill: none; }
+.m-rim-inner { stroke: #a8780a; stroke-width: 2; fill: none; }
+.m-divider { stroke: #a8780a; stroke-width: 1.3; stroke-opacity: .7; }
+.m-tri-divider { stroke: #b8860b; stroke-width: .6; stroke-opacity: .35; stroke-dasharray: 2,2; }
+.m-nak-divider { stroke: #8b5a00; stroke-width: .6; stroke-opacity: .5; }
+.m-nak-label { font-family: 'Sarabun', sans-serif; font-size: 9.5px; fill: #5d3a00; text-anchor: middle; dominant-baseline: middle; font-weight: 700; }
+.m-nak-label.active { fill: #6d1414; font-size: 10.5px; }
+.m-nak-num { font-family: 'Sarabun', sans-serif; font-size: 9px; fill: #8b5a00; text-anchor: middle; dominant-baseline: middle; font-weight: 700; opacity: .9; }
+.m-nak-num.active { fill: #6d1414; opacity: 1; font-size: 10.5px; }
+.m-rasi-label { font-family: 'Mali','Sarabun',serif; font-size: 15px; font-weight: 700; fill: #6d1414; text-anchor: middle; dominant-baseline: middle; paint-order: stroke; stroke: rgba(255,248,225,.8); stroke-width: 3; }
+.m-chip { fill: #fff3d2; stroke: rgba(255,255,255,.7); stroke-width: 1.5; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
+.m-chip.varg { stroke: #d4a017; stroke-width: 3; }
+.m-chip.planet-sun     { fill: #d24a13; }
+.m-chip.planet-moon    { fill: #d4b34c; }
+.m-chip.planet-mars    { fill: #b71c1c; }
+.m-chip.planet-mercury { fill: #2e7d32; }
+.m-chip.planet-jupiter { fill: #e65100; }
+.m-chip.planet-venus   { fill: #1976d2; }
+.m-chip.planet-saturn  { fill: #3e2723; }
+.m-chip.planet-rahu    { fill: #424242; }
+.m-chip.planet-ketu    { fill: #6a1b9a; }
+.m-chip.planet-uranus  { fill: #0d47a1; }
+.m-chip-text { font-family: 'Mali','Sarabun',serif; font-size: 14px; font-weight: 700; fill: #fff8e7; text-anchor: middle; dominant-baseline: middle; }
+.m-chip-text.on-moon { fill: #4a3500; }
+.m-lagna { fill: #c0392b; stroke: #fff8e7; stroke-width: 2; filter: drop-shadow(0 2px 4px rgba(0,0,0,.4)); }
+.m-lagna-text { font-family: 'Mali',serif; font-size: 12px; fill: #fff8e7; text-anchor: middle; dominant-baseline: middle; font-weight: 700; }
+/* rashi lord ring (navamsa mode) */
+.rashi-lord-marker { cursor: help; }
+.rashi-lord-bg { fill: #fff8e1; stroke: #8a6a1f; stroke-width: 1.5; opacity: .92; }
+.rashi-lord-text { font-family: 'Mali',serif; font-size: 16px; font-weight: 700; fill: #6b0e1b; }
+.rashi-lord-marker:hover .rashi-lord-bg { fill: #d4a017; }
+
+/* ============================================================
+   นวางค์จักร (Navamsa / D9)
+   ============================================================ */
+
+.navamsa-section {
+  grid-column: 1 / -1;
+  margin-top: 0;
+}
+
+.navamsa-section .card {
+  padding: 1.25rem 1.5rem;
+}
+
+/* Grid: SVG ซ้าย + ตารางขวา */
+.navamsa-grid {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.navamsa-svg-wrap {
+  width: 260px;
+  flex-shrink: 0;
+}
+
+.navamsa-svg-wrap svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .navamsa-grid { grid-template-columns: 1fr; }
+  .navamsa-svg-wrap { width: 100%; max-width: 260px; margin: 0 auto; }
+}
+
+/* Lagna badge */
+.navamsa-lagna-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.navamsa-lagna-rashi {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* ประเภทนวางค์ (เทวะ/นะระ/รากษส) */
+.navamsa-type-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.navamsa-type-deva    { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.navamsa-type-nara    { background: #e0f2fe; color: #075985; border: 1px solid #7dd3fc; }
+.navamsa-type-rakshas { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+/* ตาราง navamsa รายดาว */
+.navamsa-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.navamsa-table th {
+  background: var(--bg-card-alt, #f8f4ee);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+}
+
+.navamsa-table td {
+  padding: 0.38rem 0.5rem;
+  border-bottom: 1px solid var(--border-light, rgba(0,0,0,.06));
+  vertical-align: middle;
+}
+
+.navamsa-table tr:last-child td { border-bottom: none; }
+.navamsa-table tr:hover td { background: var(--bg-hover, rgba(0,0,0,.03)); }
+
+/* combined status pills */
+.nav-combined-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.nav-combined-excellent   { background: #fef9c3; color: #713f12; border: 1px solid #fde047; }
+.nav-combined-good        { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.nav-combined-nav-good    { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+.nav-combined-neutral     { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+.nav-combined-weak        { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.nav-combined-mixed-bad   { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
+.nav-combined-mixed-good  { background: #d1fae5; color: #064e3b; border: 1px solid #6ee7b7; }
+.nav-combined-very-weak   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+.nav-combined-prakshtra   { background: #fae8ff; color: #6b21a8; border: 1px solid #d8b4fe; }
+.nav-combined-vargottama  { background: #fef9c3; color: #713f12; border: 1px solid #fbbf24; box-shadow: 0 0 0 2px #fde04755; }
+.nav-combined-uttama      { background: #fffbeb; color: #92400e; border: 1px solid #f59e0b; }
+
+/* glossary คำอธิบาย tag นวางค์ */
+.nav-glossary {
+  margin-top: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--card-bg);
+}
+.nav-glossary summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--gold);
+  font-weight: 600;
+  padding: 0.25rem 0;
+  user-select: none;
+}
+.nav-glossary summary:hover { opacity: 0.8; }
+.nav-glossary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.nav-glossary-item {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 0.4rem;
+  padding: 0.6rem 0.75rem;
+}
+.nav-glossary-header {
+  margin-bottom: 0.4rem;
+}
+.nav-glossary-item p {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  margin: 0;
+  color: var(--text-muted);
+}
+.nav-glossary-dignity {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+}
+.nav-glossary-dignity h4 {
+  font-size: 0.82rem;
+  margin: 0 0 0.5rem;
+  color: var(--gold);
+}
+.nav-glossary-dignity-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* สถานะพิเศษ chips */
+.navamsa-special-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.navamsa-special-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.nav-chip-vargottama { background: #fef9c3; color: #713f12; border: 1px solid #fde047; }
+.nav-chip-uttama     { background: #fffbeb; color: #92400e; border: 1px solid #f59e0b; }
+.nav-chip-prakshtra  { background: #fae8ff; color: #6b21a8; border: 1px solid #d8b4fe; }
+.nav-chip-reversal-good { background: #d1fae5; color: #064e3b; border: 1px solid #6ee7b7; }
+.nav-chip-reversal-bad  { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
+
+/* แถวที่มี special status */
+.navamsa-row-vargottama { background: #fef9c340 !important; }
+.navamsa-row-special    { background: #fae8ff20 !important; }
+
+/* planet chip วงกลมในตาราง navamsa */
+.nav-planet-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-family: 'Mali', serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff8e7;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,.3);
+  border: 1.5px solid rgba(255,255,255,.45);
+}
+.nav-planet-chip.planet-sun     { background: #d24a13; }
+.nav-planet-chip.planet-moon    { background: #d4b34c; color: #4a3500; }
+.nav-planet-chip.planet-mars    { background: #b71c1c; }
+.nav-planet-chip.planet-mercury { background: #2e7d32; }
+.nav-planet-chip.planet-jupiter { background: #e65100; }
+.nav-planet-chip.planet-venus   { background: #1976d2; }
+.nav-planet-chip.planet-saturn  { background: #3e2723; }
+.nav-planet-chip.planet-rahu    { background: #424242; }
+.nav-planet-chip.planet-ketu    { background: #6a1b9a; }
+.nav-planet-chip.planet-uranus  { background: #0d47a1; }
+.navamsa-table td:first-child { white-space: nowrap; }
+.navamsa-planet-cell { display: flex; align-items: center; gap: 5px; }
+
+/* คำสำคัญโหราศาสตร์ — §คำ§ → <strong class="kw"> */
+strong.kw {
+  font-weight: 700;
+  color: #8b5a00;
+  background: rgba(180, 130, 20, 0.12);
+  padding: 0.05em 0.25em;
+  border-radius: 3px;
+  font-style: normal;
+}
+
+/* nav_strength color */
+.nav-str-strong { color: #15803d; font-weight: 700; }
+.nav-str-weak   { color: #dc2626; font-weight: 700; }
+.nav-str-neutral { color: var(--text-muted); }
+
+/* คำอธิบายย่อใต้ pill — แสดงตลอด ไม่ toggle เพื่อกัน row กระตุก */
+.nav-meaning-hint {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+  line-height: 1.3;
+  opacity: 0.78;
 }

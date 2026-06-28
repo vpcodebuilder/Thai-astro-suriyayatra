@@ -6,6 +6,9 @@
   {% endif %}
   <circle cx="{{ view.center }}" cy="{{ view.center }}" r="{{ view.r_outer }}" class="m-rim" />
   <circle cx="{{ view.center }}" cy="{{ view.center }}" r="{{ view.r_inner }}" class="m-rim" />
+  {% for dr in view.navamsa_divider_rs %}
+  <circle cx="{{ view.center }}" cy="{{ view.center }}" r="{{ dr }}" class="m-rim" style="stroke-width:1;stroke-dasharray:3 3;opacity:0.5;" />
+  {% endfor %}
 
   {# เส้นแบ่ง 12 ราศี #}
   {% for d in view.dividers %}

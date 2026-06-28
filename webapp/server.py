@@ -8,13 +8,21 @@
 from __future__ import annotations
 
 import math
+import os
 import sys
 from datetime import datetime, timedelta, timezone, date as _date
 from pathlib import Path
 from typing import Optional
 
+# โหลด .env (ANTHROPIC_API_KEY ฯลฯ) ถ้ามี — silent ถ้ายังไม่ได้ install python-dotenv
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+except ImportError:
+    pass
+
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -44,6 +52,8 @@ from thai_astro.triyangka import (
     POISON_INFO,
     RASHI_ELEMENT,
 )
+from thai_astro.navamsa import analyze_chart_navamsa, NAVAMSA_TYPE_INFO
+from thai_astro.chat_context import build_context, format_for_prompt
 from thai_astro.horathaynu.api import predict as horathaynu_predict, predict_from_datetime as horathaynu_predict_dt
 from thai_astro.horathaynu.core.caster import cast_chain as horathaynu_cast
 from thai_astro.horathaynu.core.bhava import BHAVA_NAMES_TH as HORATHAYNU_BHAVA_NAMES
@@ -59,6 +69,15 @@ BASE_DIR = Path(__file__).resolve().parent
 app = FastAPI(title="ผูกดวงโหราศาสตร์ไทย")
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+_RE_KEYWORD = __import__("re").compile(r"§([^§]+)§")
+
+def _markup_kw(text: str) -> str:
+    if not text:
+        return text
+    return _RE_KEYWORD.sub(r'<strong class="kw">\1</strong>', text)
+
+templates.env.filters["markup_kw"] = _markup_kw
 
 
 # ============================================================
@@ -249,50 +268,48 @@ def _chip_layout_by_decanate(
     planets: list[dict],
     rashi_start_angle: float,
     base_radius: float = R_PLANET,
+    step_offset: int = 28,
 ) -> list[tuple[float, float]]:
-    """วาง chip ตามตรียางค์ที่ดาวกำเนิดตก
+    """วาง chip ที่มุมตรงกับองศาจริงของดาวในราศี (longitude-accurate)
 
-    เกณฑ์:
-        - decanate 0 (degree 0-10): center_angle = rashi_start + 5
-        - decanate 1 (degree 10-20): center_angle = rashi_start + 15
-        - decanate 2 (degree 20-30): center_angle = rashi_start + 25
-        - ดาวหลายดวงในช่องเดียวกัน: spread แนวรัศมี (in/out)
+    หลักการ:
+        - มุม chip = rashi_start_angle + degree + arcminute/60
+        - ดาวที่อยู่ใกล้กัน (Δangle < MIN_GAP) → กระจายตามรัศมี (in/out alternating)
+        - step_offset=28 (natal) ป้องกัน chip ทับกัน (diameter=26px); transit ใช้ 14
+        - ผลลัพธ์: chip ตกในช่องตรียางค์ที่ถูกต้องเสมอ + เรียงตามองศาจริง
     """
     n = len(planets)
     if n == 0:
         return []
 
-    # จัดกลุ่มตาม decanate
-    groups: dict[int, list[int]] = {0: [], 1: [], 2: []}
+    # คำนวณมุมจริงของแต่ละดาว
+    items = []
     for i, p in enumerate(planets):
         deg = p.get("degree", 0) + p.get("arcminute", 0) / 60.0
-        dec = 0 if deg < 10 else (1 if deg < 20 else 2)
-        groups[dec].append(i)
+        ang = rashi_start_angle + deg
+        items.append({"idx": i, "ang": ang})
+    items.sort(key=lambda x: x["ang"])
 
+    # Assign radii: หา offset ที่ไม่ชนกับ chip ที่วางไปแล้ว
+    MIN_GAP = 6.0
+    s = step_offset
+    OFFSETS = [0, s, -s, 2*s, -2*s, 3*s, -3*s]
     out: list[tuple[float, float] | None] = [None] * n
-    for dec, idxs in groups.items():
-        sub_center = rashi_start_angle + 5 + dec * 10
-        m = len(idxs)
-        if m == 1:
-            out[idxs[0]] = _polar_to_xy(sub_center, base_radius)
-        elif m == 2:
-            # 2 chip — ในกับนอก
-            out[idxs[0]] = _polar_to_xy(sub_center, base_radius - 14)
-            out[idxs[1]] = _polar_to_xy(sub_center, base_radius + 14)
-        else:
-            # 3+ chip — แบ่ง in/out แล้วกระจายตามมุม
-            half = (m + 1) // 2
-            for j, idx in enumerate(idxs[:half]):
-                spread = min(7 * (half - 1), 12)
-                step = spread / (half - 1) if half > 1 else 0
-                ang = sub_center - spread / 2 + j * step
-                out[idx] = _polar_to_xy(ang, base_radius + 14)
-            for j, idx in enumerate(idxs[half:]):
-                rest = m - half
-                spread = min(7 * (rest - 1), 12)
-                step = spread / (rest - 1) if rest > 1 else 0
-                ang = sub_center - spread / 2 + j * step if rest > 1 else sub_center
-                out[idx] = _polar_to_xy(ang, base_radius - 14)
+    placed: list[tuple[float, float]] = []  # (ang, offset) ของ chip ที่วางแล้ว
+    for it in items:
+        ang = it["ang"]
+        chosen = 0
+        for off in OFFSETS:
+            collide = False
+            for la, lo in placed:
+                if abs(ang - la) < MIN_GAP and off == lo:
+                    collide = True
+                    break
+            if not collide:
+                chosen = off
+                break
+        placed.append((ang, chosen))
+        out[it["idx"]] = _polar_to_xy(ang, base_radius + chosen)
     return [pt for pt in out if pt is not None]  # type: ignore
 
 
@@ -601,7 +618,7 @@ def build_circular_layout(
             tlist = transits_by_rasi.get(r["index"], [])
             rashi_start_angle = 75 + 30 * r["index"]
             txys = _chip_layout_by_decanate(
-                tlist, rashi_start_angle, base_radius=R_TRANSIT
+                tlist, rashi_start_angle, base_radius=R_TRANSIT, step_offset=14
             )
             for (x, y), tp in zip(txys, tlist):
                 transit_chips.append({**tp, "x": x, "y": y})
@@ -856,6 +873,53 @@ def chart_to_view(
             "dignity_is_weak": ndi.is_weak,
         })
 
+    # นวางค์จักร (D9) — คำนวณก่อน dignities เพราะจะ merge เข้า planet_positions
+    navamsa_report = analyze_chart_navamsa(chart)
+    _nav_by_planet = {a.planet: a for a in navamsa_report.planets}
+    for _pp in planet_positions:
+        _na = _nav_by_planet.get(_pp["name"])
+        if _na:
+            _pp.update({
+                "nav_rashi": _na.nav_rashi,
+                "nav_rashi_name": _na.nav_rashi_name,
+                "nav_index": _na.nav_index,
+                "navamsa_type": _na.navamsa_type,
+                "navamsa_type_icon": _na.navamsa_type_icon,
+                "is_vargottama": _na.is_vargottama,
+                "is_uttamanamsa": _na.is_uttamanamsa,
+                "is_prakshtra": _na.is_prakshtra,
+                "nav_dignity": _na.nav_dignity,
+                "nav_dignity_label": _na.nav_dignity_label,
+                "nav_strength": _na.nav_strength,
+                "nav_combined_label": _na.combined_label,
+                "nav_combined_icon": _na.combined_icon,
+                "nav_combined_color_class": _na.combined_color_class,
+                "nav_combined_meaning": _na.combined_meaning,
+                "nav_combined_tone": _na.combined_tone,
+                "nav_special_note": _na.special_note,
+            })
+    _nav_planet_meta = {
+        a.planet: {
+            "nav_index": a.nav_index,
+            "is_vargottama": a.is_vargottama,
+            "dignity": a.nav_dignity,
+            "dignity_label": a.nav_dignity_label,
+            "dignity_strength": a.nav_strength,
+        }
+        for a in navamsa_report.planets
+    }
+    navamsa_svg = _muhurta_svg_view(
+        navamsa_report.planets_by_nav_rashi,
+        ascendant={
+            "rasi": navamsa_report.lagna_nav_rashi,
+            "degree": 15,
+            "arcminute": 0,
+        },
+        planet_meta=_nav_planet_meta,
+        show_rashi_lord_ring=True,
+        is_navamsa=True,
+    )
+
     # ตำแหน่งกำลังดาว + เกณฑ์โยค (คำนวณก่อนเพื่อส่งเข้า bhava lord predictor)
     dignities = compute_all_dignities(chart.planets)
     yogas = detect_yogas(chart.ascendant.zodiac.rasi, chart.planets, dignities)
@@ -1080,6 +1144,24 @@ def chart_to_view(
         } if transit_chart is not None else None),
         "natal_bhava_lords": natal_lord_summary,
         "oracle": oracle_reading,
+        "navamsa": {
+            "svg": navamsa_svg,
+            "lagna_nav_rashi": navamsa_report.lagna_nav_rashi,
+            "lagna_nav_rashi_name": navamsa_report.lagna_nav_rashi_name,
+            "lagna_navamsa_type": navamsa_report.lagna_navamsa_type,
+            "lagna_navamsa_type_icon": navamsa_report.lagna_navamsa_type_icon,
+            "lagna_navamsa_meaning": navamsa_report.lagna_navamsa_meaning,
+            "lagna_is_vargottama": navamsa_report.lagna_is_vargottama,
+            "lagna_is_uttamanamsa": navamsa_report.lagna_is_uttamanamsa,
+            "vargottama_planets": navamsa_report.vargottama_planets,
+            "uttamanamsa_planets": navamsa_report.uttamanamsa_planets,
+            "prakshtra_planets": navamsa_report.prakshtra_planets,
+            "strong_in_nav": navamsa_report.strong_in_nav,
+            "weak_in_nav": navamsa_report.weak_in_nav,
+            "reversal_good": navamsa_report.reversal_good,
+            "reversal_bad": navamsa_report.reversal_bad,
+            "type_info": NAVAMSA_TYPE_INFO,
+        },
         "astro_patterns": _astro_patterns_to_view(astro_report),
         "taksa": _taksa_to_view(taksa, taksa_transit_aspects, transit_taksa),
         "birth_weekday_name": taksa.birth_weekday_name,
@@ -2162,27 +2244,39 @@ from thai_astro.navamsa import compute_navamsa as _compute_navamsa
 
 
 # ----- Muhurta SVG dimensions (smaller — 2 charts side-by-side) -----
-M_SVG_SIZE = 440
+M_SVG_SIZE = 560
 M_CENTER = M_SVG_SIZE / 2
-M_R_INNER = 60
-M_R_OUTER = 170                # ขอบนอกของวงราศี
-M_R_LABEL = 145                # ชื่อราศี
-M_R_CHIP = 110                 # planet chips
-M_R_LAGNA = 130                # lagna marker
+M_R_INNER = 75
+M_R_OUTER = 205                # ขอบนอกของวงราศี
+M_R_LABEL = 180                # ชื่อราศี (กลาง sector)
+M_R_CHIP_NATAL = 145           # natal chips (เลขไทย ๑-๙ — กลาง sector ใน rashi ring)
+M_R_CHIP_NATAL_INNER = 125     # 2-row layout เมื่อดาว >=4: แถวใน
+M_R_CHIP_NATAL_OUTER = 165     # 2-row layout เมื่อดาว >=4: แถวนอก
+M_R_NATAL_LAGNA = 155          # natal lagna marker (ใกล้ขอบนอกของ rashi ring)
+M_R_CHIP = 264                 # hit chips (เลขอารบิก 1-9 — ขอบวงนักษัตร)
+M_R_CHIP_HIT_INNER = 240       # 2-row hit layout (แถวใน — ขอบวงนักษัตรด้านใน)
+M_R_CHIP_HIT_OUTER = 273       # 2-row hit layout (แถวนอก)
+M_R_LAGNA = 264                # lagna marker (ระดับเดียวกับ hit chips)
 # Triyangka (decanate) dividers — เส้นแบ่ง 10°/20° ในแต่ละราศี
 M_R_TRI_INNER = M_R_INNER
 M_R_TRI_OUTER = M_R_OUTER - 6  # สั้นกว่าเส้นราศี (กันสับสน)
 # Nakshatra ring (วงนอก) — 27 ฤกษ์
-M_R_NAK_RING_IN = 175
-M_R_NAK_RING_OUT = 218
-M_R_NAK_LABEL_NAME = 184    # ชื่อนักษัตร (ใกล้ขอบใน)
-M_R_NAK_LABEL_NUM = 205     # เลข (ใกล้ขอบนอก)
+M_R_NAK_RING_IN = 215
+M_R_NAK_RING_OUT = 250
+M_R_NAK_LABEL_NAME = 224    # ชื่อนักษัตร (ใกล้ขอบใน)
+M_R_NAK_LABEL_NUM = 242     # เลข (ใกล้ขอบนอก)
 
 # planet abbreviation (เลขอารบิก) สำหรับ chip ฤกษ์
 _MUHURTA_PLANET_ABBR = {
     "อาทิตย์": "1", "จันทร์": "2", "อังคาร": "3", "พุธ": "4",
     "พฤหัสบดี": "5", "ศุกร์": "6", "เสาร์": "7",
     "ราหู": "8", "เกตุ": "9", "มฤตยู": "0",
+}
+# planet abbreviation (เลขไทย) สำหรับ chip ดาวเจ้าชะตา (natal)
+_MUHURTA_PLANET_ABBR_TH = {
+    "อาทิตย์": "๑", "จันทร์": "๒", "อังคาร": "๓", "พุธ": "๔",
+    "พฤหัสบดี": "๕", "ศุกร์": "๖", "เสาร์": "๗",
+    "ราหู": "๘", "เกตุ": "๙", "มฤตยู": "๐",
 }
 # planet color class (ตรงกับหน้าผูกดวงสุริยยาตร์)
 _MUHURTA_PLANET_CLASS = {
@@ -2206,7 +2300,13 @@ def _muhurta_svg_view(planets_by_rashi: dict, ascendant: Optional[dict] = None,
                       vargottama: Optional[set] = None,
                       show_triyangka: bool = False,
                       show_nakshatra: bool = False,
-                      highlight_nakshatra_index: Optional[int] = None) -> dict:
+                      highlight_nakshatra_index: Optional[int] = None,
+                      natal_planets_by_rashi: Optional[dict] = None,
+                      natal_ascendant: Optional[dict] = None,
+                      show_rashi_lord_ring: bool = False,
+                      planet_meta: Optional[dict] = None,
+                      natal_planet_meta: Optional[dict] = None,
+                      is_navamsa: bool = False) -> dict:
     """SVG view สำหรับวงจักรราศีฤกษ์
     show_triyangka: วาดเส้นตรียางค์ 24 เส้น (10°/20° ในแต่ละราศี)
     show_nakshatra: วาดวงนอก + 27 ฤกษ์
@@ -2274,35 +2374,215 @@ def _muhurta_svg_view(planets_by_rashi: dict, ascendant: Optional[dict] = None,
                 "highlight": (j == highlight_nakshatra_index),
             })
 
+    # แยก cross-rashi tracking ต่างหากสำหรับ hit chips กับ natal chips เพื่อกันปนกัน
+    _gp_hit: list[tuple[float, float]] = []
+    _gp_natal: list[tuple[float, float]] = []
+
     rasis = []
     for ri in range(12):
         center_angle = 90 + 30 * ri
         label_x, label_y = _muhurta_polar(center_angle, M_R_LABEL)
 
+        # helper: เติม metadata เข้า chip dict (รวม triyangka poison + navamsa)
+        def _enrich_chip(chip: dict, planet_name: str, meta_dict: Optional[dict]) -> dict:
+            m = (meta_dict or {}).get(planet_name) or {}
+            chip.update({
+                "rasi_name": m.get("rasi_name", ""),
+                "degree": m.get("degree", 0),
+                "arcminute": m.get("arcminute", 0),
+                "arcsecond": m.get("arcsecond", 0),
+                "retrograde": m.get("retrograde", False),
+                "dignity": m.get("dignity", ""),
+                "dignity_label": m.get("dignity_label", ""),
+                "dignity_strength": m.get("dignity_strength", 0),
+                "source": m.get("source", ""),
+                "is_poison": m.get("is_poison", False),
+                "poison_type": m.get("poison_type") or "",
+                "poison_icon": m.get("poison_icon") or "",
+                "poison_severity": m.get("poison_severity") or "",
+                "triyangka_decanate": m.get("triyangka_decanate", 0),
+                "triyangka_lord": m.get("triyangka_lord", ""),
+                # navamsa context (ใช้ใน tooltip ของผังนวางค์)
+                "nav_rasi_name": m.get("nav_rasi_name", ""),
+                "nav_index": m.get("nav_index", 0),
+                "nav_lord_planet": m.get("nav_lord_planet", ""),
+                "nav_lord_num": m.get("nav_lord_num", 0),
+                "is_vargottama": m.get("is_vargottama", False),
+            })
+            return chip
+
+        # === helper: วาง chip ===
+        rashi_start = 75 + 30 * ri
+        def _place_by_degree(names, meta, base_r, inner_r, outer_r, gp: list):
+            """วาง chip ใน rashi section:
+            - navamsa: กระจายสม่ำเสมอตลอด 30° arc (ไม่ใช้องศาจริง) เรียงตาม nav_index
+            - non-navamsa: วางตามองศาจริง + radial/angular collision avoidance
+            """
+            if not names:
+                return []
+
+            if is_navamsa:
+                # radial stacking: max 2 ต่อวง, ขยับออกถ้าเกิน, clamp ให้อยู่ในช่อง
+                indexed = sorted(
+                    enumerate(names),
+                    key=lambda x: ((meta or {}).get(x[1]) or {}).get("nav_index", 0)
+                )
+                r_base = max(inner_r + 13, min(outer_r - 13, base_r))
+                CHIP_DIAM = 26.0
+                MARGIN = 2.5  # องศาจากขอบ rashi (ห้ามชิดเส้น)
+
+                # แบ่ง chips เป็น levels (max 2 ต่อ level, ขยับออก CHIP_DIAM)
+                levels: list = []
+                cur_r = r_base
+                batch: list = []
+                for orig_i, _ in indexed:
+                    if len(batch) < 2:
+                        batch.append(orig_i)
+                    else:
+                        levels.append((cur_r, batch))
+                        cur_r = min(outer_r - 13, cur_r + CHIP_DIAM)
+                        batch = [orig_i]
+                levels.append((cur_r, batch))
+
+                # วาง chip แต่ละ level — clamp ให้อยู่ใน [rashi_start+MARGIN, rashi_start+30-MARGIN]
+                out: list = [None] * len(names)
+                for r_lv, lv_ids in levels:
+                    nl = len(lv_ids)
+                    safe_ang = math.degrees(
+                        2.0 * math.asin(CHIP_DIAM / max(2.0 * r_lv, CHIP_DIAM + 1.0))
+                    ) + 0.5
+                    step_ang = max(30.0 / (nl + 1), safe_ang)
+                    arc_st = max(MARGIN, (30.0 - step_ang * max(nl - 1, 0)) / 2.0)
+                    ang_lo = rashi_start + MARGIN
+                    ang_hi = rashi_start + 30.0 - MARGIN
+                    for i, orig_i in enumerate(lv_ids):
+                        ang = rashi_start + arc_st + i * step_ang
+                        ang = max(ang_lo, min(ang_hi, ang))  # clamp ใน rashi
+                        xy = _muhurta_polar(ang, r_lv)
+                        gp.append((ang, r_lv, *xy))
+                        out[orig_i] = xy
+                return out
+
+            # --- non-navamsa: degree-accurate + collision avoidance ---
+            items = []
+            for i, pname in enumerate(names):
+                m = (meta or {}).get(pname) or {}
+                deg = m.get("degree", 0) + m.get("arcminute", 0) / 60.0
+                ang = rashi_start + deg
+                items.append({"idx": i, "ang": ang})
+            items.sort(key=lambda x: x["ang"])
+            CHIP_DIAM = 26.0
+            OFFSET = 26
+            OFFSETS = [0, OFFSET, -OFFSET, 2*OFFSET, -2*OFFSET, 3*OFFSET, -3*OFFSET]
+            SVG_SAFE = M_SVG_SIZE // 2 - 13
+            r_min = inner_r + 13
+            r_max = outer_r - 13
+            if r_max - r_min < OFFSET:
+                r_min = max(13, base_r - 3 * OFFSET)
+                r_max = min(SVG_SAFE, base_r + 3 * OFFSET)
+            out = [None] * len(names)
+            placed: list[tuple] = [(la, lr, lx, ly) for la, lr, lx, ly in gp
+                                    if la >= rashi_start - 15]
+            initial_len = len(placed)
+            for it in items:
+                ang = it["ang"]
+                chosen_r = max(r_min, min(r_max, base_r))
+                chosen_xy = _muhurta_polar(ang, chosen_r)
+                found = False
+                for off in OFFSETS:
+                    r_try = max(r_min, min(r_max, base_r + off))
+                    tx, ty = _muhurta_polar(ang, r_try)
+                    if not any(
+                        math.sqrt((tx - lx) ** 2 + (ty - ly) ** 2) < CHIP_DIAM
+                        for _, _, lx, ly in placed
+                    ):
+                        chosen_r = r_try
+                        chosen_xy = (tx, ty)
+                        found = True
+                        break
+                if not found:
+                    for ang_nudge in [5, -5, 10, -10, 15, -15]:
+                        for off in OFFSETS:
+                            r_try = max(r_min, min(r_max, base_r + off))
+                            tx, ty = _muhurta_polar(ang + ang_nudge, r_try)
+                            if not any(
+                                math.sqrt((tx - lx) ** 2 + (ty - ly) ** 2) < CHIP_DIAM
+                                for _, _, lx, ly in placed
+                            ):
+                                chosen_r = r_try
+                                chosen_xy = (tx, ty)
+                                found = True
+                                break
+                        if found:
+                            break
+                placed.append((ang, chosen_r, *chosen_xy))
+                out[it["idx"]] = chosen_xy
+            gp.extend(placed[initial_len:])
+            return out
+
         planet_names = planets_by_rashi.get(ri, [])
         chips = []
-        n = len(planet_names)
-        if n == 0:
-            pass
-        elif n == 1:
-            cx, cy = _muhurta_polar(center_angle, M_R_CHIP)
-            chips.append({"name": planet_names[0],
-                          "abbr": _MUHURTA_PLANET_ABBR.get(planet_names[0], "?"),
-                          "color_class": _MUHURTA_PLANET_CLASS.get(planet_names[0], ""),
-                          "x": cx, "y": cy,
-                          "varg": planet_names[0] in vargottama})
+        # navamsa หาฤกษ์ (มี natal layer): transit chips นอก r=205 → r=230
+        # navamsa ผูกดวง (ไม่มี natal layer): chips อยู่ในวงราศี เหมือน natal zone
+        # non-navamsa: chips วงนักษัตร
+        if is_navamsa and natal_planets_by_rashi is not None:
+            _base_r, _hit_inner, _hit_outer = 230, 207, 252
+        elif is_navamsa:
+            _base_r, _hit_inner, _hit_outer = M_R_CHIP_NATAL, M_R_INNER, M_R_OUTER
         else:
-            # spread around center_angle
-            spread = min(20, 5 * n)
-            for i, pname in enumerate(planet_names):
-                t = i / max(1, n - 1)
-                ang = center_angle - spread / 2 + spread * t
-                cx, cy = _muhurta_polar(ang, M_R_CHIP)
-                chips.append({"name": pname,
-                              "abbr": _MUHURTA_PLANET_ABBR.get(pname, "?"),
-                              "color_class": _MUHURTA_PLANET_CLASS.get(pname, ""),
-                              "x": cx, "y": cy,
-                              "varg": pname in vargottama})
+            _base_r, _hit_inner, _hit_outer = M_R_CHIP, M_R_CHIP_HIT_INNER, M_R_CHIP_HIT_OUTER
+        xys = _place_by_degree(planet_names, planet_meta, _base_r, _hit_inner, _hit_outer, _gp_hit)
+        for i, pname in enumerate(planet_names):
+            cx, cy = xys[i]
+            chips.append(_enrich_chip({
+                "name": pname,
+                "abbr": _MUHURTA_PLANET_ABBR.get(pname, "?"),
+                "color_class": _MUHURTA_PLANET_CLASS.get(pname, ""),
+                "x": cx, "y": cy,
+                "varg": pname in vargottama,
+            }, pname, planet_meta))
+
+        # === natal chips (เลขไทย) — วางตามองศาจริง (longitude-accurate) ===
+        natal_chips = []
+        if natal_planets_by_rashi is not None:
+            natal_names = natal_planets_by_rashi.get(ri, [])
+            # navamsa natal: วงในของ zodiac ring (75-143) → r=110
+            # non-navamsa natal: ทั้งวงราศี [M_R_INNER, M_R_OUTER]
+            if is_navamsa:
+                _natal_base_r, _nat_inner, _nat_outer = 110, M_R_INNER, 143
+            else:
+                _natal_base_r, _nat_inner, _nat_outer = M_R_CHIP_NATAL, M_R_INNER, M_R_OUTER
+            nxys = _place_by_degree(natal_names, natal_planet_meta,
+                                     _natal_base_r, _nat_inner, _nat_outer, _gp_natal)
+            for i, pname in enumerate(natal_names):
+                cx, cy = nxys[i]
+                natal_chips.append(_enrich_chip({
+                    "name": pname,
+                    "abbr": _MUHURTA_PLANET_ABBR_TH.get(pname, "?"),
+                    "color_class": _MUHURTA_PLANET_CLASS.get(pname, ""),
+                    "x": cx, "y": cy,
+                }, pname, natal_planet_meta))
+
+        # rashi lord ring สำหรับ navamsa chart (เลขดาวเกษตร 1-7) — อยู่ในวงนอกที่ตี border รอบ
+        rashi_lord_marker = None
+        if show_rashi_lord_ring:
+            from thai_astro.planets import RASI_LORD as _RL
+            _lord_num = {
+                "อาทิตย์":1,"จันทร์":2,"อังคาร":3,"พุธ":4,
+                "พฤหัสบดี":5,"ศุกร์":6,"เสาร์":7,
+                "ราหู":8,"เกตุ":9,"มฤตยู":0,
+            }
+            lord_planet = _RL[ri]
+            lord_num = _lord_num.get(lord_planet, 0)
+            # navamsa: วางในวงนอกของ zodiac ring (145-205 → center 175)
+            # rashi mode: วางในวงนักษัตร
+            r_lord = 175 if is_navamsa else (M_R_NAK_RING_IN + M_R_NAK_RING_OUT) / 2
+            lord_x, lord_y = _muhurta_polar(center_angle, r_lord)
+            rashi_lord_marker = {
+                "lord_planet": lord_planet,
+                "lord_num": lord_num,
+                "x": lord_x, "y": lord_y,
+            }
 
         rasis.append({
             "index": ri,
@@ -2310,6 +2590,8 @@ def _muhurta_svg_view(planets_by_rashi: dict, ascendant: Optional[dict] = None,
             "label_x": label_x, "label_y": label_y,
             "center_angle": center_angle,
             "chips": chips,
+            "natal_chips": natal_chips,
+            "rashi_lord_marker": rashi_lord_marker,
         })
 
     lagna = None
@@ -2317,18 +2599,90 @@ def _muhurta_svg_view(planets_by_rashi: dict, ascendant: Optional[dict] = None,
         asc_rasi = ascendant["rasi"]
         asc_deg = ascendant["degree"] + ascendant.get("arcminute", 0) / 60.0
         asc_angle = 75 + 30 * asc_rasi + asc_deg
-        lx, ly = _muhurta_polar(asc_angle, M_R_LAGNA)
-        lagna = {"x": lx, "y": ly, "angle": asc_angle}
+        _lagna_r = M_R_NATAL_LAGNA if is_navamsa else M_R_LAGNA
+        lx, ly = _muhurta_polar(asc_angle, _lagna_r)
+        # เส้นประวิ่งจากขอบในออกไปจุดลัคนา
+        lx1, ly1 = _muhurta_polar(asc_angle, M_R_INNER)
+        lagna = {"x": lx, "y": ly, "angle": asc_angle,
+                 "line_x1": lx1, "line_y1": ly1, "line_x2": lx, "line_y2": ly}
+
+    natal_lagna = None
+    if natal_ascendant:
+        n_rasi = natal_ascendant["rasi"]
+        n_deg = natal_ascendant["degree"] + natal_ascendant.get("arcminute", 0) / 60.0
+        n_ang = 75 + 30 * n_rasi + n_deg
+        nlx, nly = _muhurta_polar(n_ang, M_R_NATAL_LAGNA)
+        nlx1, nly1 = _muhurta_polar(n_ang, M_R_INNER)
+        natal_lagna = {"x": nlx, "y": nly, "angle": n_ang,
+                       "line_x1": nlx1, "line_y1": nly1, "line_x2": nlx, "line_y2": nly}
+
+    # triyangka markers + element markers (เฉพาะ rashi mode, ไม่มีใน navamsa)
+    triyangka_markers = []
+    element_markers = []
+    if show_triyangka and not is_navamsa:
+        from thai_astro.triyangka import (
+            triyangka_lord as _tlord,
+            POISON_MAP as _PMAP, POISON_INFO as _PINFO,
+            RASHI_ELEMENT as _RE, ELEMENT_INFO as _EI,
+        )
+        _planet_short = {"อาทิตย์":"1","จันทร์":"2","อังคาร":"3","พุธ":"4",
+                         "พฤหัสบดี":"5","ศุกร์":"6","เสาร์":"7"}
+        # decanate markers
+        for ri in range(12):
+            for dec in range(3):
+                sub_center = (75 + 30 * ri) + 10 * dec + 5
+                tx, ty = _muhurta_polar(sub_center, M_R_LABEL + 28)
+                lord_th = _tlord(ri, dec)
+                short = _planet_short.get(lord_th, lord_th[:1])
+                poison_type = None
+                poison_icon = None
+                if ri in _PMAP and _PMAP[ri][1] == dec:
+                    poison_type = _PMAP[ri][0]
+                    poison_icon = _PINFO[poison_type]["icon"]
+                triyangka_markers.append({
+                    "rashi_idx": ri,
+                    "rashi_name": RASI_NAMES_TH[ri],
+                    "decanate": dec,
+                    "decanate_num": dec + 1,
+                    "x": tx, "y": ty,
+                    "lord": lord_th, "short": short,
+                    "deg_from": dec * 10, "deg_to": (dec + 1) * 10,
+                    "is_poison": poison_type is not None,
+                    "poison_type": poison_type,
+                    "poison_icon": poison_icon,
+                })
+        # element markers per rashi (ใกล้ขอบใน)
+        for ri in range(12):
+            ekey = _RE[ri]
+            einfo = _EI[ekey]
+            cx, cy = _muhurta_polar(90 + 30 * ri, M_R_INNER + 14)
+            element_markers.append({
+                "rashi_idx": ri,
+                "rashi_name": RASI_NAMES_TH[ri],
+                "key": ekey,
+                "name_th": einfo["name_th"],
+                "symbol": einfo["symbol"],
+                "x": cx, "y": cy,
+            })
 
     return {
         "size": M_SVG_SIZE, "center": M_CENTER,
         "r_inner": M_R_INNER, "r_outer": M_R_OUTER,
         "r_nak_in": M_R_NAK_RING_IN, "r_nak_out": M_R_NAK_RING_OUT,
+        # r=75 (M_R_INNER) และ r=205 (M_R_OUTER) เป็นเส้นแบ่ง 3 ชั้นอยู่แล้ว ไม่ต้องเส้นพิเศษ
+        "navamsa_divider_rs": [],
         "dividers": dividers,
-        "triyangka_dividers": triyangka_dividers,
+        "triyangka_dividers": triyangka_dividers if (show_triyangka and not is_navamsa) else [],
         "nakshatra_cells": nakshatra_cells,
         "show_nakshatra": show_nakshatra,
+        "show_triyangka": show_triyangka and not is_navamsa,
+        "show_rashi_lord_ring": show_rashi_lord_ring,
+        "is_navamsa": is_navamsa,
         "rasis": rasis, "lagna": lagna,
+        "natal_lagna": natal_lagna,
+        "has_natal": natal_planets_by_rashi is not None,
+        "triyangka_markers": triyangka_markers,
+        "element_markers": element_markers,
     }
 
 
@@ -2803,8 +3157,81 @@ def _serialize_muhurta(mr, natal_extra: Optional[dict] = None) -> dict:
     """Convert MuhurtaResult → dict for template
 
     natal_extra: optional dict from _compute_personal_extras()
+                 — if includes _natal_chart, overlay natal layer ลงผัง rashi+navamsa
     """
     varg_set = set(mr.vargottama_planets)
+
+    # natal overlay (ถ้ามี natal_chart)
+    natal_chart_obj = natal_extra.pop("_natal_chart", None) if natal_extra else None
+    natal_rashi = _planets_by_rashi_from_chart(natal_chart_obj) if natal_chart_obj else None
+    natal_navamsa = _planets_by_navamsa_rashi(natal_chart_obj) if natal_chart_obj else None
+    natal_asc = None
+    if natal_chart_obj:
+        natal_asc = {
+            "rasi": natal_chart_obj.ascendant.zodiac.rasi,
+            "degree": natal_chart_obj.ascendant.zodiac.degree,
+            "arcminute": natal_chart_obj.ascendant.zodiac.arcminute,
+        }
+
+    # === enrich planet metadata สำหรับ tooltip (รวม triyangka poison + navamsa info) ===
+    _LORD_NUM_MAP = {
+        "อาทิตย์":1,"จันทร์":2,"อังคาร":3,"พุธ":4,
+        "พฤหัสบดี":5,"ศุกร์":6,"เสาร์":7,
+        "ราหู":8,"เกตุ":9,"มฤตยู":0,
+    }
+    def _build_meta(chart_obj, source_label: str, use_nav_dignity: bool = False):
+        if chart_obj is None:
+            return {}
+        out = {}
+        for name in PLANET_ORDER:
+            if name not in chart_obj.planets:
+                continue
+            p = chart_obj.planets[name]
+            # ตรียางค์ + พิษ — ใช้ตำแหน่งจริง (rashi+degree) เสมอ
+            _ti = get_triyangka_info(p.zodiac.rasi, p.zodiac.degree, p.zodiac.arcminute)
+            # navamsa: คำนวณตำแหน่ง nav_rashi + nav_index (1-9)
+            nv = _compute_navamsa(p.zodiac.rasi, p.zodiac.degree, p.zodiac.arcminute)
+            nav_lord_planet = RASI_LORD[nv.nav_rashi]
+            nav_lord_num = _LORD_NUM_MAP.get(nav_lord_planet, 0)
+            if use_nav_dignity:
+                # ใน navamsa chart: dignity ที่ nav_rashi
+                _di = compute_dignity(name, nv.nav_rashi)
+            else:
+                # ใน rashi chart: dignity ที่ราศีจริง
+                _di = compute_dignity(name, p.zodiac.rasi)
+            # rasi_name = ORIGINAL rashi เสมอ (เป็นตำแหน่งจริงของดาว)
+            rasi_label = RASI_NAMES_TH[p.zodiac.rasi]
+            out[name] = {
+                "rasi_name": rasi_label,
+                "degree": p.zodiac.degree,
+                "arcminute": p.zodiac.arcminute,
+                "arcsecond": p.zodiac.arcsecond,
+                "retrograde": p.retrograde,
+                "dignity": _di.dignity,
+                "dignity_label": _di.label,
+                "dignity_strength": _di.strength,
+                "source": source_label,
+                # ตรียางค์ poison — passthrough ทั้ง rashi และ navamsa
+                "is_poison": _ti.is_poison,
+                "poison_type": _ti.poison_type,
+                "poison_icon": _ti.poison_icon,
+                "poison_severity": _ti.poison_severity,
+                "triyangka_decanate": _ti.decanate + 1,
+                "triyangka_lord": _ti.lord_planet,
+                # navamsa context
+                "nav_rasi_name": RASI_NAMES_TH[nv.nav_rashi],
+                "nav_index": nv.nav_index,                       # 1-9
+                "nav_lord_planet": nav_lord_planet,
+                "nav_lord_num": nav_lord_num,
+                "is_vargottama": nv.is_vargottama,
+            }
+        return out
+
+    hit_meta_rashi = _build_meta(mr.chart, "ฤกษ์", use_nav_dignity=False)
+    hit_meta_navamsa = _build_meta(mr.chart, "ฤกษ์", use_nav_dignity=True)
+    natal_meta_rashi = _build_meta(natal_chart_obj, "เจ้าชะตา", use_nav_dignity=False)
+    natal_meta_navamsa = _build_meta(natal_chart_obj, "เจ้าชะตา", use_nav_dignity=True)
+
     rashi_view = _muhurta_svg_view(
         _planets_by_rashi_from_chart(mr.chart),
         ascendant={
@@ -2816,10 +3243,42 @@ def _serialize_muhurta(mr, natal_extra: Optional[dict] = None) -> dict:
         show_triyangka=True,
         show_nakshatra=True,
         highlight_nakshatra_index=mr.nakshatra.index,
+        natal_planets_by_rashi=natal_rashi,
+        natal_ascendant=natal_asc,
+        planet_meta=hit_meta_rashi,
+        natal_planet_meta=natal_meta_rashi,
+        is_navamsa=False,
     )
+    # navamsa ascendant
+    nav_asc_hit = _compute_navamsa(
+        mr.chart.ascendant.zodiac.rasi,
+        mr.chart.ascendant.zodiac.degree,
+        mr.chart.ascendant.zodiac.arcminute,
+    )
+    nav_asc_natal = None
+    if natal_chart_obj:
+        nav_asc_natal = _compute_navamsa(
+            natal_chart_obj.ascendant.zodiac.rasi,
+            natal_chart_obj.ascendant.zodiac.degree,
+            natal_chart_obj.ascendant.zodiac.arcminute,
+        )
     navamsa_view = _muhurta_svg_view(
         _planets_by_navamsa_rashi(mr.chart),
+        ascendant={
+            "rasi": nav_asc_hit.nav_rashi,
+            "degree": 15,  # กลาง sector (nav rashi เป็น 12 ช่องเท่ากัน)
+            "arcminute": 0,
+        },
         vargottama=varg_set,
+        natal_planets_by_rashi=natal_navamsa,
+        natal_ascendant=({
+            "rasi": nav_asc_natal.nav_rashi,
+            "degree": 15, "arcminute": 0,
+        } if nav_asc_natal else None),
+        show_rashi_lord_ring=True,
+        planet_meta=hit_meta_navamsa,
+        natal_planet_meta=natal_meta_navamsa,
+        is_navamsa=True,
     )
     base = {
         "when_str": mr.when.strftime("%d/%m/%Y %H:%M"),
@@ -2968,6 +3427,7 @@ def _compute_personal_extras(birth_date_th: str, birth_time: str, birth_province
         "aspects": asp_out,
         "summary_headline": summary.get("headline", ""),
         "summary_conclusion": summary.get("conclusion", ""),
+        "_natal_chart": natal_chart,  # internal — ใช้ใน _serialize_muhurta สำหรับ overlay SVG (strip ก่อน return JSON)
     }
 
 
@@ -3476,6 +3936,110 @@ async def muhurta_detail(
 
         view = _serialize_muhurta(mr, natal_extra=natal_extra)
         return JSONResponse(view)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception as e:
+        return JSONResponse({"error": f"ผิดพลาด: {e}"}, status_code=500)
+
+
+# ============================================================
+# /chart/ask — chat กับโหร AI (JSON, ไม่ต้อง auth, mock mode ถ้าไม่มี key)
+# ============================================================
+@app.post("/chart/ask")
+async def chart_ask(
+    birth_date_th: str = Form(""),
+    birth_time: str = Form(""),
+    province: str = Form("กรุงเทพมหานคร"),
+    question: str = Form(""),
+) -> JSONResponse:
+    """รับดวง + คำถาม → ตอบจากดวงดาว
+
+    ถ้าตั้งค่า ANTHROPIC_API_KEY → ส่งให้ Claude ตอบจริง
+    ถ้าไม่มี key → คืน prompt preview เพื่อให้ดูว่าจะส่งอะไรเข้า Claude
+    """
+    import os
+
+    q = question.strip()
+    if not q:
+        return JSONResponse({"error": "กรุณาพิมพ์คำถาม"}, status_code=400)
+
+    try:
+        if not birth_date_th.strip():
+            return JSONResponse({"error": "กรุณากรอกวันเดือนปีเกิด"}, status_code=400)
+        if not birth_time.strip():
+            return JSONResponse({"error": "กรุณากรอกเวลาเกิด"}, status_code=400)
+
+        y, m, d = parse_thai_date(birth_date_th)
+        hh, mm = [int(x) for x in birth_time.split(":")]
+        chart = Chart.calculate(year=y, month=m, day=d, hour=hh, minute=mm, province=province)
+
+        ctx = build_context(chart, q)
+        prompt_text = format_for_prompt(ctx)
+
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            # Mock mode — คืน prompt ที่จะส่งให้ Claude ให้ดูก่อน
+            return JSONResponse({
+                "mode": "preview",
+                "intents": ctx.intents,
+                "auto_warning": ctx.auto_warning_triggered,
+                "prompt_preview": prompt_text,
+                "reply": None,
+                "note": "ยังไม่ได้ตั้งค่า ANTHROPIC_API_KEY — แสดง prompt ที่จะส่งเข้า Claude",
+            })
+
+        # Claude API mode — streaming via Server-Sent Events
+        try:
+            import anthropic
+        except ImportError:
+            return JSONResponse({"error": "ยังไม่ได้ install anthropic library"}, status_code=500)
+
+        SYSTEM_PROMPT = (
+            "คุณคือ \"อาจารย์โหร\" ผู้เชี่ยวชาญโหราศาสตร์ไทยสายสุริยยาตร์\n"
+            "- ตอบเป็นภาษาไทย น้ำเสียงสุภาพแบบโหรอาวุโส เห็นใจผู้ถาม\n"
+            "- อ้างตำรา: อ.เทพย์ สาริกบุตร / อ.ประยูร พลอารีย์\n"
+            "- ใช้ศัพท์โหราศาสตร์ไทย (ภพ ราศี ดาวจร ทักษา) ไม่ใช้ศัพท์ตะวันตก\n"
+            "- ตอบตาม facts ที่ให้มาเท่านั้น ห้ามแต่งดาวหรือตีความเกินจาก context\n"
+            "- ถ้ามีเกณฑ์ระวัง ให้เตือนตรง ๆ แบบเห็นใจ ไม่ขู่ให้กลัว\n"
+            "- ตอบกระชับ ตรงประเด็น ไม่เกิน 200 คำ"
+        )
+
+        import json as _json
+        client = anthropic.Anthropic(api_key=api_key)
+        intents_list = list(ctx.intents)
+        auto_warn = ctx.auto_warning_triggered
+
+        def event_stream():
+            # ส่ง meta ก่อน — frontend เอาไปแสดง header bubble
+            yield "data: " + _json.dumps({
+                "type": "meta",
+                "intents": intents_list,
+                "auto_warning": auto_warn,
+            }, ensure_ascii=False) + "\n\n"
+            try:
+                with client.messages.stream(
+                    model="claude-sonnet-4-6",
+                    max_tokens=600,
+                    system=SYSTEM_PROMPT,
+                    messages=[{"role": "user", "content": prompt_text}],
+                ) as stream:
+                    for text in stream.text_stream:
+                        if text:
+                            yield "data: " + _json.dumps(
+                                {"type": "chunk", "text": text}, ensure_ascii=False
+                            ) + "\n\n"
+            except Exception as e:  # noqa: BLE001
+                yield "data: " + _json.dumps(
+                    {"type": "error", "message": str(e)}, ensure_ascii=False
+                ) + "\n\n"
+            yield "data: " + _json.dumps({"type": "done"}) + "\n\n"
+
+        return StreamingResponse(
+            event_stream(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     except Exception as e:

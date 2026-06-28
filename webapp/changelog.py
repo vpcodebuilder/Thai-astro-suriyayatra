@@ -12,6 +12,42 @@
 
 CHANGELOG = [
     {
+        "version": "2026.06.28",
+        "date": "2026-06-28",
+        "title": "🔮 นวางค์จักร — ปรับ chip layout ไม่ซ้อนทับ + glossary tag",
+        "highlights": [
+            "Radial stacking: ดาวในช่องเดียวกันของนวางค์จักรเรียงออกด้านนอกแทนการทับซ้อน (max 2 ต่อวง)",
+            "Chip อยู่ในช่อง hard-clamp ±2.5° จากเส้นขอบ ไม่หนีออกนอกราศี",
+            "ผูกดวง navamsa: chip D9 กลับเข้าวงราศี (r=145) แทนที่จะอยู่นอกวง",
+            "Navamsa card ใน ผูกดวง ย่อ SVG จาก 360px → 260px",
+            "เพิ่ม title tooltip บน badge นวางค์ (เทวะ/นะระ/รากษส, วรโคตม, อุตตมางค์, ประเกษตร)",
+            "เพิ่ม accordion '📖 คำอธิบาย tag นวางค์จักร' — 6 คำศัพท์ + ตาราง dignity",
+        ],
+        "details": [
+            {
+                "category": "เพิ่ม",
+                "items": [
+                    "title attribute บน navamsa badge ทุกชนิด (hover เพื่ออ่านความหมาย)",
+                    "Accordion glossary นวางค์จักร — เทวะ/นะระ/รากษส, วรโคตม, อุตตมางค์, ประเกษตร + dignity table",
+                ],
+            },
+            {
+                "category": "แก้",
+                "items": [
+                    "Navamsa chip collision avoidance: radial stacking max 2/วง, safe_ang คำนวณจาก r จริง",
+                    "Chip clamp ใน [rashi_start+2.5°, rashi_start+27.5°] — ไม่ทับเส้นแบ่ง rashi",
+                    "ผูกดวง navamsa (ไม่มี natal layer): chip ไปที่ r=145 ในวงราศี แทน r=230 นอกวง",
+                ],
+            },
+            {
+                "category": "ปรับ",
+                "items": [
+                    "Navamsa card SVG wrap: 360px → 260px (grid column เปลี่ยนตาม)",
+                ],
+            },
+        ],
+    },
+    {
         "version": "2026.06.21",
         "date": "2026-06-21",
         "title": "👤 หาฤกษ์เฉพาะบุคคล — เปิดใช้งานครบ + วิธีใช้ใหม่",

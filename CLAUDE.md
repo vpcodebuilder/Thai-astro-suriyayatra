@@ -3538,3 +3538,134 @@ ScanHit + `_serialize_hit`:
 ## Tests
 - 199/199 ผ่านอยู่ตลอด (ไม่เพิ่ม test ใหม่ session นี้ — verify ผ่าน browser)
 
+
+
+# ===== Session 26 — Chip layout by actual longitude (bug fix) — 2026-06-24 =====
+
+## ปัญหาที่ user catch ได้
+ดาวพุธในราศีสิงห์ 13°5' ควรอยู่ในตรียางค์ช่องที่ 2 (degree 10-20°)
+แต่ chip บนผังจักรราศี (ทั้งหน้าผูกดวงสุริยยาตร์ และ /muhurta modal โหร)
+**ไม่ตรงกับตรียางค์ที่ดาวตก** — โดยเฉพาะกรณีดาวเยอะในราศีเดียวกัน
+
+## Root cause
+
+### 1. `_chip_layout_by_decanate()` ใน server.py (หน้าผูกดวง)
+เดิม:
+```python
+# จัดกลุ่มตาม decanate แล้ววางที่ "decanate center"
+sub_center = rashi_start_angle + 5 + dec * 10  # 5°/15°/25° = กลางช่อง
+```
+เมื่อดาว 3+ ดวงในช่องเดียวกัน → spread ±6° จาก sub_center
+→ chip ที่ edge ของ spread อาจหลุดออกนอกช่องนั้น (เช่น 204° / 216° หลุดออกจาก dec=1 [205°,215°])
+
+### 2. `_muhurta_svg_view()` ใน server.py (modal โหร)
+**บั๊กหนักกว่า:** ไม่ใช้ decanate เลย!
+```python
+center_angle = 90 + 30 * ri  # ใช้กลางราศีเสมอ
+ang = center_angle - spread/2 + spread * t  # spread รอบกลางราศี
+```
+→ ทุก chip ไปกระจุกที่กลางราศี **โดยไม่สนใจองศาจริง**
+→ ดาวที่ deg=2° กับ deg=28° อยู่ตำแหน่งใกล้กันมาก
+→ ไม่ตกตรียางค์ที่ถูกต้องสำหรับ MOST planets
+
+## วิธีแก้ — longitude-accurate positioning
+
+### หลักการใหม่
+- chip angle = `rashi_start_angle + degree + arcminute/60` (ตรงตามองศาจริงเป๊ะ)
+- ดาวที่มุมใกล้กัน (Δang < `MIN_GAP=6°`) → กระจายแนวรัศมี (in/out alternating)
+- ใช้ 5+ levels: `OFFSETS = [0, +14, -14, +28, -28, +42, -42]`
+
+### Algorithm (เพิ่มใน `_chip_layout_by_decanate` + `_muhurta_svg_view._place_by_degree`)
+```python
+items = sorted(planets, key=lambda p: rashi_start + p.degree + p.arcmin/60)
+placed = []  # (ang, offset) ของ chip ก่อนหน้า
+for it in items:
+    ang = it.angle
+    chosen = 0  # base radius
+    for off in OFFSETS:
+        if not any(abs(ang - la) < MIN_GAP and off == lo for la, lo in placed):
+            chosen = off
+            break
+    placed.append((ang, chosen))
+    chip.xy = polar(ang, base_radius + chosen)
+```
+
+### สำหรับ navamsa view (is_navamsa=True)
+- navamsa ใช้ "nav_index 1-9" ไม่มีองศาจริง
+- คำนวณ angle จาก nav cell center: `(nav_index-1) × 10/3 + 10/6` (≈ 1.67° per cell)
+
+## ทดสอบผ่าน (2/9/2522 14:18, ราศีสิงห์ 6 ดาว)
+
+| ดาว | องศา | ตรียางค์คาดหวัง | chip angle (in rashi) | ตรียางค์จริงของ chip |
+|----|------|-----------------|----------------------|---------------------|
+| พฤหัสบดี | 2°4' | 1 | 2.07° | ✓ ตรียางค์ 1 |
+| พุธ | 13°5' | 2 | 13.08° | ✓ ตรียางค์ 2 |
+| ราหู | 14°6' | 2 | 14.10° | ✓ ตรียางค์ 2 |
+| อาทิตย์ | 15°15' | 2 | 15.25° | ✓ ตรียางค์ 2 |
+| ศุกร์ | 15°17' | 2 | 15.28° | ✓ ตรียางค์ 2 |
+| เสาร์ | 20°21' | 3 | 20.35° | ✓ ตรียางค์ 3 |
+
+ทุก chip ตกในตรียางค์ที่ถูกต้องตามองศาจริง (deg → angle in rashi เปรียบ % rashi → ตรียางค์ 1/2/3)
+
+## ไฟล์ที่แก้
+| ไฟล์ | สรุป |
+|------|------|
+| `webapp/server.py` `_chip_layout_by_decanate()` | rewrite: position by actual longitude + radial collision avoidance |
+| `webapp/server.py` `_muhurta_svg_view()` | replace 1/2-3/4+ chip layout → `_place_by_degree(names, meta, base_r, ...)` ที่ใช้องศาจริง (รับ navamsa mode ด้วย) |
+| `webapp/templates/{index,muhurta}.html` | cache `v=20260624k` |
+
+## Gotchas
+1. **planet_meta ต้องมี degree+arcminute** สำหรับ `_place_by_degree` — ถ้าไม่มีจะ default = 0 (clustered ที่ rashi_start)
+2. **navamsa mode**: ใช้ nav_index → องศาเฉลี่ยใน nav cell (`(idx-1) × 3.33 + 1.67`)
+   เพื่อให้ chip กระจายตามนวางค์ที่ดาวตก ไม่ใช่กระจุกที่กลาง
+3. **MIN_GAP=6°**: ถ้าดาว 2 ดวงห่างกัน ≥6° จะอยู่ที่ base radius ทั้งคู่ → ไม่ overlap
+   ถ้า < 6° → ตัวที่สอง offset radius
+4. **OFFSETS=[0,±14,±28,±42]** = 7 ระดับ พอสำหรับสูงสุด ~7 ดาวกระจุก (เช่น สิงห์ของผู้ใช้)
+5. **โหรทายหนู (position_by_degree=False)** ไม่กระทบ เพราะใช้ `_chip_layout()` ตัวเดิม (no degree)
+
+## Cache version
+`v=20260624k` — bump ทั้ง index.html + muhurta.html
+
+---
+
+# ===== Session 22 Updates =====
+# Navamsa chip layout: radial stacking + collision avoidance + zone fix
+# Commit: 2026-06-28
+
+## ภาพรวม
+แก้ปัญหาดาวซ้อนทับในนวางค์จักร (ผูกดวง + หาฤกษ์)
+
+## การเปลี่ยนแปลงหลัก
+
+### 1. Navamsa chip placement zone (ผูกดวง vs หาฤกษ์)
+ใน `_muhurta_svg_view()` บรรทัดที่ assign `_base_r, _hit_inner, _hit_outer`:
+- **ผูกดวง navamsa** (`is_navamsa=True`, `natal_planets_by_rashi=None`): `r=M_R_CHIP_NATAL=145` อยู่ในวงราศี ✓
+- **หาฤกษ์ navamsa** (`is_navamsa=True`, `natal_planets_by_rashi` มีค่า): `r=230` transit zone นอกวง
+- **ปกติ** (`is_navamsa=False`): `r=M_R_CHIP=264` nakshatra ring
+
+### 2. Radial stacking ใน `_place_by_degree` (navamsa branch)
+แทนที่ brute-force try 5×5 offsets ด้วย pre-computed radial levels:
+- Max **2 ดาว** ต่อ level (ทุก radius)
+- Level ถัดไป = `cur_r + CHIP_DIAM (26)`, clamp ที่ `outer_r - 13`
+- แต่ละ level ใช้ `safe_ang = 2·arcsin(CHIP_DIAM/2r) + 0.5°` เป็น step ขั้นต่ำ
+- **Chips hard-clamp** ใน `[rashi_start+2.5°, rashi_start+27.5°]` — ไม่ออกนอกราศี, ไม่ทับเส้นแบ่ง
+
+### 3. Navamsa badge glossary (index.html)
+- `title` attribute บน chip เทวะ/นะระ/รากษส, วรโคตม, อุตตมางค์, ประเกษตร
+- `<details class="nav-glossary">` accordion คำอธิบาย 6 term + dignity table
+
+### 4. CSS
+- `.navamsa-grid` และ `.navamsa-svg-wrap`: 360px → **260px**
+
+## Gotchas
+1. Cross-rashi nudge เดิมดัน chip ออกนอก rashi ทับเส้น — ถูกลบออกแล้ว
+2. `safe_ang` ต้องคำนวณจาก `r_lv` จริง ไม่ใช่ fixed 4°/8° เพราะ r=110 ต้องการ ~14° ส่วน r=230 ต้องการ ~7°
+3. ถ้า zone แคบ (natal r=110) และมีดาว >4 ดวง chip สุดท้ายอาจถูก clamp ชิดขอบ rashi แต่ไม่ออกนอก
+
+## ไฟล์ที่แก้
+| ไฟล์ | สรุป |
+|------|------|
+| `webapp/server.py` | navamsa zone split + radial stacking logic |
+| `webapp/changelog.py` | เพิ่ม v2026.06.28 |
+| `webapp/templates/index.html` | title attributes + nav-glossary accordion |
+| `webapp/static/styles.css` | navamsa-grid/wrap 360→260px |

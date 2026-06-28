@@ -489,6 +489,216 @@ function setupScrollRestore() {
 
 /* ====================================================================== */
 
+/* ======================================================================
+   Floating Chat Widget
+   ====================================================================== */
+function setupAstroChat() {
+  const fab      = document.getElementById("chat-fab");
+  const panel    = document.getElementById("chat-panel");
+  const closeBtn = document.getElementById("chat-panel-close");
+  const backdrop = document.getElementById("chat-backdrop");
+  const form     = document.getElementById("chat-form");
+  const history  = document.getElementById("chat-history");
+
+  if (!fab) return;
+
+  // ปุ่มอยู่ระหว่างพัฒนา — แสดง toast แทนการเปิด panel
+  if (fab.classList.contains("chat-fab--dev")) {
+    fab.addEventListener("click", () => {
+      let toast = document.getElementById("chat-dev-toast");
+      if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "chat-dev-toast";
+        toast.className = "chat-dev-toast";
+        toast.textContent = "🔮 ฟีเจอร์ถามโหร AI อยู่ระหว่างพัฒนา — เร็วๆ นี้";
+        document.body.appendChild(toast);
+      }
+      toast.classList.add("chat-dev-toast--show");
+      clearTimeout(window._chatDevToastTimer);
+      window._chatDevToastTimer = setTimeout(() => {
+        toast.classList.remove("chat-dev-toast--show");
+      }, 2500);
+    });
+    return;
+  }
+
+  if (!panel) return;
+
+  // --- toggle open/close ---
+  function openPanel() {
+    panel.classList.remove("chat-panel--closing");
+    panel.classList.add("chat-panel--open");
+    backdrop.classList.add("chat-backdrop--visible");
+    fab.classList.add("chat-fab--open");
+    fab.querySelector(".chat-fab-icon").textContent = "✕";
+    panel.setAttribute("aria-hidden", "false");
+    if (history) history.scrollTop = history.scrollHeight;
+    document.getElementById("chat-question")?.focus();
+  }
+  function closePanel() {
+    panel.classList.add("chat-panel--closing");
+    backdrop.classList.remove("chat-backdrop--visible");
+    fab.classList.remove("chat-fab--open");
+    fab.querySelector(".chat-fab-icon").textContent = "🔮";
+    panel.setAttribute("aria-hidden", "true");
+    // หลัง animation จบ (0.18s) ค่อย remove --open
+    setTimeout(() => {
+      panel.classList.remove("chat-panel--open", "chat-panel--closing");
+    }, 200);
+  }
+
+  fab.addEventListener("click", () => {
+    if (fab.disabled) return;
+    panel.classList.contains("chat-panel--open") ? closePanel() : openPanel();
+  });
+  closeBtn?.addEventListener("click", closePanel);
+  backdrop.addEventListener("click", closePanel);
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closePanel(); });
+
+  // --- ไม่มี form (ยังไม่ผูกดวง) → จบแค่นี้ ---
+  if (!form) return;
+
+  const input   = document.getElementById("chat-question");
+  const sendBtn = form.querySelector(".chat-send-btn");
+
+  // chips ใน panel-footer
+  document.querySelectorAll(".chat-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      if (!input) return;
+      input.value = chip.dataset.q || "";
+      form.dispatchEvent(new Event("submit", { cancelable: true }));
+    });
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const q = input.value.trim();
+    if (!q) return;
+
+    appendBubble("user", q);
+    input.value = "";
+    sendBtn.disabled = true;
+    const loadingEl = appendLoading();
+
+    try {
+      const data = new FormData(form);
+      data.set("question", q);
+      const res = await fetch("/chart/ask", { method: "POST", body: data });
+
+      const ct = res.headers.get("content-type") || "";
+
+      // --- preview / error → JSON ก้อนเดียว ---
+      if (ct.includes("application/json")) {
+        const json = await res.json();
+        loadingEl.remove();
+        if (json.error) {
+          appendBubble("error", "❌ " + json.error);
+          return;
+        }
+        if (json.mode === "preview") {
+          const autoNote = json.auto_warning
+            ? "\n⚠️ ระบบตรวจพบเกณฑ์ระวัง → เสริมหมวดนี้อัตโนมัติ" : "";
+          const header = `[Preview] หมวด: ${json.intents.join(" + ")}${autoNote}\n` +
+                         `หมายเหตุ: ${json.note}\n\n`;
+          appendBubble("preview", header + json.prompt_preview);
+        }
+        return;
+      }
+
+      // --- Claude streaming → SSE ---
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let aiBubble = null;
+      let aiBody = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // SSE แต่ละ event คั่นด้วย \n\n
+        let idx;
+        while ((idx = buffer.indexOf("\n\n")) !== -1) {
+          const rawEvent = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          if (!rawEvent.startsWith("data:")) continue;
+
+          let payload;
+          try {
+            payload = JSON.parse(rawEvent.slice(5).trim());
+          } catch { continue; }
+
+          if (payload.type === "meta") {
+            loadingEl.remove();
+            aiBubble = appendBubble("ai", "", payload.intents.join(" + "));
+            aiBody = aiBubble.querySelector(".chat-ai-body");
+          } else if (payload.type === "chunk" && aiBody) {
+            aiBody.textContent += payload.text;
+            history.scrollTop = history.scrollHeight;
+          } else if (payload.type === "error") {
+            if (aiBubble) aiBubble.remove();
+            loadingEl.remove();
+            appendBubble("error", "❌ " + payload.message);
+          } else if (payload.type === "done") {
+            // จบ
+          }
+        }
+      }
+    } catch (err) {
+      loadingEl.remove();
+      appendBubble("error", "❌ เชื่อมต่อ server ไม่ได้: " + err.message);
+    } finally {
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  });
+
+  function appendBubble(type, text, meta = "") {
+    const div = document.createElement("div");
+    if (type === "user") {
+      div.className = "chat-bubble chat-bubble-user";
+      div.textContent = text;
+    } else if (type === "ai") {
+      div.className = "chat-bubble chat-bubble-ai";
+      if (meta) {
+        const m = document.createElement("span");
+        m.className = "chat-meta";
+        m.textContent = "🔮 โหร AI · " + meta;
+        div.appendChild(m);
+      }
+      const body = document.createElement("div");
+      body.className = "chat-ai-body";
+      body.textContent = text;
+      div.appendChild(body);
+    } else if (type === "preview") {
+      div.className = "chat-bubble chat-bubble-preview";
+      const m = document.createElement("span");
+      m.className = "chat-meta";
+      m.textContent = "📋 Prompt Preview — mock mode (ยังไม่มี API key)";
+      div.appendChild(m);
+      const body = document.createElement("div");
+      body.textContent = text;
+      div.appendChild(body);
+    } else {
+      div.className = "chat-bubble chat-bubble-error";
+      div.textContent = text;
+    }
+    history.appendChild(div);
+    history.scrollTop = history.scrollHeight;
+    return div;
+  }
+
+  function appendLoading() {
+    const div = document.createElement("div");
+    div.className = "chat-loading";
+    div.innerHTML = "<span></span><span></span><span></span>";
+    history.appendChild(div);
+    history.scrollTop = history.scrollHeight;
+    return div;
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   setupDateSync("birth_date_th", "birth_date_picker");
   setupDatePickerButtons();
@@ -497,4 +707,5 @@ document.addEventListener("DOMContentLoaded", () => {
   setupTriyangkaToggle();
   setupTransitScrubber();
   setupScrollRestore();
+  setupAstroChat();
 });

@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Kanit:wght@400;600;700&family=Mali:wght@500;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/static/styles.css?v=20260614i" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260628d" />
 </head>
 <body class="view-general" data-scroll-target="{% if scroll_target == '1' %}transit{% endif %}">
   <header class="site-header">
@@ -201,7 +201,7 @@
               คุณกรอก <b>{{ sunrise_info.input_date }}</b> เวลา {{ sunrise_info.input_time }} น.
               ซึ่งก่อนพระอาทิตย์ขึ้น (โหมด{% if sunrise_info.mode == 'six_am' %} 06:00 ตรง{% else %} อาทิตย์ขึ้นจริง{% endif %} =
               {{ sunrise_info.sunrise }} น.{% if sunrise_info.mode == 'real_sunrise' %} ที่{{ sunrise_info.province }}{% endif %})
-              → ระบบใช้วัน <b>{{ sunrise_info.thai_date }}</b> ในการผูกดวง
+              ระบบจึงใช้วัน <b>{{ sunrise_info.thai_date }}</b> ในการผูกดวง
             </span>
           {% else %}
             <span class="sunrise-banner-icon">☀</span>
@@ -806,9 +806,9 @@
               <div class="prophecy-detail">
                 <div class="prophecy-headline">
                   <b>{{ p.lord_bhava_name }}</b> (ภพ {{ p.lord_bhava }})
-                  → <b>{{ p.located_bhava_name }}</b> (ผ่าน{{ p.lord_planet }})
+                  สู่ <b>{{ p.located_bhava_name }}</b> (ผ่าน{{ p.lord_planet }})
                 </div>
-                <div class="prophecy-text">{{ p.prediction }}</div>
+                <div class="prophecy-text">{{ p.prediction | markup_kw | safe }}</div>
               </div>
             </div>
           {% endfor %}
@@ -839,9 +839,9 @@
                 <div class="prophecy-headline">
                   เจ้าเรือน<b>{{ p.lord_bhava_name }}</b> (ภพ {{ p.lord_bhava }})
                   = <b>{{ p.lord_planet }}</b> ราศี{{ p.lord_rasi }}
-                  → อยู่<b>{{ p.located_bhava_name }}</b> (ภพ {{ p.located_bhava }})
+                  อยู่ใน<b>{{ p.located_bhava_name }}</b> (ภพ {{ p.located_bhava }})
                 </div>
-                <div class="prophecy-text">{{ p.prediction }}</div>
+                <div class="prophecy-text">{{ p.prediction | markup_kw | safe }}</div>
               </div>
             </div>
           {% endfor %}
@@ -931,9 +931,9 @@
                 <div class="prophecy-headline">
                   เจ้าเรือน<b>{{ p.lord_bhava_name }}</b> (ภพ {{ p.lord_bhava }})
                   = <b>{{ p.lord_planet }}</b> ขณะนี้จรในราศี{{ p.lord_rasi }}
-                  → อยู่<b>{{ p.located_bhava_name }}</b> (ภพ {{ p.located_bhava }})
+                  อยู่ใน<b>{{ p.located_bhava_name }}</b> (ภพ {{ p.located_bhava }})
                 </div>
-                <div class="prophecy-text">{{ p.prediction }}</div>
+                <div class="prophecy-text">{{ p.prediction | markup_kw | safe }}</div>
               </div>
             </div>
           {% endfor %}
@@ -965,7 +965,7 @@
                   <b>{{ a.transit_planet }}</b>จร({{ a.transit_rasi }}) <b>{{ a.aspect_type }}</b>
                   <b>{{ a.natal_planet }}</b>เดิม({{ a.natal_rasi }})
                 </div>
-                <div class="prophecy-text">{{ a.prediction }}</div>
+                <div class="prophecy-text">{{ a.prediction | markup_kw | safe }}</div>
                 <div class="prophecy-meta">{{ a.duration }}</div>
               </div>
             </div>
@@ -1039,7 +1039,7 @@
             <span class="tt-label">🔭 ทักษาจร ปีอายุที่ {{ tk.year_of_life }}</span>
             <span class="tt-planet"><b>{{ tk.transit_taksa.current_planet }}</b></span>
             <span class="tt-pos">(ตำแหน่งที่ {{ tk.transit_taksa.current_cycle_position }}/9)</span>
-            <span class="tt-bhava">→ ภพ<b>{{ tk.transit_taksa.natal_bhava_at_current }}</b></span>
+            <span class="tt-bhava">อยู่ภพ<b>{{ tk.transit_taksa.natal_bhava_at_current }}</b></span>
           </div>
         {% endif %}
 
@@ -1136,7 +1136,7 @@
               <h3>✨ ภพทักษาซ้อน × ทักษาเดิม — คำทำนายกระทบ</h3>
               <p class="combos-intro">
                 แต่ละคู่ = ดาวเดียวกันที่ครองทั้ง<b>ภพ overlay</b>และ<b>ภพเดิม</b>ของเจ้าชะตา
-                อ่านความหมายผสม → จะเห็นว่าเรื่องช่วงนี้ส่งผลผ่านช่องทางไหน
+                อ่านความหมายผสม — จะเห็นว่าเรื่องช่วงนี้ส่งผลผ่านช่องทางไหน
               </p>
               <div class="combo-list">
                 {% for c in tk.transit_taksa.overlay_combos %}
@@ -1219,6 +1219,196 @@
         </p>
 
         </div>{# /view-student wrapper inside taksa-card #}
+      </div>
+    </section>
+    {% endif %}
+
+    {# ===== นวางค์จักร (D9) ===== #}
+    {% if result and result.navamsa %}
+    {% set nav = result.navamsa %}
+    <section class="navamsa-section view-both">
+      <div class="card">
+        <h2><span class="title-deco">✦</span> นวางค์จักร — กายละเอียดของดวงชาตา <span class="title-deco">✦</span></h2>
+
+        {# --- ลัคนานวางค์ --- #}
+        <div class="navamsa-lagna-badge">
+          <span class="navamsa-lagna-rashi">ลัคนานวางค์: {{ result.ascendant.rasi_name }} ตกใน {{ nav.lagna_nav_rashi_name }}</span>
+          <span class="navamsa-type-chip navamsa-type-{{ 'deva' if nav.lagna_navamsa_type == 'เทวะ' else ('nara' if nav.lagna_navamsa_type == 'นะระ' else 'rakshas') }}">
+            {{ nav.lagna_navamsa_type_icon }} {{ nav.lagna_navamsa_type }}
+          </span>
+          {% if nav.lagna_is_vargottama %}
+          <span class="navamsa-type-chip nav-combined-vargottama">⭐⭐ วรโคตรนวางค์</span>
+          {% endif %}
+          {% if nav.lagna_is_uttamanamsa %}
+          <span class="navamsa-type-chip nav-combined-uttama">👑 อุตตมางศ์</span>
+          {% endif %}
+        </div>
+        <p class="oracle-intro" style="margin-bottom:0.75rem">{{ nav.lagna_navamsa_meaning }}</p>
+
+        {# --- chips สรุปสถานะพิเศษ --- #}
+        {% set has_special = nav.vargottama_planets or nav.uttamanamsa_planets or nav.prakshtra_planets or nav.reversal_good or nav.reversal_bad %}
+        {% if has_special %}
+        <div class="navamsa-special-chips">
+          {% for p in nav.vargottama_planets %}
+          <span class="navamsa-special-chip nav-chip-vargottama">⭐⭐ {{ p }} — วรโคตรนวางค์</span>
+          {% endfor %}
+          {% for p in nav.uttamanamsa_planets %}
+          <span class="navamsa-special-chip nav-chip-uttama">👑 {{ p }} — อุตตมางศ์</span>
+          {% endfor %}
+          {% for p in nav.prakshtra_planets %}
+          <span class="navamsa-special-chip nav-chip-prakshtra">⚔️ {{ p }} — ประเกษตร</span>
+          {% endfor %}
+          {% for p in nav.reversal_good %}
+          <span class="navamsa-special-chip nav-chip-reversal-good">🔄 {{ p }} — ยิ่งตกยิ่งดี</span>
+          {% endfor %}
+          {% for p in nav.reversal_bad %}
+          <span class="navamsa-special-chip nav-chip-reversal-bad">⚠️ {{ p }} — ท่าดีทีเหลว</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {# --- grid: SVG + ตาราง --- #}
+        <div class="navamsa-grid">
+          {# SVG นวางค์จักร #}
+          <div class="navamsa-svg-wrap">
+            {% set view = nav.svg %}
+            {% include "_muhurta_zodiac.html" %}
+          </div>
+
+          {# ตารางวิเคราะห์รายดาว #}
+          <div class="navamsa-table-wrap">
+            <table class="navamsa-table">
+              <thead>
+                <tr>
+                  <th>ดาว</th>
+                  <th>ราศีจักร</th>
+                  <th>กำลัง (ราศี)</th>
+                  <th>นวางค์</th>
+                  <th>กำลัง (นวางค์)</th>
+                  <th>ผลรวม</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in result.planets %}
+                <tr class="{% if p.is_vargottama %}navamsa-row-vargottama{% elif p.is_prakshtra or p.is_uttamanamsa %}navamsa-row-special{% endif %}">
+                  <td>
+                    <div class="navamsa-planet-cell">
+                      <span class="nav-planet-chip {{ p.color_class }}">{{ p.abbr }}</span>
+                      <span>{{ p.name }}</span>
+                      {% if p.navamsa_type %}
+                      <span class="navamsa-type-chip navamsa-type-{{ 'deva' if p.navamsa_type == 'เทวะ' else ('nara' if p.navamsa_type == 'นะระ' else 'rakshas') }}"
+                            style="font-size:0.68rem;padding:0.1rem 0.35rem;cursor:help"
+                            title="{{ p.navamsa_type }} — {% if p.navamsa_type == 'เทวะ' %}ลูกนวางค์ 1/4/7 ส่งเสริมคุณธรรม ทรัพย์สิน อำนาจ ความมั่งคั่ง{% elif p.navamsa_type == 'นะระ' %}ลูกนวางค์ 2/5/8 มีชื่อเสียงดี ใจดี อยู่ดีกินดี เน้นปัญญา{% else %}ลูกนวางค์ 3/6/9 เน้นความปรารถนาวัตถุ แข็งกร้าว เอาตัวรอดเก่ง{% endif %}">
+                        {{ p.navamsa_type_icon }}
+                      </span>
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td>
+                    {{ p.rasi_name }}
+                    <span class="text-muted" style="font-size:0.72rem">{{ p.degree }}°{{ p.arcminute }}'</span>
+                  </td>
+                  <td>
+                    <span class="dignity-pill dignity-pill-{{ p.dignity }}">{{ p.dignity_label }}</span>
+                  </td>
+                  <td>
+                    {% if p.nav_rashi_name %}{{ p.nav_rashi_name }}{% endif %}
+                    {% if p.is_vargottama %}<span class="navamsa-type-chip nav-combined-vargottama" style="font-size:0.65rem;padding:0.1rem 0.3rem;cursor:help" title="วรโคตม — ดาวอยู่ราศีเดียวกันทั้งราศีจักรและนวางค์จักร กำลังดาวแข็งแกร่งพิเศษ คุณสมบัติแสดงออกชัดเจนตลอดชีวิต">⭐⭐</span>{% endif %}
+                    {% if p.is_uttamanamsa and not p.is_vargottama %}<span class="navamsa-type-chip nav-combined-uttama" style="font-size:0.65rem;padding:0.1rem 0.3rem;cursor:help" title="อุตตมางค์ — ดาวตกลูกนวางค์ที่ดีที่สุด (จร=ลูก1 / สถิร=ลูก5 / ทวิ=ลูก9) จิตใจและโชคชะตาภายในแข็งมาก ให้ผลดีในระยะยาว">👑</span>{% endif %}
+                    {% if p.is_prakshtra %}<span class="navamsa-type-chip nav-combined-prakshtra" style="font-size:0.65rem;padding:0.1rem 0.3rem;cursor:help" title="ประเกษตร — ดาวอยู่ราศีเกษตร(เจ้าราศี)ในราศีจักร แต่ตกราศีศัตรูในนวางค์ มีความสามารถโดดเด่น แต่ต้องฝ่าอุปสรรคก่อนเสมอ เอาตัวรอดได้ดี">⚔️</span>{% endif %}
+                  </td>
+                  <td>
+                    {% if p.nav_dignity_label %}
+                    <span class="dignity-pill dignity-pill-{{ p.nav_dignity }}">{{ p.nav_dignity_label }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if p.nav_combined_label %}
+                    <span class="nav-combined-pill {{ p.nav_combined_color_class }}">
+                      {{ p.nav_combined_icon }} {{ p.nav_combined_label }}
+                    </span>
+                    <div class="nav-meaning-hint">{{ p.nav_combined_meaning }}</div>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <p class="oracle-footer" style="margin-top:0.75rem">
+          <small>* นวางค์จักร (D9) = กายละเอียด ราศีจักรคือรูปลักษณ์ภายนอก นวางค์คือจิตใจ/โชคชะตาภายใน
+          ดาวแข็งในนวางค์แต่อ่อนในราศี = "ยิ่งตกยิ่งดี" · ดาวแข็งในราศีแต่อ่อนในนวางค์ = "ท่าดีทีเหลว"</small>
+        </p>
+
+        {# --- คำอธิบาย tag นวางค์ (กดเปิดอ่าน) --- #}
+        <details class="nav-glossary">
+          <summary>📖 คำอธิบาย tag นวางค์จักร</summary>
+          <div class="nav-glossary-grid">
+            <div class="nav-glossary-item">
+              <div class="nav-glossary-header">
+                <span class="navamsa-type-chip nav-combined-vargottama">⭐⭐ วรโคตม</span>
+              </div>
+              <p>ดาวอยู่ <strong>ราศีเดียวกัน</strong>ทั้งในราศีจักรและนวางค์จักร กำลังดาวแข็งแกร่งพิเศษ 3 เท่า คุณสมบัติและหน้าที่ที่ดาวนั้นครอบครองจะแสดงออกชัดเจนและยั่งยืนตลอดชีวิต ถือว่าดีที่สุดในบรรดาสถานะพิเศษทั้งหมด</p>
+            </div>
+            <div class="nav-glossary-item">
+              <div class="nav-glossary-header">
+                <span class="navamsa-type-chip nav-combined-uttama">👑 อุตตมางค์</span>
+              </div>
+              <p>ดาวตกลงใน <strong>ลูกนวางค์ที่ดีที่สุด</strong> ของราศีนั้น (ราศีจร=ลูก1 / ราศีสถิร=ลูก5 / ราศีทวิ=ลูก9) แม้กำลังในราศีจักรจะปานกลาง แต่จิตใจและโชคชะตาภายในแข็งมาก ให้ผลดีในระยะยาวและเป็นที่พึ่งของตนเองได้</p>
+            </div>
+            <div class="nav-glossary-item">
+              <div class="nav-glossary-header">
+                <span class="navamsa-type-chip nav-combined-prakshtra">⚔️ ประเกษตร</span>
+              </div>
+              <p>ดาวอยู่ <strong>ราศีเกษตร</strong> (เจ้าราศี) ในราศีจักร แต่ในนวางค์ตกราศีศัตรู มีความสามารถโดดเด่นจากดวงพื้น แต่ต้องฝ่าฟันอุปสรรคและถูกขัดขวางก่อนเสมอ เอาตัวรอดได้ดี แต่เหนื่อยกว่าคนอื่น</p>
+            </div>
+            <div class="nav-glossary-item">
+              <div class="nav-glossary-header">
+                <span class="navamsa-type-chip navamsa-type-deva">✨ เทวะ</span>
+              </div>
+              <p>ดาวตกใน <strong>ลูกนวางค์ที่ 1, 4 หรือ 7</strong> ของราศี (กลุ่มเทพ) ส่งเสริมคุณธรรม ความเมตตา มีทรัพย์สินและอำนาจ จิตใจสูงส่ง มีแนวโน้มทางธรรมหรือมีอำนาจในสังคม</p>
+            </div>
+            <div class="nav-glossary-item">
+              <div class="nav-glossary-header">
+                <span class="navamsa-type-chip navamsa-type-nara">🧑 นะระ</span>
+              </div>
+              <p>ดาวตกใน <strong>ลูกนวางค์ที่ 2, 5 หรือ 8</strong> ของราศี (กลุ่มมนุษย์) มีชื่อเสียงดี ใจดี อยู่ดีกินดี เน้นปัญญาและการทำงาน ความสุขสงบมาจากความสัมพันธ์ที่ดีกับผู้คน</p>
+            </div>
+            <div class="nav-glossary-item">
+              <div class="nav-glossary-header">
+                <span class="navamsa-type-chip navamsa-type-rakshas">👹 รากษส</span>
+              </div>
+              <p>ดาวตกใน <strong>ลูกนวางค์ที่ 3, 6 หรือ 9</strong> ของราศี (กลุ่มอสูร) เน้นความปรารถนาทางวัตถุ ลักษณะแข็งกร้าว เอาตัวรอดเก่ง บางครั้งอาจมีชื่อเสียงผสม แต่ก็มีพลังขับเคลื่อนสูง</p>
+            </div>
+          </div>
+
+          <div class="nav-glossary-dignity">
+            <h4>กำลังดาว (Dignity)</h4>
+            <div class="nav-glossary-dignity-row">
+              <span class="dignity-pill dignity-pill-อุจจ์">อุจจ์</span> <span>ดาวตกราศีที่แข็งแกร่งที่สุด (Exaltation) — ให้คุณเต็มที่ไม่มีข้อด้อย</span>
+            </div>
+            <div class="nav-glossary-dignity-row">
+              <span class="dignity-pill dignity-pill-มหาจักร">มหาจักร</span> <span>ดาวสถิตในราศีมหาจักร — กำลังสูงมาก ให้คุณอย่างยิ่งใหญ่</span>
+            </div>
+            <div class="nav-glossary-dignity-row">
+              <span class="dignity-pill dignity-pill-จุลจักร">จุลจักร</span> <span>ดาวสถิตในราศีจุลจักร — กำลังดี ให้คุณชัดเจนแต่ขนาดเล็กกว่ามหาจักร</span>
+            </div>
+            <div class="nav-glossary-dignity-row">
+              <span class="dignity-pill dignity-pill-ราชาโชค">ราชาโชค</span> <span>ราชาโยค — ดาวอยู่ในตำแหน่งอำนาจ ส่งเสริมความเป็นผู้นำ</span>
+            </div>
+            <div class="nav-glossary-dignity-row">
+              <span class="dignity-pill dignity-pill-เทวีโชค">เทวีโชค</span> <span>เทวียอก — คุณภาพดี มีโชคจากเทวี เหนือกว่าเกษตรในตำราไทย</span>
+            </div>
+            <div class="nav-glossary-dignity-row">
+              <span class="dignity-pill dignity-pill-เกษตร">เกษตร</span> <span>ดาวอยู่ราศีของตนเอง (Domicile) — มีกำลังพอประมาณ ให้คุณปกติ</span>
+            </div>
+            <div class="nav-glossary-dignity-row">
+              <span class="dignity-pill dignity-pill-นีจ">นีจ</span> <span>ดาวตกราศีที่อ่อนแอที่สุด (Debilitation) — ให้คุณน้อย มักมีอุปสรรค</span>
+            </div>
+          </div>
+        </details>
       </div>
     </section>
     {% endif %}
@@ -1355,12 +1545,12 @@
                     <div class="oracle-source-label">📜 ดวงเดิม</div>
                     {% if area.natal.good %}
                       <ul class="oracle-good">
-                        {% for g in area.natal.good %}<li>✨ {{ g | replace('§', '') }}</li>{% endfor %}
+                        {% for g in area.natal.good %}<li>✨ {{ g | markup_kw | safe }}</li>{% endfor %}
                       </ul>
                     {% endif %}
                     {% if area.natal.warn %}
                       <ul class="oracle-warn">
-                        {% for w in area.natal.warn %}<li>⚠ {{ w | replace('§', '') }}</li>{% endfor %}
+                        {% for w in area.natal.warn %}<li>⚠ {{ w | markup_kw | safe }}</li>{% endfor %}
                       </ul>
                     {% endif %}
                   </div>
@@ -1371,12 +1561,12 @@
                     <div class="oracle-source-label">🌠 ดาวจร{% if o.transit_date_label %} ({{ o.transit_date_label }}){% endif %}</div>
                     {% if area.transit.good %}
                       <ul class="oracle-good">
-                        {% for g in area.transit.good %}<li>✨ {{ g | replace('§', '') }}</li>{% endfor %}
+                        {% for g in area.transit.good %}<li>✨ {{ g | markup_kw | safe }}</li>{% endfor %}
                       </ul>
                     {% endif %}
                     {% if area.transit.warn %}
                       <ul class="oracle-warn">
-                        {% for w in area.transit.warn %}<li>⚠ {{ w | replace('§', '') }}</li>{% endfor %}
+                        {% for w in area.transit.warn %}<li>⚠ {{ w | markup_kw | safe }}</li>{% endfor %}
                       </ul>
                     {% endif %}
                   </div>
@@ -1390,7 +1580,7 @@
           <div class="oracle-block oracle-block-good">
             <h3>✨ โอกาสดี ๆ ที่กำลังเข้ามา</h3>
             <ul>
-              {% for op in o.opportunities %}<li>{{ op }}</li>{% endfor %}
+              {% for op in o.opportunities %}<li>{{ op | markup_kw | safe }}</li>{% endfor %}
             </ul>
           </div>
         {% endif %}
@@ -1399,7 +1589,7 @@
           <div class="oracle-block oracle-block-warn">
             <h3>⚠ สิ่งที่อยากเตือนให้ระวัง</h3>
             <ul>
-              {% for w in o.warnings %}<li>{{ w }}</li>{% endfor %}
+              {% for w in o.warnings %}<li>{{ w | markup_kw | safe }}</li>{% endfor %}
             </ul>
           </div>
         {% endif %}
@@ -1414,7 +1604,70 @@
     </section>
     {% endif %}
     {% endif %}
+
+
   </main>
+
+  <!-- ============================================================ -->
+  <!-- FLOATING CHAT BUTTON + PANEL                               -->
+  <!-- ============================================================ -->
+
+  <!-- FAB: ปุ่มลอยขวาล่าง — ปิดชั่วคราว อยู่ระหว่างพัฒนา (รอตั้ง ANTHROPIC_API_KEY) -->
+  <button id="chat-fab" class="chat-fab chat-fab--dev" title="ฟีเจอร์อยู่ระหว่างพัฒนา" aria-label="ฟีเจอร์อยู่ระหว่างพัฒนา">
+    <span class="chat-fab-icon">🔮</span>
+    <span class="chat-fab-label">เร็วๆ นี้</span>
+  </button>
+
+  <!-- Floating Chat Panel -->
+  <div id="chat-panel" class="chat-panel" aria-hidden="true">
+    <div class="chat-panel-header">
+      <div class="chat-panel-title">
+        <span>🔮</span>
+        <span>ถามโหร AI</span>
+        <span class="chat-badge">Beta</span>
+      </div>
+      {% if result %}
+      <div class="chat-panel-subtitle">
+        ดวง {{ form.birth_date_th }} · {{ form.birth_time }} · {{ form.province }}
+      </div>
+      {% endif %}
+      <button id="chat-panel-close" class="chat-panel-close" aria-label="ปิด">✕</button>
+    </div>
+
+    <div id="chat-history" class="chat-history">
+      {% if not result %}
+      <div class="chat-locked-msg">
+        <div class="chat-locked-icon">🔒</div>
+        <p>กรอกข้อมูลวันเกิดแล้วกด <strong>ผูกดวง</strong> ก่อน<br>จึงจะสามารถถามโหรจากดวงของคุณได้</p>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if result %}
+    <div class="chat-panel-footer">
+      <div class="chat-chips">
+        <button type="button" class="chat-chip" data-q="ช่วงนี้การงานและอาชีพเป็นยังไงบ้าง">การงาน</button>
+        <button type="button" class="chat-chip" data-q="การเงินช่วงนี้จะเป็นยังไง มีโชคลาภไหม">การเงิน</button>
+        <button type="button" class="chat-chip" data-q="ความรักช่วงนี้เป็นยังไง มีคู่ครองไหม">ความรัก</button>
+        <button type="button" class="chat-chip" data-q="สุขภาพช่วงนี้ต้องระวังอะไรบ้าง">สุขภาพ</button>
+        <button type="button" class="chat-chip" data-q="ช่วงนี้มีเกณฑ์อะไรต้องระวังบ้าง">เกณฑ์ระวัง</button>
+      </div>
+      <form id="chat-form" class="chat-form">
+        <input type="hidden" name="birth_date_th" value="{{ form.birth_date_th }}">
+        <input type="hidden" name="birth_time"    value="{{ form.birth_time }}">
+        <input type="hidden" name="province"      value="{{ form.province }}">
+        <div class="chat-input-row">
+          <input type="text" name="question" id="chat-question" class="chat-input"
+                 placeholder="ถามได้เลย…" autocomplete="off" maxlength="200">
+          <button type="submit" class="chat-send-btn">ส่ง</button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Backdrop -->
+  <div id="chat-backdrop" class="chat-backdrop"></div>
 
   <!-- tooltip for planet hover (ปรากฎเมื่อ hover ดาว) -->
   <div id="planet-tooltip" class="planet-tooltip" role="tooltip" aria-hidden="true"></div>
@@ -1423,6 +1676,6 @@
     <p>คำนวณตามคัมภีร์สุริยยาตร์ของไทย · port มาจาก Devtino.Astrology</p>
   </footer>
 
-  <script src="/static/script.js?v=20260614i"></script>
+  <script src="/static/script.js?v=20260627x"></script>
 </body>
 </html>
